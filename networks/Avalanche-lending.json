@@ -1,0 +1,30 @@
+{
+  "traderjoe": {
+    "Tokens": {
+      "DAI": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
+      "USDC": "0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664"
+    },
+    "lendingTokens": {
+      "DAI": "0xc988c170d0E38197DC634A45bF00169C7Aa7CA19",
+      "USDC": "0xEd6AaF91a2B084bd594DBd1245be3691F9f637aC"
+    },
+    "PriceOracleProxy": {
+      "DAI": "0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300",
+      "USDC": "0xF096872672F44d6EBA71458D74fe67F9a77a23B9"
+    }
+  },
+  "aave": {
+    "Tokens": {
+      "DAI": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
+      "USDC": "0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664"
+    },
+    "lendingTokens": {
+      "DAI": "0x47AFa96Cdc9fAb46904A55a6ad4bf6660B53c38a",
+      "USDC": "0x46A51127C3ce23fb7AB1DE06226147F446e4a857"
+    },
+    "PriceOracleProxy": {
+      "DAI": "0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300",
+      "USDC": "0xF096872672F44d6EBA71458D74fe67F9a77a23B9"
+    }
+  }
+}

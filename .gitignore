@@ -1,0 +1,11 @@
+.env
+.openzeppelin
+*.log
+artifacts
+cache
+deployments
+node_modules
+contractAddresses.csv
+package-lock.json
+tokens.json
+mnemonic.txt
