@@ -1,28 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@pooltogether/fixed-point/contracts/FixedPoint.sol";
-import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
+import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../utils/IERC20.sol";
 import "../utils/ICErc20.sol";
-import "../utils/SafeDecimalMath.sol";
 
 import "./iHelpTokenInterface.sol";
 import "./SwapperInterface.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
-
-    using SafeMath for uint256;
+contract CharityPool is OwnableUpgradeable {
+    using PRBMathUD60x18 for uint256;
     
-    bool private initialized;
-
     /**
      * Emitted when a user deposits into the Pool.
      * @param sender The purchaser of the tickets
@@ -46,6 +41,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     string public name;
     string public tokenname;
+    
     address public operator;
     address public charityWallet;
     address public holdingPool;
@@ -53,31 +49,23 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public stakingPool;
     address public developmentPool;
     address public holdingToken;
+    address[] public contributors;
+    
     SwapperInterface internal swapper;
 
-    /**
-     * The total of all balances
-     */
+    uint8 internal holdingDecimals;
+    
+    uint256 public totalInterestEarned;
+    uint256 public totalInterestEarnedUSD;
+    uint256 public currentInterestEarned;
+    uint256 public lastTotalInterest;
+    uint256 public newTotalInterestEarned;
+    uint256 public newTotalInterestEarnedUSD;
+    uint256 public redeemableInterest;
     uint256 public accountedBalance;
     uint256 public accountedBalanceUSD;
-
-    /**
-     * Min funding to be participate in the pool
-     */
-    uint256 public minFunding;
-
-    uint8 internal holdingDecimals;
-    uint256 internal __totalInterestEarned;
-    uint256 internal __totalInterestEarnedUSD;
-    uint256 internal __lastInterestEarned;
-    uint256 internal __lastTotalInterest;
-    uint256 internal __newTotalInterestEarned;
-    uint256 internal __newTotalInterestEarnedUSD;
-    uint256 internal __interestEarned;
-    uint256 internal __redeemableInterest;
-    uint256 internal _shareOfUnderlyingCash;
-
-    address[] public contributors;
+    mapping(address => uint256) public balances;
+    mapping(address => uint256) public balancesUSD;
 
     /**
      * The Compound cToken that this Pool is bound to.
@@ -85,18 +73,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ICErc20 public cToken;
     iHelpTokenInterface public ihelpToken;
 
-    /**
-     * The total deposits for each user.
-     */
-    mapping(address => uint256) internal balances;
-    mapping(address => uint256) internal balancesUSD;
-
-    mapping(address => uint256) percentOfContributors;
-
-    mapping(string => address) ctokenAddressLookup;
-
-    bool public isOpen;
-    
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
@@ -125,11 +101,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _;
     }
 
-    modifier open() {
-        require(isOpen, "Funding/open");
-        _;
-    }
-
     function postUpgrade() external onlyOperatorOrOwner {
         
     }
@@ -148,15 +119,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address _ihelpToken,
         address _swapperPool,
         address _stakingPool,
-        address _developmentPool,
-        uint256 _minFunding
-    ) public {
+        address _developmentPool
+    ) public initializer {
         
-        require(!initialized, "Contract instance has already been initialized");
-        initialized = true;
-
         __Ownable_init();
-        __ReentrancyGuard_init();
 
         require(_cToken != address(0), "Funding/ctoken-zero");
         require(_operator != address(0), "Funding/operator-zero");
@@ -178,24 +144,24 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         holdingToken = _holdingToken;
         holdingDecimals = IERC20(holdingToken).decimals();
 
-        minFunding = _minFunding;
-        isOpen = true;
-
-        __totalInterestEarned = 0;
-        __totalInterestEarnedUSD = 0;
-        __lastInterestEarned = 0;
-        __newTotalInterestEarned = 0;
-        __newTotalInterestEarnedUSD = 0;
-        __lastTotalInterest = 0;
-        __redeemableInterest = 0;
+        totalInterestEarned = 0;
+        totalInterestEarnedUSD = 0;
+        currentInterestEarned = 0;
+        newTotalInterestEarned = 0;
+        newTotalInterestEarnedUSD = 0;
+        lastTotalInterest = 0;
+        redeemableInterest = 0;
+        
+        accountedBalance = 0;
+        accountedBalanceUSD = 0;
 
     }
 
     function deposit(uint256 _amount)
     public
-    open {
+     {
         require(
-            minFunding == 0 || _amount >= minFunding,
+            _amount >= 0,
             "Funding/small-amount"
         );
         // Transfer the tokens into this contract
@@ -224,9 +190,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function sponsor(uint256 _amount)
     public
-    open {
+     {
         require(
-            minFunding == 0 || _amount >= minFunding,
+            _amount >= 0,
             "Funding/small-amount"
         );
         // Transfer the tokens into this contract
@@ -275,10 +241,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function _depositFrom(address _spender, uint256 _amount) internal {
         require(_amount != 0, "Funding/deposit-zero");
         // Update the user's balance
-        balances[_spender] = SafeMath.add(balances[_spender],_amount);
+        balances[_spender] = balances[_spender] + _amount;
 
         // Update the total of this contract
-        accountedBalance = SafeMath.add(accountedBalance,_amount);
+        accountedBalance = accountedBalance + _amount;
         
         // Deposit into Compound
         require(token().approve(address(cToken), _amount), "Funding/approve");
@@ -295,14 +261,14 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // Update the user's balance
         if (balance > _amount) {
-            balances[_sender] = SafeMath.sub(balance,_amount);
+            balances[_sender] = balance - _amount;
         } else {
             balances[_sender] = 0;
         }
 
         // Update the total of this contract
         if (accountedBalance > _amount) {
-            accountedBalance = SafeMath.sub(accountedBalance,_amount);
+            accountedBalance = accountedBalance - _amount;
         } else {
             accountedBalance = 0;
         }
@@ -322,18 +288,18 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             address tokenaddress = address(token());
             
             // 2.5% to developer pool as native currency of pool
-            uint256 developerFee = SafeMath.div(SafeMath.mul(_amount,25),1000);
+            uint256 developerFee = (_amount*25) / 1000;
             require(token().approve(developmentPool, developerFee), "Funding/developer approve");
             require(token().transferFrom(msg.sender,developmentPool, developerFee), "Funding/developer transfer");
             
             // 2.5% to staking pool as swapped dai
-            uint256 stakingFee = SafeMath.div(SafeMath.mul(_amount,25),1000);
+            uint256 stakingFee = (_amount*25)/1000;
             
             if (tokenaddress == holdingToken) {
                 require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
                 require(token().transferFrom(msg.sender,stakingPool, stakingFee), "Funding/staking transfer");
             } else {
-                uint256 minAmount = SafeMath.div(SafeMath.mul(stakingFee,50),100);
+                uint256 minAmount = (stakingFee*50)/100;
                 
                 require(token().approve(address(this), stakingFee), "Funding/staking swap approve");
                 require(token().transferFrom(msg.sender,address(this), stakingFee), "Funding/staking swap transfer");
@@ -367,7 +333,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function redeemInterest() public onlyHelpToken {
 
-        uint256 amount = __redeemableInterest;
+        uint256 amount = redeemableInterest;
 
         console.log('redeemAmount', amount);
 
@@ -385,7 +351,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 console.log('\nSWAPPING', swapperPool, amount);
                 
                 // ensure minimum of 50% redeemed
-                uint256 minAmount = SafeMath.div(SafeMath.mul(amount,50),100);
+                uint256 minAmount = (amount*50)/100;
                 // console.log( holdingToken, amount, minAmount, holdingPool);
 
                 require(token().approve(swapperPool, amount), "Funding/approve");
@@ -395,8 +361,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             }
 
             // reset the lastinterestearned incrementer
-            __lastInterestEarned = 0;
-            __redeemableInterest = 0;
+            currentInterestEarned = 0;
+            redeemableInterest = 0;
 
             emit Rewarded(charityWallet, amount);
 
@@ -433,7 +399,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 balance = balance();
 
         if (balance > accountedBalance) {
-            return SafeMath.sub(balance,accountedBalance);
+            return balance - accountedBalance;
         }
         else {
             return 0;
@@ -450,7 +416,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     public
     view
     returns(uint256) {
-        return SafeMath.mul(supplyRatePerBlock(),_blocks);
+        return supplyRatePerBlock()*_blocks;
     }
 
     /**
@@ -476,7 +442,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return contributors;
     }
     
-    function pow(uint256 base, uint256 exponent) public pure returns (uint256) {
+    function safepow(uint256 base, uint256 exponent) public pure returns (uint256) {
         if (exponent == 0) {
             return 1;
         }
@@ -489,7 +455,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         else {
             uint256 z = base;
             for (uint256 i = 1; i < exponent; i++)
-                z = SafeMath.mul(z, base);
+                z = z*base;
             return z;
         }
     }
@@ -498,12 +464,12 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         
         uint256 tokenPrice = getUnderlyingTokenPrice();
         uint256 convertExchangeRateToWei = 100000000;
-        uint256 tokenPriceWei = SafeDecimalMath.divideDecimal(tokenPrice,convertExchangeRateToWei);
+        uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
         
-        uint256 valueUSD = SafeDecimalMath.multiplyDecimal(value,tokenPriceWei);
+        uint256 valueUSD = value.mul(tokenPriceWei);
         // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
         if (decimals() != holdingDecimals) {
-            valueUSD =  SafeMath.mul(valueUSD,pow(10,holdingDecimals-decimals()));
+            valueUSD =  valueUSD*safepow(10,holdingDecimals-decimals());
         }
         
         return valueUSD;
@@ -523,67 +489,35 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 newEarned = interestEarned();
 
         console.log('newEarned', newEarned);
-        console.log('__lastInterestEarned', __lastInterestEarned);
+        console.log('currentInterestEarned', currentInterestEarned);
         
         // MAY HAVE TO TAKE INTO ACCOUNT THE ACTUAL CHANGE IN CONTRIBUTION BALANCE HERE
 
-        if (newEarned > __lastInterestEarned) {
+        if (newEarned > currentInterestEarned) {
 
-            __newTotalInterestEarned = SafeMath.sub(newEarned,__lastInterestEarned);
-            console.log('__newTotalInterestEarned', __newTotalInterestEarned);
-            __lastInterestEarned = __newTotalInterestEarned;
+            newTotalInterestEarned = newEarned - currentInterestEarned;
+            console.log('__newTotalInterestEarned', newTotalInterestEarned);
+            currentInterestEarned = newTotalInterestEarned;
 
             // keep track of the total interest earned as USD
-            __totalInterestEarned = SafeMath.add(__totalInterestEarned, __newTotalInterestEarned);
-            console.log('__totalInterestEarned', __totalInterestEarned);
+            totalInterestEarned = totalInterestEarned + newTotalInterestEarned;
+            console.log('totalInterestEarned', totalInterestEarned);
 
-            __redeemableInterest = SafeMath.add(__redeemableInterest, __newTotalInterestEarned);
+            redeemableInterest = redeemableInterest + newTotalInterestEarned;
             
         } else {
-            __newTotalInterestEarned = 0;
+            newTotalInterestEarned = 0;
         }
         
         // set the new usd values
-        __newTotalInterestEarnedUSD = convertToUsd(__newTotalInterestEarned);
-        __totalInterestEarnedUSD = convertToUsd(__totalInterestEarned);
+        newTotalInterestEarnedUSD = convertToUsd(newTotalInterestEarned);
+        totalInterestEarnedUSD = convertToUsd(totalInterestEarned);
         accountedBalanceUSD = convertToUsd(accountedBalance);
         
         for (uint ii = 0; ii < contributors.length; ii++) {
             balancesUSD[contributors[ii]] = convertToUsd(balances[contributors[ii]]);
         }
 
-    }
-
-    function currentInterestEarned() public view returns(uint256) {
-        return __lastInterestEarned;
-    }
-
-    function newTotalInterestEarned() public view returns(uint256) {
-        return __newTotalInterestEarned;
-    }
-    
-    function newTotalInterestEarnedUSD() public view returns(uint256) {
-        return __newTotalInterestEarnedUSD;
-    }
-    
-    function totalInterestEarned() public view returns(uint256) {
-        return __totalInterestEarned;
-    }
-    
-    function totalInterestEarnedUSD() public view returns(uint256) {
-        return __totalInterestEarnedUSD;
-    }
-
-    function getAccountedBalance() public view returns(uint256) {
-        return accountedBalance;
-    }
-    
-    function getAccountedBalanceUSD() public view returns(uint256) {
-        return accountedBalanceUSD;
-    }
-
-    function getCharityWallet() public view returns(address) {
-        return charityWallet;
     }
     
     function decimals() public view returns(uint8) {

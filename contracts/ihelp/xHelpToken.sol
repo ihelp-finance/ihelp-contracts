@@ -1,27 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@pooltogether/fixed-point/contracts/FixedPoint.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-
-import "../utils/ERC20Upgradeable.sol";
-import "../utils/ERC20Mintable.sol";
-import "../utils/SafeDecimalMath.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
 
 import "./iHelpTokenInterface.sol";
 
 import "hardhat/console.sol";
 
-contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
   
   iHelpTokenInterface public ihelpToken;
-  
-  bool private initialized;
-  
-  using SafeMath for uint256;
   
   uint256 internal __rewardAwarded;
   address[] public stakeholders;
@@ -31,16 +21,14 @@ contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
     string memory _name,
     string memory _symbol,
     address _token
-  ) public {
+  ) public initializer {
+
     require(address(_token) != address(0), "token is not defined");
     
-    require(!initialized, "Contract instance has already been initialized");
-    initialized = true;
-
-    __Ownable_init();
-    __ReentrancyGuard_init();
-    
     __ERC20_init(_name, _symbol);
+    __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
+    __Ownable_init();
+
     ihelpToken = iHelpTokenInterface(_token);
   }
 
@@ -164,10 +152,10 @@ contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         uint256 helpStaked = balanceOf(stakeholder);
         console.log('helpStaked',helpStaked);
       
-        uint256 rewardShare = SafeDecimalMath.divideDecimal(helpStaked, totalStaked);
+        uint256 rewardShare = helpStaked / totalStaked;
         console.log('rewardShare', rewardShare);
         
-        uint256 reward = SafeDecimalMath.multiplyDecimal(rewardShare, totalReward);
+        uint256 reward = rewardShare * totalReward;
         console.log('reward', reward);
         
         claimableStakeholderReward[stakeholder] += reward;
@@ -177,7 +165,6 @@ contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
       __rewardAwarded += totalReward;
       
       // transfer this reward to the holding pool
-      rewardToken().approve(address(this), totalReward);
       rewardToken().transferFrom(stakingPool(), address(this), totalReward);
     
     }
@@ -192,7 +179,6 @@ contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
       claimableStakeholderReward[msg.sender] -= claimAmount;
 
-      rewardToken().approve(msg.sender, claimAmount);
       rewardToken().transferFrom(address(this), msg.sender, claimAmount);
 
   }
@@ -207,7 +193,6 @@ contract xHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
       claimableStakeholderReward[msg.sender] -= amount;
 
-      rewardToken().approve(msg.sender, amount);
       rewardToken().transferFrom(address(this), msg.sender, amount);
 
   }

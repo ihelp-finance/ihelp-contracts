@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({path:'/core/ihelp/ihelp-dev-local/packages/hardhat/.env'})
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -110,32 +110,11 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 200
           },
         },
-      },
-      {
-        version: "0.6.12",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
-      {
-        version: "0.5.1",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
+      }
     ],
-  },
-  ovm: {
-    solcVersion: "0.7.6",
   },
   namedAccounts: {
     developmentPool: {

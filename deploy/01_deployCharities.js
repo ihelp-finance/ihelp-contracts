@@ -173,19 +173,19 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     if (isTestEnvironment && deployMockTokens) {
 
       const hardhatContracts = require('../../react-app/src/contracts/hardhat_contracts');
-
+      
       if (currency == 'DAI') {
-        tokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['DAI']['address'];
-        ctokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['cDAI']['address'];
+        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['DAI']['address'];
+        ctokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['cDAI']['address'];
         pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
       }
       else if (currency == 'USDC') {
-        tokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['USDC']['address'];
-        ctokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['cUSDC']['address'];
+        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['USDC']['address'];
+        ctokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['cUSDC']['address'];
         pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
       }
       else if (currency == 'HELP') {
-        tokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['iHelp']['address'];
+        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['iHelp']['address'];
         ctokenaddress = null;
         pricefeed = null;
       }
@@ -258,7 +258,6 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
               swapperAddress, // swapper contract
               stakingPool, // staking pool
               developmentPool, // staking pool
-              '1' // minFunding
             ]
           },
           onUpgrade: {

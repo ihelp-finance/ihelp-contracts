@@ -6,7 +6,6 @@ const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
-const externalContracts = require('../../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
 
@@ -167,9 +166,9 @@ const validate = async() => {
   let ihelp, xhelp, swapper, dai, cdai, usdc, cusdc, charityPool1, charityPool2, charityPool3;
   ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
   xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
-  dai = await hardhat.ethers.getContractAt('ERC20Mintable', daiAddress, signer);
+  dai = await hardhat.ethers.getContractAt('ERC20MintableMock', daiAddress, signer);
   cdai = await hardhat.ethers.getContractAt('CTokenMock', cDaiAddress, signer);
-  usdc = await hardhat.ethers.getContractAt('ERC20Mintable', usdcAddress, signer);
+  usdc = await hardhat.ethers.getContractAt('ERC20MintableMock', usdcAddress, signer);
   cusdc = await hardhat.ethers.getContractAt('CTokenMock', cUsdcAddress, signer);
   swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
   charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
@@ -278,13 +277,13 @@ const validate = async() => {
     }
     // console.log(result);
 
-    const c1contributionsTx = await charityPool1.getAccountedBalance();
+    const c1contributionsTx = await charityPool1.accountedBalance();
     const c1contributions = fromBigNumber(c1contributionsTx, daiDecimals);
 
-    const c2contributionsTx = await charityPool2.getAccountedBalance();
+    const c2contributionsTx = await charityPool2.accountedBalance();
     const c2contributions = fromBigNumber(c2contributionsTx, usdcDecimals);
 
-    const c3contributionsTx = await charityPool3.getAccountedBalance();
+    const c3contributionsTx = await charityPool3.accountedBalance();
     const c3contributions = fromBigNumber(c3contributionsTx, daiDecimals);
 
     const phaseTx = await ihelp.tokenPhase();
@@ -576,6 +575,7 @@ const validate = async() => {
   await sponsorTx2u2.wait();
 
   await getOutputs(INPUT);
+  
 
   INPUT = 3;
   console.log('\n*** INPUT', INPUT, '***')

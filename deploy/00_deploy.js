@@ -1,3 +1,4 @@
+
 const ethersLib = require('ethers')
 const chalk = require('chalk')
 const Big = require('big.js');
@@ -107,7 +108,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   } = await getNamedAccounts();
 
   console.log('');
-  
+
   const chainId = parseInt(await getChainId(), 10)
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
@@ -116,7 +117,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
 
   const signer = await ethers.provider.getSigner(deployer);
-  
+
   console.log(`signer: ${signer._address}`);
 
   // get the signer eth balance
@@ -148,7 +149,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
         'DAI',
         18
       ],
-      contract: 'ERC20Mintable',
+      contract: 'ERC20MintableMock',
       from: deployer,
       skipIfAlreadyDeployed: true
     })
@@ -173,7 +174,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
         'USDC',
         6
       ],
-      contract: 'ERC20Mintable',
+      contract: 'ERC20MintableMock',
       from: deployer,
       skipIfAlreadyDeployed: true
     })
@@ -190,17 +191,17 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
       skipIfAlreadyDeployed: true
     })
 
-    cyan("\nDeploying WETH...")
-    wethResult = await deploy("WETH", {
-      args: [
-        'WETH Test Token',
-        'WETH',
-        18
-      ],
-      contract: 'ERC20Mintable',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    })
+    // cyan("\nDeploying WETH...")
+    // wethResult = await deploy("WETH", {
+    //   args: [
+    //     'WETH Test Token',
+    //     'WETH',
+    //     18
+    //   ],
+    //   contract: 'ERC20Mintable',
+    //   from: deployer,
+    //   skipIfAlreadyDeployed: true
+    // })
 
     // cyan("\nDeploying cETH...")
     // // should be about 20% APR
@@ -219,7 +220,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     dim("  - cDAI:              ", cDaiResult.address)
     dim("  - USDC:              ", usdcResult.address)
     dim("  - cUSDC:              ", cUsdcResult.address)
-    dim("  - WETH:              ", wethResult.address)
+    //dim("  - WETH:              ", wethResult.address)
     //dim("  - cETH:              ", cEthAddress)
 
   }
@@ -233,7 +234,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     let pricefeed = null;
     let tokenaddress = null;
 
-    let addresses = fs.readFileSync(`./networks/${chainName(chainId)}-lending.json`,'utf8');
+    let addresses = fs.readFileSync(`./networks/${chainName(chainId)}-lending.json`, 'utf8');
     addresses = JSON.parse(addresses);
 
     if (isTestEnvironment && deployMockTokens) {
@@ -296,7 +297,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound');
 
   const holdingtokenAddress = ihelpAddresses['token'];
-  
+
   const ihelpResult = await deploy("iHelp", {
     contract: 'iHelpToken',
     proxy: {
@@ -324,21 +325,21 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     from: deployer,
     skipIfAlreadyDeployed: skipIfAlreadyDeployed
   });
+
   if (ihelpResult.newlyDeployed) {
     green(`--- Initialized iHelp Token ---`);
   }
   const ihelpAddress = ihelpResult.address;
-  
-  green('iHelp Proxy:',ihelpAddress)
-  green('iHelp Implementation:',ihelpResult.implementation)
-  //console.dir(ihelpResult)
+
+  green('iHelp Proxy:', ihelpAddress)
+  green('iHelp Implementation:', ihelpResult.implementation)
 
   let ihelp = await ethers.getContractAt('iHelpToken', ihelpAddress);
 
   // let currentSupply = await ihelp.totalSupply();
   // if (currentSupply.toString() == '0') {
-  //   console.log('minting initial HELP tokens')
-  //   await ihelp.mint(signer._address, ethers.utils.parseEther('1000000'))
+  //console.log('minting initial HELP tokens')
+  //await ihelp.mint(signer._address, ethers.utils.parseEther('1000000'))
   // }
 
   // deploy the xHelp token
@@ -409,8 +410,8 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   const swapv2FactoryAddress = swapperAddresses['factory'];
   const swapv2RouterAddress = swapperAddresses['router'];
 
-  console.log('router',swapv2RouterAddress);
-  console.log('factory',swapv2FactoryAddress);
+  console.log('router', swapv2RouterAddress);
+  console.log('factory', swapv2FactoryAddress);
 
   //const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
   const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW");
@@ -439,9 +440,9 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
       token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
     }
     else {
-      token1contract = await ethers.getContractAt('ERC20Mintable', token1Address, signer);
+      token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
     }
-    const token2contract = await ethers.getContractAt('ERC20Mintable', token2Address, signer);
+    const token2contract = await ethers.getContractAt('ERC20MintableMock', token2Address, signer);
 
     const token1decimals = await token1contract.decimals();
     const token2decimals = await token2contract.decimals();
@@ -522,14 +523,14 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   // await activateLiquidityPool('HELP', 'DAI', '125000', '150000', 'aave', 'traderjoe');
 
   if (isTestEnvironment && deployMockTokens) {
-    
+
     yellow('\nActivating liquidity pools for test environment...');
 
     await activateLiquidityPool('USDC', 'DAI', '50000000', '50000000', 'compound', 'uniswap');
     // await activateLiquidityPool('WETH', 'DAI', '3500', '50000000', 'compound', 'uniswap');
 
   }
-  
+
   console.log('');
   green('Signer Address:', signer._address);
   // green('DAI Address:', daiAddress);
@@ -562,24 +563,25 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
   // publish the contracts
   const exec = require('child_process').exec;
+
   function os_func() {
-      this.execCommand = function (cmd) {
-          return new Promise((resolve, reject)=> {
-             exec(cmd, (error, stdout, stderr) => {
-               if (error) {
-                  reject(error);
-                  return;
-              }
-              resolve(stdout)
-             });
-         })
-     }
+    this.execCommand = function(cmd) {
+      return new Promise((resolve, reject) => {
+        exec(cmd, (error, stdout, stderr) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(stdout)
+        });
+      })
+    }
   }
   var os = new os_func();
 
   cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-  
+
   // write the key addresses to a csv file
   return csvWriter.writeRecords(contractAddresses).then(() => {})
 

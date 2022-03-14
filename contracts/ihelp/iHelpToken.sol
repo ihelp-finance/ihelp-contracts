@@ -1,59 +1,46 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@pooltogether/fixed-point/contracts/FixedPoint.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
+import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../utils/IERC20.sol";
-import "../utils/SafeDecimalMath.sol";
 
-import "./CharityPoolInterface.sol";
+import "./CharityPool.sol";
 
 import "hardhat/console.sol";
 
-contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-
-    using SafeMath
-    for uint256;
-    using SafeDecimalMath
-    for uint;
-    
-    bool private initialized;
+contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
+    using PRBMathUD60x18 for uint256;
 
     address public operator;
     address public stakingPool;
     address public developmentPool;
     address public holdingPool;
+
     IERC20 public underlyingToken;
-
-    uint256 internal __totalCirculating;
-    uint256 internal __totalSupply;
-    uint256 internal __tokenPhase;
-    uint256 internal __interestGenerated;
-    uint256 internal __tokensLastDripped;
-    uint256 internal __tokensMintedPerPhase;
-    uint256 internal __lastProcessedInterestUSD;
-
+    uint256 public __totalCirculating;
+    uint256 public __totalSupply;
+    uint256 public __tokenPhase;
+    uint256 public __interestGenerated;
+    uint256 public __tokensLastDripped;
+    uint256 public __tokensMintedPerPhase;
+    uint256 public __lastProcessedInterestUSD;
+    mapping(uint => uint256) public __tokensPerInterestByPhase;
+    mapping(uint => uint256) public __cumulativeInterestByPhase;
+    mapping(address => uint256) public charityPoolContributions;
+    mapping(address => address[]) public charityPoolContributors;
+    mapping(address => uint256) public contributorTokenClaims;
+    mapping(address => uint256) public charityInterestShare;
+    mapping(address => uint256) public claimableCharityInterest;
     uint256 public developmentShareOfInterest;
     uint256 public stakingShareOfInterest;
     uint256 public charityShareOfInterest;
 
-    mapping(address => uint256) internal charityInterestShare;
-    mapping(address => uint256) internal claimableCharityInterest;
-
-    mapping(uint => uint256) __tokensPerInterestByPhase;
-    mapping(uint => uint256) __cumulativeInterestByPhase;
-
-    mapping(address => uint256) internal charityPoolContributions;
-    mapping(address => address[]) internal charityPoolContributors;
-    mapping(address => uint256) internal contributorTokenClaims;
-
     // map the charity pool address to the underlying token
-    mapping(address => CharityPoolInterface) internal __charityPoolRegistry;
+    mapping(address => CharityPool) internal __charityPoolRegistry;
 
     address[] public charityPoolList;
 
@@ -76,7 +63,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
             cumulativeInterest += lastInterest;
             __cumulativeInterestByPhase[phase] = cumulativeInterest;
-            __tokensPerInterestByPhase[phase] = FixedPoint.calculateMantissa(__tokensMintedPerPhase, cumulativeInterest - lastCumulative);
+            __tokensPerInterestByPhase[phase] = __tokensMintedPerPhase.div(cumulativeInterest - lastCumulative);
 
             lastCumulative = cumulativeInterest;
 
@@ -116,21 +103,17 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         address _developmentPool,
         address _holdingPool,
         address _underlyingToken
-    ) public {
+    ) public initializer {
         
-        require(!initialized, "Contract instance has already been initialized");
-        initialized = true;
-
+        __ERC20_init(_name, _symbol);
+        __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
         __Ownable_init();
-        __ReentrancyGuard_init();
         
         operator = _operator;
         stakingPool = _stakingPool;
         developmentPool = _developmentPool;
         holdingPool = _holdingPool;
         underlyingToken = IERC20(_underlyingToken);
-
-        __ERC20_init(_name, _symbol);
 
         __tokensMintedPerPhase = 1000000;
         
@@ -156,11 +139,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         _mint(_developmentPool, premineTokens * 1000000000000000000);
         
     }
-
-    function masterTransfer(address from, address to, uint256 amount) internal {
-        _transfer(from, to, amount);
-    }
-
+    
     function tokenPhase() public view returns(uint256) {
         return __tokenPhase;
     }
@@ -182,7 +161,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
     }
 
     function interestPerTokenByPhase(uint phase) public view returns(uint256) {
-        return FixedPoint.calculateMantissa(__cumulativeInterestByPhase[phase], __tokensMintedPerPhase);
+        return __cumulativeInterestByPhase[phase].div(__tokensMintedPerPhase);
     }
 
     function setTokenPhase(uint phase) public onlyOperatorOrOwner returns(uint) {
@@ -194,7 +173,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
     function registerCharityPool(address _addr) public onlyOperatorOrOwner returns(address) {
         if (charityPoolInRegistry(_addr) != _addr) {
             console.log('adding charity...');
-            __charityPoolRegistry[_addr] = CharityPoolInterface(_addr);
+            __charityPoolRegistry[_addr] = CharityPool(_addr);
             charityPoolList.push(_addr);
         }
         else {
@@ -255,24 +234,6 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         return totalInterest;
     }
     
-    function pow(uint256 base, uint256 exponent) public pure returns (uint256) {
-        if (exponent == 0) {
-            return 1;
-        }
-        else if (exponent == 1) {
-            return base;
-        }
-        else if (base == 0 && exponent != 0) {
-            return 0;
-        }
-        else {
-            uint256 z = base;
-            for (uint256 i = 1; i < exponent; i++)
-                z = SafeMath.mul(z, base);
-            return z;
-        }
-    }
-
     // drip ihelp tokens based on interest generated across all charities
     function drip() public onlyOperatorOrOwner returns(uint256) {
         
@@ -310,7 +271,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
             newInterestUSD += totalInterestUSDofCharity;
 
             // get the balance per user that has generated this new interest amount
-            uint256 charityAccountedBalance = __charityPoolRegistry[charityPoolList[i]].getAccountedBalanceUSD();
+            uint256 charityAccountedBalance = __charityPoolRegistry[charityPoolList[i]].accountedBalanceUSD();
 
             totalCharityPoolContributions += charityAccountedBalance;
             charityPoolContributions[charityPoolList[i]] = charityAccountedBalance;
@@ -330,7 +291,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         console.log('tokensPerInterest', tokensPerInterest);
 
         // calculate the units to drip this timestamp
-        uint256 tokensToCirculate = SafeDecimalMath.multiplyDecimal(newInterestUSD, tokensPerInterest);
+        uint256 tokensToCirculate = newInterestUSD.mul(tokensPerInterest);
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log('totalSupply', __totalSupply);
@@ -367,10 +328,10 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
                     if (poolContribution > 0) {
 
-                        uint256 poolShare = SafeDecimalMath.divideDecimal(poolContribution, totalCharityPoolContributions);
+                        uint256 poolShare = poolContribution.div(totalCharityPoolContributions);
                         console.log('poolShare', poolShare);
 
-                        uint256 poolTokens = SafeDecimalMath.multiplyDecimal(poolShare, tokensToCirculateInCurrentPhase);
+                        uint256 poolTokens = poolShare.mul(tokensToCirculateInCurrentPhase);
                         console.log('poolTokens', poolTokens);
 
                         address[] memory contributorList = charityPoolContributors[charityPoolList[i]];
@@ -380,10 +341,10 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
                             // get the contributors balance
                             uint256 userContribution = __charityPoolRegistry[charityPoolList[i]].balanceOfUSD(contributorList[ii]);
 
-                            uint256 userShare = SafeDecimalMath.divideDecimal(userContribution, poolContribution);
+                            uint256 userShare = userContribution.div(poolContribution);
                             console.log('contributor', contributorList[ii], userContribution, userShare);
 
-                            uint256 contribTokens = SafeDecimalMath.multiplyDecimal(userShare, poolTokens);
+                            uint256 contribTokens = userShare.mul(poolTokens);
                             console.log('contribTokens', contribTokens);
 
                             contributorTokenClaims[contributorList[ii]] += contribTokens;
@@ -396,7 +357,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
             }
 
-            uint interestForExistingTokenSupply = SafeDecimalMath.divideDecimal(tokensToCirculateInCurrentPhase, tokensPerInterest);
+            uint interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
 
             console.log('interestForExistingTokenSupply', interestForExistingTokenSupply);
 
@@ -418,7 +379,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
             __totalSupply += __tokensMintedPerPhase * 1000000000000000000;
 
-            uint256 remainingTokensToCirculate = SafeDecimalMath.multiplyDecimal(remainingInterestToCirculate, newTokensPerInterest);
+            uint256 remainingTokensToCirculate = remainingInterestToCirculate.mul(newTokensPerInterest);
             // e..g $4 * $0.86 = $3.44
 
             tokensToCirculate = remainingTokensToCirculate;
@@ -446,10 +407,10 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
 
                 if (poolContribution > 0) {
 
-                    uint256 poolShare = SafeDecimalMath.divideDecimal(poolContribution, totalCharityPoolContributions);
+                    uint256 poolShare = poolContribution.div(totalCharityPoolContributions);
                     console.log('poolShare', poolShare);
 
-                    uint256 poolTokens = SafeDecimalMath.multiplyDecimal(poolShare, tokensToCirculate);
+                    uint256 poolTokens = poolShare.mul(tokensToCirculate);
                     console.log('poolTokens', poolTokens);
 
                     address[] memory contributorList = charityPoolContributors[charityPoolList[i]];
@@ -459,10 +420,10 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
                         // get the contributors balance
                         uint256 userContribution = __charityPoolRegistry[charityPoolList[i]].balanceOfUSD(contributorList[ii]);
 
-                        uint256 userShare = SafeDecimalMath.divideDecimal(userContribution, poolContribution);
+                        uint256 userShare = userContribution.div(poolContribution);
                         console.log('contributor', contributorList[ii], userContribution, userShare);
 
-                        uint256 contribTokens = SafeDecimalMath.multiplyDecimal(userShare, poolTokens);
+                        uint256 contribTokens = userShare.mul(poolTokens);
                         console.log('contribTokens', contribTokens);
 
                         contributorTokenClaims[contributorList[ii]] += contribTokens;
@@ -525,25 +486,25 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
                     console.log('perfectRedeemedInterest,realRedeemedInterest');
                     console.log(charityInterestShare[charityPoolList[i]], realRedeemedInterest);
 
-                    uint256 differenceInInterest = SafeDecimalMath.divideDecimal(realRedeemedInterest, charityInterestShare[charityPoolList[i]]);
+                    uint256 differenceInInterest = realRedeemedInterest.div(charityInterestShare[charityPoolList[i]]);
                     console.log('differenceInInterest', differenceInInterest);
 
                     // make the redeem interest portion available to the charity
-                    address charityWalletAddress = __charityPoolRegistry[charityPoolList[i]].getCharityWallet();
+                    address charityWalletAddress = __charityPoolRegistry[charityPoolList[i]].charityWallet();
 
-                    uint256 correctedInterestShare = SafeDecimalMath.multiplyDecimal(charityInterestShare[charityPoolList[i]], differenceInInterest);
+                    uint256 correctedInterestShare = charityInterestShare[charityPoolList[i]].mul(differenceInInterest);
                     console.log('correctedInterestShare', correctedInterestShare);
 
                     // divide this amongst holding, dev and staking pools (and charities)
                     
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
                     if (charityWalletAddress == holdingPool) {
-                        claimableCharityInterest[charityPoolList[i]] += SafeDecimalMath.multiplyDecimal(correctedInterestShare, charityShareOfInterest);
+                        claimableCharityInterest[charityPoolList[i]] += correctedInterestShare.mul(charityShareOfInterest);
                     } else {
-                        claimableCharityInterest[charityWalletAddress] += SafeDecimalMath.multiplyDecimal(correctedInterestShare, charityShareOfInterest);
+                        claimableCharityInterest[charityWalletAddress] += correctedInterestShare.mul(charityShareOfInterest);
                     }
-                    claimableCharityInterest[developmentPool] += SafeDecimalMath.multiplyDecimal(correctedInterestShare, developmentShareOfInterest);
-                    claimableCharityInterest[stakingPool] += SafeDecimalMath.multiplyDecimal(correctedInterestShare, stakingShareOfInterest);
+                    claimableCharityInterest[developmentPool] += correctedInterestShare.mul(developmentShareOfInterest);
+                    claimableCharityInterest[stakingPool] += correctedInterestShare.mul(stakingShareOfInterest);
 
                     // reset the charity interest share
                     charityInterestShare[charityPoolList[i]] = 0;
@@ -644,7 +605,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         contributorTokenClaims[msg.sender] -= claimAmount;
 
         approve(operator, claimAmount);
-        masterTransfer(operator, msg.sender, claimAmount);
+        _transfer(operator, msg.sender, claimAmount);
 
     }
     
@@ -659,7 +620,7 @@ contract iHelpToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgr
         contributorTokenClaims[msg.sender] -= amount;
 
         approve(operator, amount);
-        masterTransfer(operator, msg.sender, amount);
+        _transfer(operator, msg.sender, amount);
 
     }
 

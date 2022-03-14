@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.4;
 
-import "./ERC20Upgradeable.sol";
+import "./ERC20UpgradeableMock.sol";
 
 /**
  * @dev Extension of {ERC20} that adds a set of accounts with the {MinterRole},
@@ -10,11 +10,17 @@ import "./ERC20Upgradeable.sol";
  *
  * At construction, the deployer of the contract is the only minter.
  */
-contract ERC20Mintable is ERC20Upgradeable {
+contract ERC20MintableMock is ERC20UpgradeableMock {
 
-    constructor(string memory _name, string memory _symbol, uint8 _decimals) public {
+    constructor ( string memory _name, string memory _symbol, uint8 _decimals) public initializer {
+        
         __ERC20_init(_name, _symbol);
         _setupDecimals(_decimals);
+        
+    }
+    
+    function postUpgrade() external {
+        
     }
 
     /**
