@@ -65,7 +65,7 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimableReward() public view returns (uint256) {
-        return claimableRewardOf[msg.sender];
+        return claimableRewardOf(msg.sender);
     }
 
     function claimableRewardOf(address _addr) public view returns (uint256) {
@@ -74,11 +74,9 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 totalReward = totalToReward();
         console.log("totalReward", totalReward);
+        console.log("stakeholder", _addr);
 
-        address stakeholder = stakeholders.at(i);
-        console.log("stakeholder", stakeholder);
-
-        uint256 helpStaked = balanceOf(stakeholder);
+        uint256 helpStaked = balanceOf(_addr);
         console.log("helpStaked", helpStaked);
 
         uint256 rewardShare = helpStaked / totalStaked;
@@ -127,7 +125,7 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimSpecificReward(uint256 amount) public {
-        uint256 claimAmount = claimableRewardOf[msg.sender];
+        uint256 claimAmount = claimableRewardOf(msg.sender);
 
         require(claimAmount >= amount, "not enough claimable balance for amount");
 
