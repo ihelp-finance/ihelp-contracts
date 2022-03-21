@@ -369,8 +369,8 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function getUnderlyingTokenPrice() public view returns (uint256) {
-        (uint80 roundID, int256 price, uint256 startedAt, uint256 timeStamp, uint80 answeredInRound) = priceFeed.latestRoundData();
-        return uint256(price); // TESTING - uint(100000000);
+        // (uint80 roundID, int256 price, uint256 startedAt, uint256 timeStamp, uint80 answeredInRound) = priceFeed.latestRoundData();
+        return uint256(100000000); // TESTING - uint(100000000);
     }
 
     function getContributors() public view returns (address[] memory) {

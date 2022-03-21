@@ -3,11 +3,11 @@ const Big = require('big.js');
 const Web3 = require('web3');
 const web3 = new Web3('http://127.0.0.1:7545');
 const fs = require('fs');
-const chalk = require('chalk')
-const ethersLib = require('ethers')
-const ethers = require('ethers')
-const axios = require('axios')
-const csv = require('csvtojson')
+const chalk = require('chalk');
+const ethersLib = require('ethers');
+const ethers = require('ethers');
+const axios = require('axios');
+const csv = require('csvtojson');
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -19,53 +19,53 @@ const csvWriter = createCsvWriter({
   append: true
 });
 
-const externalContracts = require('../../react-app/src/contracts/external_contracts');
+// const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
 
 let userAccount, userSigner;
 let signer;
-let xhelp, ihelp, dai, cdai, swapper
+let xhelp, ihelp, dai, cdai, swapper;
 
 const fromBigNumber = (number, decimals) => {
   if (decimals == undefined) {
-    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)))
+    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)));
   }
   else {
     return parseFloat(ethersLib.utils.formatUnits(number, decimals));
   }
-}
+};
 
 function dim() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.dim.call(chalk, ...arguments))
+    console.log(chalk.dim.call(chalk, ...arguments));
   }
 }
 
 function cyan() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.cyan.call(chalk, ...arguments))
+    console.log(chalk.cyan.call(chalk, ...arguments));
   }
 }
 
 function yellow() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.yellow.call(chalk, ...arguments))
+    console.log(chalk.yellow.call(chalk, ...arguments));
   }
 }
 
 function green() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.green.call(chalk, ...arguments))
+    console.log(chalk.green.call(chalk, ...arguments));
   }
 }
 
 function displayResult(name, result) {
   if (!result.newlyDeployed) {
-    yellow(`Re-used existing ${name} at ${result.address}`)
+    yellow(`Re-used existing ${name} at ${result.address}`);
   }
   else {
-    green(`${name} deployed at ${result.address}`)
+    green(`${name} deployed at ${result.address}`);
   }
 }
 
@@ -104,9 +104,9 @@ const chainName = (chainId) => {
     default:
       return 'Unknown';
   }
-}
+};
 
-module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
+module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
 
   const { deploy } = deployments;
 
@@ -126,18 +126,18 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
   const signer = await ethers.provider.getSigner(deployer);
 
-  dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-  dim("Charity Contracts - Deploy Script")
-  dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+  dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+  dim("Charity Contracts - Deploy Script");
+  dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
   const chainId = parseInt(await getChainId(), 10);
-    
+
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-  dim(`deployer: ${deployer}`)
-  dim(`chainId: ${chainId}`)
+  dim(`deployer: ${deployer}`);
+  dim(`chainId: ${chainId}`);
 
-  userSigner = await ethers.provider.getSigner(userAccount)
+  userSigner = await ethers.provider.getSigner(userAccount);
 
   console.log(`signer: ${signer._address}`);
 
@@ -159,9 +159,9 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
-  console.log('')
+  console.log('');
 
-  const getTokenAddresses = async(currency, lender) => {
+  const getTokenAddresses = async (currency, lender) => {
 
     let ctokenaddress = null;
     let pricefeed = null;
@@ -173,7 +173,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     if (isTestEnvironment && deployMockTokens) {
 
       const hardhatContracts = require('../../react-app/src/contracts/hardhat_contracts');
-      
+
       if (currency == 'DAI') {
         tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['DAI']['address'];
         ctokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['cDAI']['address'];
@@ -223,17 +223,17 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
       "pricefeed": pricefeed
     };
 
-  }
+  };
 
   // deploy charity - make this a function
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound');
   const holdingtokenAddress = ihelpAddresses['token'];
-  
-  console.log(holdingtokenAddress)
-  
+
+  console.log(holdingtokenAddress);
+
   const deployedCharities = [];
 
-  const deployCharityPool = async(contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
+  const deployCharityPool = async (contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
 
     const charityAddresses = await getTokenAddresses(charityToken, lendingProtocol);
 
@@ -268,13 +268,13 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
       },
       from: deployer,
       skipIfAlreadyDeployed: skipIfAlreadyDeployed
-    })
+    });
 
     deployedCharities.push([contractName, charityResult]);
 
-    console.log('   deployed:', contractName, charityResult.address)
+    console.log('   deployed:', contractName, charityResult.address);
 
-  }
+  };
 
   if (isTestEnvironment == true) {
 
@@ -282,7 +282,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     await deployCharityPool('charityPool2', 'Charity Pool 2', holdingPool, 'USDC', 'compound');
     await deployCharityPool('charityPool3', 'Charity Pool 3', holdingPool, 'DAI', 'compound');
 
-    console.log('deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address] }))
+    console.log('deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
     let numberOfCharities = await ihelp.numberOfCharities();
     if (numberOfCharities.toString() == '0') {
       for (let i = 0; i < deployedCharities.length; i++) {
@@ -295,39 +295,39 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
     const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
 
-    var long_id = "1lwHTt1C8tkm_LEHFv2kcqaTOgNFJ6U0p32M_j98zts0"
-    var g_id = "313945428"
-    var url = "https://docs.google.com/spreadsheets/d/" + long_id + "/export?gid=" + g_id + "&format=csv&id=" + long_id
+    var long_id = "1lwHTt1C8tkm_LEHFv2kcqaTOgNFJ6U0p32M_j98zts0";
+    var g_id = "313945428";
+    var url = "https://docs.google.com/spreadsheets/d/" + long_id + "/export?gid=" + g_id + "&format=csv&id=" + long_id;
 
-    const response = await axios.get(url)
-    const result = response.data
-    const charityJson = await csv().fromString(result)
+    const response = await axios.get(url);
+    const result = response.data;
+    const charityJson = await csv().fromString(result);
 
     // RUN ALL THE CHARITIES
     const charityJsonRun = charityJson;
 
-    const deployCharity = async(ci) => {
+    const deployCharity = async (ci) => {
       const c = charityJsonRun[ci];
 
-      console.log(c['Organization Name'])
+      console.log(c['Organization Name']);
 
       await deployCharityPool(`${c['Organization Name']}-DAI-traderjoe`, c['Organization Name'], holdingPool, 'DAI', 'traderjoe');
       await deployCharityPool(`${c['Organization Name']}-USDC-traderjoe`, c['Organization Name'], holdingPool, 'USDC', 'traderjoe');
       //await deployCharityPool(`${c['Organization Name']}-USDT`, c['Organization Name'], holdingPool, 'USDT', 'aave');
 
       if (ci < charityJsonRun.length - 1) {
-        await deployCharity(ci + 1)
+        await deployCharity(ci + 1);
       }
       else {
 
         const contractAddresses = [];
-        deployedCharities.map((d) => { contractAddresses.push({ name: d[0], address: d[1].address }) });
+        deployedCharities.map((d) => { contractAddresses.push({ name: d[0], address: d[1].address }); });
 
         // console.log('\ndeployedCharities:');
         // console.log(contractAddresses);
         // console.log('');
 
-        console.log('registering deployed charities with the ihelp protocol...')
+        console.log('registering deployed charities with the ihelp protocol...');
 
         for (let i = 0; i < deployedCharities.length; i++) {
 
@@ -347,13 +347,13 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
         console.log(Big(number).toFixed(0));
 
         // write the key addresses to a csv file
-        return csvWriter.writeRecords(contractAddresses).then(() => {})
+        return csvWriter.writeRecords(contractAddresses).then(() => { });
 
       }
-    }
+    };
 
     if (charityJsonRun.length > 0) {
-      await deployCharity(0)
+      await deployCharity(0);
     }
 
   }

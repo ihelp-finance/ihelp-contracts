@@ -4,43 +4,43 @@ const Web3 = require('web3');
 const web3 = new Web3('http://127.0.0.1:7545');
 const csv = require('csvtojson');
 const fs = require('fs');
-const chalk = require('chalk')
-const ethers = require('ethers')
+const chalk = require('chalk');
+const ethers = require('ethers');
 
 const { assert, use, expect } = require("chai");
 
 let userSigner1, userSigner2, signer;
 
-const fromBigNumber = (number,decimals) => {
-  if (decimals==undefined) {
-    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)))
-  }else {
-    return parseFloat(ethers.utils.formatUnits(number,decimals));
+const fromBigNumber = (number, decimals) => {
+  if (decimals == undefined) {
+    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)));
+  } else {
+    return parseFloat(ethers.utils.formatUnits(number, decimals));
   }
-}
+};
 
 
 function dim() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.dim.call(chalk, ...arguments))
+    console.log(chalk.dim.call(chalk, ...arguments));
   }
 }
 
 function cyan() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.cyan.call(chalk, ...arguments))
+    console.log(chalk.cyan.call(chalk, ...arguments));
   }
 }
 
 function yellow() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.yellow.call(chalk, ...arguments))
+    console.log(chalk.yellow.call(chalk, ...arguments));
   }
 }
 
 function green() {
   if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.green.call(chalk, ...arguments))
+    console.log(chalk.green.call(chalk, ...arguments));
   }
 }
 
@@ -75,9 +75,9 @@ const chainName = (chainId) => {
     default:
       return 'Unknown';
   }
-}
+};
 
-const validate = async() => {
+const validate = async () => {
 
   const { deploy } = hardhat.deployments;
 
@@ -96,8 +96,8 @@ const validate = async() => {
   console.log(`user1:`, userAccount1);
   console.log(`user2:`, userAccount2);
 
-  userSigner1 = await hardhat.ethers.provider.getSigner(userAccount1)
-  userSigner2 = await hardhat.ethers.provider.getSigner(userAccount2)
+  userSigner1 = await hardhat.ethers.provider.getSigner(userAccount1);
+  userSigner2 = await hardhat.ethers.provider.getSigner(userAccount2);
 
   signer = await hardhat.ethers.provider.getSigner(deployer);
 
@@ -184,7 +184,7 @@ const validate = async() => {
   const currentDaiBalance1 = await dai.balanceOf(userAccount1);
   console.log('current user1 dai:', fromBigNumber(currentDaiBalance1));
   if (fromBigNumber(currentDaiBalance1) == 0) {
-    console.log('minting user1 test dai...')
+    console.log('minting user1 test dai...');
     const daiMintTx = await dai.mint(userAccount1, web3.utils.toWei('18100'));
     await daiMintTx.wait();
     const currentDaiBalance1 = await dai.balanceOf(userAccount1);
@@ -204,7 +204,7 @@ const validate = async() => {
   const currentDaiBalance2 = await dai.balanceOf(userAccount2);
   console.log('current user2 dai:', fromBigNumber(currentDaiBalance2));
   if (fromBigNumber(currentDaiBalance2) == 0) {
-    console.log('minting user2 test dai...')
+    console.log('minting user2 test dai...');
     const daiMintTx = await dai.mint(userAccount2, web3.utils.toWei('7500'));
     await daiMintTx.wait();
     const currentDaiBalance2 = await dai.balanceOf(userAccount2);
@@ -252,9 +252,9 @@ const validate = async() => {
         return false;
       }
     }
-  }
+  };
 
-  const getOutputs = async(input) => {
+  const getOutputs = async (input) => {
 
     let result = null;
     for (let i = 0; i < check.length; i++) {
@@ -269,7 +269,7 @@ const validate = async() => {
             try {
               result[keys[j]] = parseFloat(result[keys[j]].replace(/,/g, ''));
             }
-            catch (e) {}
+            catch (e) { }
           }
         }
         break;
@@ -337,7 +337,7 @@ const validate = async() => {
 
     const user2xhelpTx = await xhelp.balanceOf(userAccount2);
     const user2xhelp = fromBigNumber(user2xhelpTx);
-    
+
     // const xhelpratioTx = await xhelp.exchangeRateCurrent();
     // const xhelpratio = fromBigNumber(xhelpratioTx);
 
@@ -392,62 +392,90 @@ const validate = async() => {
     console.log('   U2 xHELP Balance', '\t\t\t', parseFloat(user2xhelp.toFixed(2)), '\t\t', result['U2 XHELP Balance'], '\t\t', user2xhelpPASS);
     //console.log('   xHELP/HELP Ratio', '\t\t\t', parseFloat(xhelpratio.toFixed(2)), '\t\t', result['XHELP/HELP Ratio'], '\t\t', xhelpratioPASS);
 
-  }
-  
-  const rewardStep = async() => {
-    
+  };
+
+  const rewardStep = async () => {
+
     // take the staking pool dai amount and distribute this across stakers
     const stakepoolTx = await dai.balanceOf(stakingPool);
     // approve the staking pool address to send from xhelp contract
-    let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress,stakepoolTx.toString());
+    let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
     await rewardApprove.wait();
-    
+
     const calcRewardsTx = await xhelp.distributeRewards();
     await calcRewardsTx.wait();
-    
-  }
 
-  const upkeepStep = async() => {
+  };
 
-    // drip the token interest
-    const dripTx = await ihelp.drip();
-    await dripTx.wait();
 
-    // dump the tokens to the various pools
-    const dumpTx = await ihelp.dump();
-    await dumpTx.wait();
+  const upkeepStatusMapping = {
+    0: "dripStage1",
+    1: "dripStage2",
+    2: "dripStage3",
+    3: "dripStage4",
+    4: "dump"
+  };
+
+
+  // Incrementally go trough all upkeep steps
+  const processUpkeep = async (upkeepStatus) => {
+    let newUpkeepstatus = upkeepStatus;
+    const method = upkeepStatusMapping[upkeepStatus];
+    console.log("Processing upkeep, status ", method);
+    while (upkeepStatus == newUpkeepstatus) {
+      console.log("here");
+
+
+      await ihelp.functions[method]();
+      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
+    }
+
+    console.log("New Upkeep status ", newUpkeepstatus);
+
+    // Return when the upkeep status goes back to 0
+    if (newUpkeepstatus === 0) {
+      return;
+    }
+    await processUpkeep(newUpkeepstatus);
+  };
+
+
+  const upkeepStep = async () => {
+
+    let upkeepStatus = await ihelp.processingState().then(data => data.status);
+    await processUpkeep(upkeepStatus);
 
     // transfer the contributions to the end wallets
     //console.log('dev claiming...', developmentPool);
     const devTx1 = await ihelp.connect(developmentPoolSigner).getClaimableCharityInterest();
     //console.log(devTx1.toString());
-    
-    let devTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress,devTx1.toString());
+
+    let devTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, devTx1.toString());
     //console.log(devTx1Approve['hash']);
     await devTx1Approve.wait();
 
     var options = {
-        gasPrice: 21500000000,
-        gasLimit: 10000000,
-        //nonce:8
-    }
-    
-    const devclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(developmentPool,options);
+      gasPrice: 21500000000,
+      gasLimit: 10000000,
+      //nonce:8
+    };
+
+    const devclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(developmentPool, options);
     //console.log(devclaimTx['hash']);
     await devclaimTx.wait();
-    
+
     //console.log('stake claiming...', stakingPool);
     const stakeTx1 = await ihelp.connect(stakingPoolSigner).getClaimableCharityInterest();
     //console.log(stakeTx1.toString());
-    
-    let stakeTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress,stakeTx1.toString());
+
+    let stakeTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, stakeTx1.toString());
     //console.log(stakeTx1Approve['hash']);
     await stakeTx1Approve.wait();
 
-    const stakeclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(stakingPool,options);
+    const stakeclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(stakingPool, options);
     //console.log(stakeclaimTx['hash']);
     await stakeclaimTx.wait();
-    
+
     /*
       // run the reward distribution script
       let stakingPoolBalance = await dai.connect(stakingPoolSigner).balanceOf(stakingPool);
@@ -479,9 +507,9 @@ const validate = async() => {
       }
     */
 
-  }
+  };
 
-  const calculateAccrualValueDai = async(value) => {
+  const calculateAccrualValueDai = async (value) => {
 
     const c1bTx = await cdai.balanceOfUnderlying(charityPool1.address);
     const c1b = (c1bTx.toString());
@@ -506,9 +534,9 @@ const validate = async() => {
 
     return accrualValue;
 
-  }
+  };
 
-  const calculateAccrualValueUsdc = async(value) => {
+  const calculateAccrualValueUsdc = async (value) => {
 
     const c2bTx = await cusdc.balanceOfUnderlying(charityPool2.address);
     const c2b = (c2bTx.toString());
@@ -529,17 +557,17 @@ const validate = async() => {
 
     return accrualValue;
 
-  }
+  };
 
 
-  let INPUT = 0
-  console.log('\n*** INPUT', INPUT, '***')
+  let INPUT = 0;
+  console.log('\n*** INPUT', INPUT, '***');
   await getOutputs(INPUT);
 
   //process.exit(0)
 
-  INPUT = 1
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 1;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // make a deposit
   const approvalTx1u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('100'));
@@ -555,7 +583,7 @@ const validate = async() => {
   await getOutputs(INPUT);
 
   INPUT = 2;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // make a deposit for user 1
   const approvalTx2u1 = await usdc.connect(userSigner1).approve(charityPool2.address, ethers.utils.parseUnits('1000', usdcDecimals));
@@ -575,10 +603,10 @@ const validate = async() => {
   await sponsorTx2u2.wait();
 
   await getOutputs(INPUT);
-  
+
 
   INPUT = 3;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -592,24 +620,24 @@ const validate = async() => {
   await accrue3TxUsdc.wait();
 
   await upkeepStep();
-  
+
   // claim the HELP tokens
   const claim4Txu1 = await ihelp.connect(userSigner1).claimSpecificTokens(web3.utils.toWei('50000'));
   await claim4Txu1.wait();
-  
+
   // // take the staking pool dai amount and distribute this across stakers
   const approvalTx4u1 = await ihelp.connect(userSigner1).approve(xhelpAddress, web3.utils.toWei('50000'));
   await approvalTx4u1.wait();
   const stakeTx4u1 = await xhelp.connect(userSigner1).deposit(web3.utils.toWei('50000'));
   await stakeTx4u1.wait();
-  
+
   await rewardStep();
 
   await getOutputs(INPUT);
 
 
   INPUT = 4;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -623,23 +651,23 @@ const validate = async() => {
   await accrue4TxUsdc.wait();
 
   await upkeepStep();
-  
+
   await rewardStep();
 
   await getOutputs(INPUT);
 
 
-  INPUT = 5
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 5;
+  console.log('\n*** INPUT', INPUT, '***');
 
   await getOutputs(INPUT);
 
-  process.exit(0)
+  process.exit(0);
 
 
 
-  INPUT = 6
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 6;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -658,12 +686,12 @@ const validate = async() => {
 
 
   INPUT = 7;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
   const withdraw71Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw71Txu1.wait();
-  
+
   const withdraw72Txu1 = await charityPool3.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', daiDecimals));
   await withdraw72Txu1.wait();
 
@@ -671,8 +699,8 @@ const validate = async() => {
   await getOutputs(INPUT);
 
 
-  INPUT = 8
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 8;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -689,19 +717,19 @@ const validate = async() => {
 
   await getOutputs(INPUT);
 
-  INPUT = 9
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 9;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // claim the HELP tokens
   const claim9Txu1 = await ihelp.connect(userSigner1).claimSpecificTokens(web3.utils.toWei('20000'));
-  await claim9Txu1.wait()
+  await claim9Txu1.wait();
 
   await upkeepStep();
   await getOutputs(INPUT);
 
 
-  INPUT = 10
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 10;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // stake the HELP tokens to xHELP
   const approvalTx10u1 = await ihelp.connect(userSigner1).approve(xhelpAddress, web3.utils.toWei('20000'));
@@ -710,10 +738,10 @@ const validate = async() => {
   await stakeTx10u1.wait();
 
   await getOutputs(INPUT);
-  
-  
-  INPUT = 11
-  console.log('\n*** INPUT', INPUT, '***')
+
+
+  INPUT = 11;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -732,8 +760,8 @@ const validate = async() => {
 
   //process.exit(0)
 
-  INPUT = 12
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 12;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -750,39 +778,39 @@ const validate = async() => {
 
   await getOutputs(INPUT);
 
-  INPUT = 13
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 13;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // claim the HELP tokens
   const claim13Txu1 = await ihelp.connect(userSigner2).claimSpecificTokens(web3.utils.toWei('10000'));
-  await claim13Txu1.wait()
+  await claim13Txu1.wait();
 
   await upkeepStep();
   await getOutputs(INPUT);
 
-  INPUT = 14
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 14;
+  console.log('\n*** INPUT', INPUT, '***');
 
   const withdraw14Tx = await xhelp.connect(userSigner1).withdraw(web3.utils.toWei('10000'));
   await withdraw14Tx.wait();
-  
+
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
-  INPUT = 15
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 15;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // claim the HELP tokens
   const claim15Txu1 = await ihelp.connect(userSigner1).claimSpecificTokens(web3.utils.toWei('900000'));
-  await claim15Txu1.wait()
+  await claim15Txu1.wait();
 
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
-  INPUT = 16
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 16;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // stake the HELP tokens to xHELP
   const approvalTx16u2 = await ihelp.connect(userSigner2).approve(xhelpAddress, web3.utils.toWei('5000'));
@@ -791,9 +819,9 @@ const validate = async() => {
   await stakeTx16u2.wait();
 
   await getOutputs(INPUT);
-  
-  INPUT = 17
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 17;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // make a deposit
   const approvalTx17u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('1500'));
@@ -802,9 +830,9 @@ const validate = async() => {
   await sponsorTx17u1.wait();
 
   await getOutputs(INPUT);
-    
-  INPUT = 18
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 18;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -821,21 +849,21 @@ const validate = async() => {
 
   await getOutputs(INPUT);
 
-  
-  INPUT = 19
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 19;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // claim the HELP tokens
   const claim19Txu2 = await ihelp.connect(userSigner2).claimSpecificTokens(web3.utils.toWei('10000'));
-  await claim19Txu2.wait()
+  await claim19Txu2.wait();
 
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
-  
-  INPUT = 20
-  console.log('\n*** INPUT', INPUT, '***')
+
+
+  INPUT = 20;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // stake the HELP tokens to xHELP
   const approvalTx20u2 = await ihelp.connect(userSigner2).approve(xhelpAddress, web3.utils.toWei('10000'));
@@ -844,20 +872,20 @@ const validate = async() => {
   await stakeTx20u2.wait();
 
   await getOutputs(INPUT);
-  
 
-  INPUT = 21
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 21;
+  console.log('\n*** INPUT', INPUT, '***');
 
   const withdraw21Tx = await xhelp.connect(userSigner1).withdraw(web3.utils.toWei('5000'));
   await withdraw21Tx.wait();
-  
+
   await upkeepStep();
 
-  await getOutputs(INPUT);    
+  await getOutputs(INPUT);
 
   INPUT = 22;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
   const withdraw22Txu2 = await charityPool1.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('2500', daiDecimals));
@@ -865,9 +893,9 @@ const validate = async() => {
 
   //await upkeepStep();
   await getOutputs(INPUT);
-  
-  INPUT = 23
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 23;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -883,16 +911,16 @@ const validate = async() => {
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
-  INPUT = 24
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 24;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // make a deposit
   const approvalTx24u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('10000'));
   await approvalTx24u1.wait();
   const sponsorTx24u1 = await charityPool1.connect(userSigner1).sponsor(web3.utils.toWei('10000'));
   await sponsorTx24u1.wait();
-  
+
   const approvalTx241u1 = await dai.connect(userSigner1).approve(charityPool3.address, web3.utils.toWei('5000'));
   await approvalTx241u1.wait();
   const sponsorTx241u1 = await charityPool3.connect(userSigner1).sponsor(web3.utils.toWei('5000'));
@@ -902,7 +930,7 @@ const validate = async() => {
   await approvalTx24u2.wait();
   const sponsorTx24u2 = await charityPool1.connect(userSigner2).sponsor(web3.utils.toWei('5000'));
   await sponsorTx24u2.wait();
-  
+
   // make a deposit for user 2
   const approvalTx241u2 = await usdc.connect(userSigner2).approve(charityPool2.address, ethers.utils.parseUnits('7500', usdcDecimals));
   await approvalTx241u2.wait();
@@ -910,9 +938,9 @@ const validate = async() => {
   await sponsorTx241u2.wait();
 
   await getOutputs(INPUT);
-  
-  INPUT = 25
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 25;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -930,8 +958,8 @@ const validate = async() => {
   await getOutputs(INPUT);
 
 
-  INPUT = 26
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 26;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -946,13 +974,13 @@ const validate = async() => {
 
   const withdraw26Tx = await xhelp.connect(userSigner2).withdraw(web3.utils.toWei('300'));
   await withdraw26Tx.wait();
-  
+
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
-  INPUT = 27
-  console.log('\n*** INPUT', INPUT, '***')
+
+  INPUT = 27;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -969,27 +997,27 @@ const validate = async() => {
 
   await getOutputs(INPUT);
 
-  INPUT = 28
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 28;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // claim the HELP tokens
   const claim28Txu2 = await ihelp.connect(userSigner2).claimSpecificTokens(web3.utils.toWei('500000'));
-  await claim28Txu2.wait()
+  await claim28Txu2.wait();
 
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
+
   INPUT = 29;
-  console.log('\n*** INPUT', INPUT, '***')
+  console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
   const withdraw291Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw291Txu1.wait();
-  
+
   const withdraw291Txu2 = await charityPool2.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('9000', usdcDecimals));
   await withdraw291Txu2.wait();
-  
+
   // stake the HELP tokens to xHELP
   const approvalTx29u2 = await ihelp.connect(userSigner2).approve(xhelpAddress, web3.utils.toWei('5000'));
   await approvalTx29u2.wait();
@@ -999,8 +1027,8 @@ const validate = async() => {
   await upkeepStep();
   await getOutputs(INPUT);
 
-  INPUT = 30
-  console.log('\n*** INPUT', INPUT, '***')
+  INPUT = 30;
+  console.log('\n*** INPUT', INPUT, '***');
 
   // accrue the cdai interest
   // to accrue the interest by an exact, we need to accrue by the share of charity pools relative to the entire cdai cash
@@ -1012,7 +1040,7 @@ const validate = async() => {
   await upkeepStep();
 
   await getOutputs(INPUT);
-  
+
 
 };
 
