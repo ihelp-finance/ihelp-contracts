@@ -180,7 +180,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 premineTokens = 7000000;
         _mint(_developmentPool, premineTokens * 1000000000000000000);
 
-        __processingGasLimit = 300_000;
+        __processingGasLimit = 300_000 * 1e9;
     }
 
     function tokenPhase() public view returns (uint256) {
@@ -255,10 +255,14 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("calculating incremental charity pool interest generation...");
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
+
+        console.log("Intial gas,", initialGas);
+
         require(processingState.status == 0, "Invalid status");
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
+            console.log("Consumed gas,", consumedGas);
             if (consumedGas >= __processingGasLimit) {
                 processingState.i = i;
                 return;
