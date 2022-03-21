@@ -423,10 +423,12 @@ const validate = async () => {
     const method = upkeepStatusMapping[upkeepStatus];
     console.log("Processing upkeep, status ", method);
     while (upkeepStatus == newUpkeepstatus) {
-      console.log("here");
-
-
-      await ihelp.functions[method]();
+      if (method === 'dump') {
+        const perfectRedeemInterest = await ihelp.calculatePerfectRedeemInterest();
+        await ihelp.functions[method](perfectRedeemInterest);
+      } else {
+        await ihelp.functions[method]();
+      }
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
 
