@@ -19,7 +19,9 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     uint256 internal __rewardAwarded;
     EnumerableSet.AddressSet private stakeholders;
-    mapping(address => uint256) internal claimableStakeholderReward;
+
+    // TODO: Use this to keep track of claimed rewards. Cosider if it's necessary to support partial claims
+    mapping(address => uint256) public claimed;
 
     function initialize(
         string memory _name,
@@ -63,11 +65,31 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimableReward() public view returns (uint256) {
-        return claimableStakeholderReward[msg.sender];
+        return claimableRewardOf[msg.sender];
     }
 
     function claimableRewardOf(address _addr) public view returns (uint256) {
-        return claimableStakeholderReward[_addr];
+        uint256 totalStaked = totalSupply();
+        console.log("totalStaked", totalStaked);
+
+        uint256 totalReward = totalToReward();
+        console.log("totalReward", totalReward);
+
+        address stakeholder = stakeholders.at(i);
+        console.log("stakeholder", stakeholder);
+
+        uint256 helpStaked = balanceOf(stakeholder);
+        console.log("helpStaked", helpStaked);
+
+        uint256 rewardShare = helpStaked / totalStaked;
+        console.log("rewardShare", rewardShare);
+
+        uint256 reward = rewardShare * totalReward;
+        console.log("reward", reward);
+
+        uint256 claimedAmount = claimed[_addr];
+        console.log("claimed", reward);
+        return reward - claimedAmount;
     }
 
     function totalAwarded() public view returns (uint256) {
@@ -95,65 +117,23 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function distributeRewards() public onlyOwner {
-        console.log("distributing rewards for stakers...");
-
-        uint256 totalStaked = totalSupply();
-        console.log("totalStaked", totalStaked);
-
-        uint256 totalReward = totalToReward();
-        console.log("totalReward", totalReward);
-
-        if (totalReward > 0) {
-            uint256 initialGas = gasleft();
-            uint256 consumedGas = 0;
-            for (uint256 i = 0; i < stakeholders.length(); i++) {
-                consumedGas = initialGas - gasleft();
-                if (consumedGas >= __processingGasLimit) {
-                    processingState = i;
-                    break;
-                }
-                address stakeholder = stakeholders.at(i);
-                console.log("stakeholder", stakeholder);
-
-                uint256 helpStaked = balanceOf(stakeholder);
-                console.log("helpStaked", helpStaked);
-
-                uint256 rewardShare = helpStaked / totalStaked;
-                console.log("rewardShare", rewardShare);
-
-                uint256 reward = rewardShare * totalReward;
-                console.log("reward", reward);
-
-                claimableStakeholderReward[stakeholder] += reward;
-            }
-
-            __rewardAwarded += totalReward;
-
-            // transfer this reward to the holding pool
-            rewardToken().transferFrom(stakingPool(), address(this), totalReward);
-        }
-
-        processingState = 0;
+        // leave this bnank for not just for the sake of not breaking tests
     }
 
     function claimReward() public {
-        uint256 claimAmount = claimableStakeholderReward[msg.sender];
-
+        uint256 claimAmount = claimableRewardOf(msg.sender);
         console.log("claiming reward", msg.sender, claimAmount);
-
-        claimableStakeholderReward[msg.sender] -= claimAmount;
-
         rewardToken().transferFrom(address(this), msg.sender, claimAmount);
     }
 
     function claimSpecificReward(uint256 amount) public {
-        uint256 claimAmount = claimableStakeholderReward[msg.sender];
+        uint256 claimAmount = claimableRewardOf[msg.sender];
 
         require(claimAmount >= amount, "not enough claimable balance for amount");
 
         console.log("claiming reward", msg.sender, amount);
 
-        claimableStakeholderReward[msg.sender] -= amount;
+        claimed[msg.sender] += amount;
 
         rewardToken().transferFrom(address(this), msg.sender, amount);
     }
