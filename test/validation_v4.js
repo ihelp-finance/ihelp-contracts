@@ -435,7 +435,7 @@ const validate = async () => {
     console.log("New Upkeep status ", newUpkeepstatus);
 
     // Return when the upkeep status goes back to 0
-    if (newUpkeepstatus === 0) {
+    if (newUpkeepstatus.toNumber() === 0) {
       return;
     }
     await processUpkeep(newUpkeepstatus);
