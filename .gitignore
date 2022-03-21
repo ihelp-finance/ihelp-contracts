@@ -11,3 +11,4 @@ tokens.json
 mnemonic.txt
 yarn.lock
 yarn-error.log
+build
