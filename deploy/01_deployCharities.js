@@ -172,7 +172,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
     if (isTestEnvironment && deployMockTokens) {
 
-      const hardhatContracts = require('../../react-app/src/contracts/hardhat_contracts');
+      const hardhatContracts = require('../build/hardhat_contracts');
 
       if (currency == 'DAI') {
         tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['DAI']['address'];

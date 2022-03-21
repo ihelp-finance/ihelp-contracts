@@ -324,7 +324,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("tokensPerInterest", tokensPerInterest);
 
         // calculate the units to drip this timestamp
-        uint256 tokensToCirculate = newInterestUSD * tokensPerInterest;
+        uint256 tokensToCirculate = newInterestUSD.mul(tokensPerInterest);
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log("totalSupply", __totalSupply);

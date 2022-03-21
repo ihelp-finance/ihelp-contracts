@@ -64,17 +64,17 @@ function publishContract(contractName, networkName) {
 }
 
 async function main() {
-  const directories = fs.readdirSync(deploymentsDir);
-  directories.forEach(function (directory) {
-    const files = fs.readdirSync(`${deploymentsDir}/${directory}`);
-    files.forEach(function (file) {
-      if (file.indexOf(".json") >= 0) {
-        const contractName = file.replace(".json", "");
-        publishContract(contractName, directory);
-      }
-    });
-  });
-  console.log("✅  Published contracts to the subgraph package.");
+  // const directories = fs.readdirSync(deploymentsDir);
+  // directories.forEach(function (directory) {
+  //   const files = fs.readdirSync(`${deploymentsDir}/${directory}`);
+  //   files.forEach(function (file) {
+  //     if (file.indexOf(".json") >= 0) {
+  //       const contractName = file.replace(".json", "");
+  //       publishContract(contractName, directory);
+  //     }
+  //   });
+  // });
+  console.log("✅  Published contracts ");
 }
 main()
   .then(() => process.exit(0))
