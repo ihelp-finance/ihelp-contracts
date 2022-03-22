@@ -414,6 +414,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function distribute(uint256 tokensToCirculate) internal returns (bool) {
+        console.log("Starting distribution", tokensToCirculate);
+
         bool success = true;
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
@@ -633,10 +635,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function claimSpecificTokens(uint256 amount) public {
         uint256 claimAmount = contributorTokenClaims[msg.sender];
+        console.log("claiming tokens", msg.sender, amount, claimAmount);
 
         require(claimAmount >= amount, "not enough claimable balance for amount");
-
-        console.log("claiming tokens", msg.sender, amount);
 
         contributorTokenClaims[msg.sender] -= amount;
 

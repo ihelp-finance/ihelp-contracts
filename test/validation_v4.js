@@ -421,7 +421,7 @@ const validate = async () => {
   const processUpkeep = async (upkeepStatus) => {
     let newUpkeepstatus = upkeepStatus;
     const method = upkeepStatusMapping[upkeepStatus];
-    console.log("Processing upkeep, status ", method);
+    cyan("Processing upkeep, status ", method);
     while (upkeepStatus == newUpkeepstatus) {
       if (method === 'dump') {
         const perfectRedeemInterest = await ihelp.calculatePerfectRedeemInterest();
@@ -432,7 +432,7 @@ const validate = async () => {
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
 
-    console.log("New Upkeep status ", newUpkeepstatus);
+    green("New Upkeep status ", newUpkeepstatus.toNumber());
 
     // Return when the upkeep status goes back to 0
     if (newUpkeepstatus.toNumber() === 0) {
@@ -622,6 +622,8 @@ const validate = async () => {
   await accrue3TxUsdc.wait();
 
   await upkeepStep();
+
+  yellow("Upkeep finished, claiming 50000 tokens ");
 
   // claim the HELP tokens
   const claim4Txu1 = await ihelp.connect(userSigner1).claimSpecificTokens(web3.utils.toWei('50000'));
