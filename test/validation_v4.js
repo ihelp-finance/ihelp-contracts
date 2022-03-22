@@ -659,7 +659,7 @@ const validate = async () => {
   await rewardStep();
 
   await getOutputs(INPUT);
-
+  
 
   INPUT = 5;
   console.log('\n*** INPUT', INPUT, '***');
