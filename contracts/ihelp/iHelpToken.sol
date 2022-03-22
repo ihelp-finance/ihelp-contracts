@@ -436,7 +436,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             console.log("poolContribution", poolContribution);
 
             if (poolContribution > 0) {
-                uint256 poolShare = poolContribution.div(tokensToCirculate);
+                uint256 poolShare = poolContribution.div(processingState.totalCharityPoolContributions);
                 console.log("poolShare", poolShare);
 
                 uint256 poolTokens = poolShare.mul(tokensToCirculate);
