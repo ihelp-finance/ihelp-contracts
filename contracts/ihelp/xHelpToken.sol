@@ -91,7 +91,7 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function totalAwarded() public view returns (uint256) {
-        return __rewardAwarded;
+        return totalToReward();
     }
 
     function rewardToken() public view returns (IERC20) {
