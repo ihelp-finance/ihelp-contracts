@@ -34,7 +34,7 @@
     "dotenv": "^16.0.0",
     "ethereum-waffle": "^3.1.1",
     "ethers": "^5.3.0",
-    "hardhat": "2.9.1",
+    "hardhat": "2.9.2",
     "hardhat-deploy": "^0.10.6",
     "node-watch": "^0.7.0",
     "qrcode-terminal": "^0.12.0",
