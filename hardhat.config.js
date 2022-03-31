@@ -3,12 +3,13 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const dotenv = require('dotenv');
-dotenv.config({path:'/core/ihelp/ihelp-dev-local/packages/hardhat/.env'})
+dotenv.config({ path: '/core/ihelp/ihelp-dev-local/packages/hardhat/.env' });
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
+require("solidity-coverage");
 
 require("hardhat-deploy");
 
@@ -19,7 +20,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //const defaultNetwork = "fuji";
 //const defaultNetwork = "mainnet";
 //const defaultNetwork = "rinkeby";
-const defaultNetwork = "localhost";
+const defaultNetwork = "hardhat";
 
 let forkingData = undefined;
 
@@ -35,8 +36,8 @@ else if (defaultNetwork == 'mainnet') {
 }
 else if (defaultNetwork == 'localhost') {
   forkingData = {
-    url: process.env.FORKING_URL
-  }
+    url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW'
+  };
 }
 
 function mnemonic() {
@@ -62,7 +63,7 @@ const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
 
 module.exports = {
-  
+
   defaultNetwork,
 
   networks: {
@@ -74,28 +75,24 @@ module.exports = {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43113,
-      accounts: [
-        `0x${deployerPrivateKey}`, // deployer
-        `0x${stakingPoolPrivateKey}`, // stakingPool
-        `0x${holdingPoolPrivateKey}`, // holdingPool
-      ]
+      accounts: {
+        mnemonic: mnemonic(),
+      },
     },
     mainnet: {
-        url: 'https://api.avax.network/ext/bc/C/rpc',
-        gasPrice: 225000000000,
-        chainId: 43114,
-        accounts: [
-          `0x${deployerPrivateKey}`, // deployer
-          `0x${stakingPoolPrivateKey}`, // stakingPool
-          `0x${holdingPoolPrivateKey}`, // holdingPool
-        ]
+      url: 'https://api.avax.network/ext/bc/C/rpc',
+      gasPrice: 225000000000,
+      chainId: 43114,
+      accounts: {
+        mnemonic: mnemonic(),
       },
+    },
     localhost: {
       url: "http://localhost:7545",
-      //forking: forkingData
+      forking: forkingData
     },
     rinkeby: {
-      url: process.env.FORKING_URL,
+      url: "http://localhost:7545",
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -104,17 +101,18 @@ module.exports = {
     }
   },
   solidity: {
-    compilers: [
-      {
-        version: "0.8.9",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          },
+    version: "0.8.9",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      },
+      outputSelection: {
+        "*": {
+          "*": ["storageLayout"],
         },
-      }
-    ],
+      },
+    }
   },
   namedAccounts: {
     developmentPool: {
@@ -125,7 +123,7 @@ module.exports = {
       default: 0,
     },
     stakingPool: {
-      default: 1, 
+      default: 1,
     },
     holdingPool: {
       default: 2,
@@ -134,10 +132,10 @@ module.exports = {
       default: 3,
     },
     charity1wallet: {
-      default: 4, 
+      default: 4,
     },
     charity2wallet: {
-      default: 5, 
+      default: 5,
     },
     charity3wallet: {
       default: 6
@@ -146,7 +144,7 @@ module.exports = {
       default: 7
     },
     userAccount: {
-      default: 8 
+      default: 8
     },
     userAccount1: {
       default: 9
@@ -207,10 +205,10 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
       deployerWallet = deployerWallet.connect(ethers.provider);
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using deployer account"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using deployer account"
       );
       let sendresult = await deployerWallet.sendTransaction(tx);
       console.log("\n" + url + "/pk#" + privateKey + "\n");
@@ -218,10 +216,10 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     } else {
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using local node"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using local node"
       );
       console.log("\n" + url + "/pk#" + privateKey + "\n");
       return send(ethers.provider.getSigner(), tx);
@@ -251,8 +249,8 @@ task(
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
     console.log(
       "🔐 Account Generated as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -311,12 +309,12 @@ task(
 
     console.log(
       "⛏  Account Mined as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "📜 This will create the first contract: " +
-        chalk.magenta("0x" + contract_address)
+      chalk.magenta("0x" + contract_address)
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -414,6 +412,28 @@ function send(signer, txparams) {
     // checkForReceipt(2, params, transactionHash, resolve)
   });
 }
+
+task("snapshot").setAction(async () => {
+  const id = await hre.network.provider.request({
+    method: "evm_snapshot",
+  });
+  debug(`Snapshotid: ${id}`);
+
+});
+
+task("revert")
+  .addParam("id", "Snapshot id").setAction(async (taskArgs) => {
+    await hre.network.provider.request({
+      method: "evm_revert",
+      params: [taskArgs.id]
+    });
+
+    const newId = await hre.network.provider.request({
+      method: "evm_snapshot",
+    });
+    debug(`New Snapshotid: ${newId}`);
+  });
+
 
 task("send", "Send ETH")
   .addParam("from", "From address or account index")

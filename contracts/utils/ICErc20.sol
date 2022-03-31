@@ -3,15 +3,23 @@
 pragma solidity ^0.8.9;
 
 interface ICErc20 {
-   // address public underlying;
-    function mint(uint256 mintAmount) external returns (uint);
-    function redeemUnderlying(uint256 redeemAmount) external returns (uint);
-    function balanceOfUnderlying(address owner) external returns (uint);
-    function getCash() external view returns (uint);
-    function supplyRatePerBlock() external view returns (uint);
-    function totalSupply() external view returns (uint);
-    function balanceOf(address user) external view returns (uint);
+    // address public underlying;
+    function mint(uint256 mintAmount) external returns (uint256);
+
+    function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
+
+    function balanceOfUnderlying(address owner) external returns (uint256);
+
+    function getCash() external view returns (uint256);
+
+    function supplyRatePerBlock() external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address user) external view returns (uint256);
+
     function burn(uint256 amount) external;
+
     // Links to public address variable from CERC200Storage
     function underlying() external view returns (address);
 }

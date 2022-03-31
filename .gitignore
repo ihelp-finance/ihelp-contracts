@@ -12,3 +12,6 @@ mnemonic.txt
 yarn.lock
 yarn-error.log
 build
+.prettierrc
+coverage
+coverage.json
