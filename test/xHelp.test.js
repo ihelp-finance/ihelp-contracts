@@ -1,8 +1,8 @@
-const { expect } = require("chai");
+const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
 const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
-
+use(smock.matchers);
 describe("xHelp", function () {
     let Token;
     let tokenContract;
@@ -34,12 +34,9 @@ describe("xHelp", function () {
             addr1.address,
             mockContract.address
         );
-        // await mockContract.initialize();
         await tokenContract.initialize("TOK", "TOK", ihelp.address);
-
-        await ihelp.increaseAllowance(owner.address, parseEther("100"));
-        await tokenContract.increaseAllowance(owner.address, parseEther("100"));
         await ihelp.increaseAllowance(tokenContract.address, parseEther('999999999999'));
+        await mockContract.increaseAllowance(tokenContract.address, parseEther('999999999999'));
 
     });
 
@@ -143,7 +140,15 @@ describe("xHelp", function () {
         });
     });
 
-    describe("Claimable Amounts", function () {
+    describe("Balance", function () {
+        it("Should return correct balance ", async function () {
+            // Deposit tokens
+            await tokenContract.deposit(50);
+            expect(await tokenContract.balanceOf(owner.address)).to.equal(50);
+        });
+    });
+
+    describe("Rewards claiming", function () {
         it("Should return the claimable amount ", async function () {
             // Deposit tokens
             await tokenContract.deposit(50);
@@ -151,6 +156,40 @@ describe("xHelp", function () {
             // Mock the reward return
             mockContract.balanceOf.returns(50);
             expect(await tokenContract.claimableReward()).to.equal(50);
+        });
+
+        it("Should claim reward", async function () {
+            // Deposit tokens
+            await tokenContract.deposit(50);
+
+            // Mock the rewards token
+            mockContract.balanceOf.returns(50);
+            await mockContract.setVariable('_balances', {
+                [tokenContract.address]: parseEther('9999999')
+            });
+            // Execute the claim call
+            await tokenContract.claimReward();
+
+            // Check the the transfer function is called
+            expect(mockContract.transfer).to.have.been.calledWith(owner.address, 50);
+        });
+
+        it("Should claim specific reward", async function () {
+            // Deposit tokens
+            await tokenContract.deposit(50);
+
+            // Mock the rewards token
+            mockContract.balanceOf.returns(50);
+            await mockContract.setVariable('_balances', {
+                [tokenContract.address]: parseEther('9999999')
+            });
+            // Execute the claim call
+            await tokenContract.claimSpecificReward(25);
+
+            // Check the the transfer function is called
+            expect(mockContract.transfer).to.have.been.calledWith(owner.address, 25);
+            expect(await tokenContract.claimableReward()).to.equal(25);
+
         });
     });
 
@@ -172,7 +211,6 @@ describe("xHelp", function () {
         it("Should decrease allowence after transfer ", async function () {
 
             await tokenContract.deposit(200);
-
             // Increase allowence
             await tokenContract.increaseAllowance(addr1.address, 200);
             await tokenContract.connect(addr1).transferFrom(owner.address, addr1.address, 100);

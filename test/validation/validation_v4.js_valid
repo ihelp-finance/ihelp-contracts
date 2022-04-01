@@ -402,7 +402,6 @@ const validate = async () => {
     let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
     await rewardApprove.wait();
 
-    const calcRewardsTx = await xhelp.distributeRewards();
     await calcRewardsTx.wait();
 
   };
