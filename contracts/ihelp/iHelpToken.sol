@@ -160,11 +160,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __tokensMintedPerPhase = 1000000;
 
         // scale these later in the contract based on the charity pool decicals
-        developmentShareOfInterest = 0.05 * 1000000000000000000;
-        stakingShareOfInterest = 0.15 * 1000000000000000000;
-        charityShareOfInterest = 0.80 * 1000000000000000000;
+        developmentShareOfInterest = 0.05 * 1e18;
+        stakingShareOfInterest = 0.15 * 1e18;
+        charityShareOfInterest = 0.80 * 1e18;
 
-        __totalSupply = __tokensMintedPerPhase * 1000000000000000000;
+        __totalSupply = __tokensMintedPerPhase * 1e18;
         __totalCirculating = 0;
 
         __tokenPhase = 1;
@@ -175,10 +175,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         setTokenPhases();
 
         // mint the initial HELP phase and premine tokens
-        _mint(operator, __tokensMintedPerPhase * 1000000000000000000);
+        _mint(operator, __tokensMintedPerPhase * 1e18);
 
         uint256 premineTokens = 7000000;
-        _mint(_developmentPool, premineTokens * 1000000000000000000);
+        _mint(_developmentPool, premineTokens * 1e18);
 
         __processingGasLimit = 300_000 * 1e9;
     }
@@ -255,10 +255,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("calculating incremental charity pool interest generation...");
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
-        
+
         processingState.newInterestUS = 0;
         processingState.totalCharityPoolContributions = 0;
-        
+
         console.log("Intial gas,", initialGas);
 
         require(processingState.status == 0, "Invalid status");
@@ -349,7 +349,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             console.log("splitting interest division...");
 
             tokensToCirculateInCurrentPhase = __totalSupply;
-            console.log('tokensToCirculateInCurrentPhase',tokensToCirculateInCurrentPhase);
+            console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
             // e.g. 10 tokens
 
             __totalSupply -= tokensToCirculateInCurrentPhase;
@@ -381,7 +381,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
                 uint256 remainingTokensToCirculate = remainingInterestToCirculate.mul(newTokensPerInterest);
                 // e..g $4 * $0.86 = $3.44
-                console.log('remainingTokensToCirculate',remainingTokensToCirculate);
+                console.log("remainingTokensToCirculate", remainingTokensToCirculate);
 
                 tokensToCirculate = remainingTokensToCirculate;
                 processingState.status = 2;
