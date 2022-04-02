@@ -214,7 +214,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function registerCharityPool(address _addr) public onlyOperatorOrOwner returns (address) {
-        if (charityPoolInRegistry(_addr) != _addr) {
+        // TODO: Where is this called from, do we need a require here???
+        if (charityPoolInRegistry(_addr) == address(0)) {
             console.log("adding charity...");
             __charityPoolRegistry[_addr] = CharityPool(_addr);
             charityPoolList.add(_addr);
