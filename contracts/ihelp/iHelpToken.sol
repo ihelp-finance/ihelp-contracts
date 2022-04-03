@@ -257,12 +257,13 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
 
-        processingState.newInterestUS = 0;
-        processingState.totalCharityPoolContributions = 0;
-
         console.log("Intial gas,", initialGas);
 
         require(processingState.status == 0, "Invalid status");
+
+        // TODO: - A bug or a feature? calling dripStage1() twice in a row resets newInterestUS & totalCharityPoolContributions. Is that redundant?
+        processingState.newInterestUS = 0;
+        processingState.totalCharityPoolContributions = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();

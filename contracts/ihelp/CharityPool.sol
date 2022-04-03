@@ -152,7 +152,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function deposit(uint256 _amount) public {
-        require(_amount >= 0, "Funding/small-amount");
+        require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
@@ -164,7 +164,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function sponsor(uint256 _amount) public {
-        require(_amount >= 0, "Funding/small-amount");
+        require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
@@ -337,11 +337,11 @@ contract CharityPool is OwnableUpgradeable {
      * @notice Returns the underlying balance of this contract in the cToken.
      * @return The cToken underlying balance for this contract.
      */
-    function balance() public returns (uint256) {
+    function balance() public view returns (uint256) {
         return cToken.balanceOfUnderlying(address(this));
     }
 
-    function interestEarned() public returns (uint256) {
+    function interestEarned() public view returns (uint256) {
         uint256 _balance = balance();
 
         if (_balance > accountedBalance) {
@@ -406,7 +406,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function setStakingPool(address _pool) public onlyOperatorOrOwner {
-        stakingPool = _pool;
+        stakingPool = _pool; // TODO: require address(0)?
     }
 
     // increment and return the total interest generated
