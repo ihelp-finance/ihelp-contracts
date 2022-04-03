@@ -30,7 +30,6 @@ describe("iHelp", function () {
             holdingPool.address,
             mockContract.address
         );
-
     });
 
     describe("Deployment", function () {
@@ -171,4 +170,21 @@ describe("iHelp", function () {
         });
     });
 
+    describe("Drips", function() {
+        it("Should increment status", async function() {
+            await iHelp.dripStage1();
+            expect((await iHelp.processingState()).status).to.equal(1)
+        })
+
+        it("Should not allow to skip stages", async function() {
+            await iHelp.dripStage1();
+            await expect(iHelp.dripStage3()).to.be.revertedWith("Invalid status");
+        })
+
+        it("Should go trough stages", async function() {
+            await iHelp.dripStage1();
+            await iHelp.dripStage2();
+            await iHelp.dripStage4();
+        })
+    })
 });
