@@ -15,3 +15,5 @@ build
 .prettierrc
 coverage
 coverage.json
+.DS_Store
+contracts/.DS_Store

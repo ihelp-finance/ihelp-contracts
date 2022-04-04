@@ -244,6 +244,8 @@ contract CharityPool is OwnableUpgradeable {
 
             // 2.5% to developer pool as native currency of pool
             uint256 developerFee = (_amount * 25) / 1000;
+
+            // Do we need this approval TODO:
             require(token().approve(developmentPool, developerFee), "Funding/developer approve");
             require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
@@ -251,12 +253,13 @@ contract CharityPool is OwnableUpgradeable {
             uint256 stakingFee = (_amount * 25) / 1000;
 
             if (tokenaddress == holdingToken) {
+                // TODO: - is approve required?
                 require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
                 require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
             } else {
+                console.log("Swapping");
                 uint256 minAmount = (stakingFee * 50) / 100;
 
-                require(token().approve(address(this), stakingFee), "Funding/staking swap approve");
                 require(token().transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
 
                 require(token().approve(swapperPool, stakingFee), "Funding/staking swapper approve");
@@ -378,6 +381,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function safepow(uint256 base, uint256 exponent) public pure returns (uint256) {
+        // TODO: can we delegate to lib? Ask Meth
         if (exponent == 0) {
             return 1;
         } else if (exponent == 1) {
@@ -398,8 +402,10 @@ contract CharityPool is OwnableUpgradeable {
 
         uint256 valueUSD = value.mul(tokenPriceWei);
         // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
-        if (decimals() != holdingDecimals) {
+        if (decimals() < holdingDecimals) {
             valueUSD = valueUSD * safepow(10, holdingDecimals - decimals());
+        } else if (decimals() > holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, decimals() - holdingDecimals);
         }
 
         return valueUSD;
