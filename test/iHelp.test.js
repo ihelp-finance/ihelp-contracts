@@ -2,21 +2,25 @@ const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
 const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
+const BigNumber = require('big.js');
+
 use(smock.matchers);
+
 describe("iHelp", function () {
     let iHelp;
     let owner;
     let addr1;
     let addr2;
+    let addr3;
     let addrs;
     let stakingPool, mockContract, developmentPool, holdingPool;
 
 
     beforeEach(async function () {
-        const IHelp = await ethers.getContractFactory("iHelpToken");
+        const IHelp = await smock.mock("iHelpToken");
         const Mock = await smock.mock("ERC20MintableMock");
 
-        [owner, addr1, addr2, stakingPool, developmentPool, holdingPool, operator, ...addrs] = await ethers.getSigners();
+        [owner, addr1, addr2, addr3, stakingPool, developmentPool, holdingPool, operator, ...addrs] = await ethers.getSigners();
 
         mockContract = await Mock.deploy("Mock", "MOK", 18);
         iHelp = await IHelp.deploy();
@@ -123,6 +127,11 @@ describe("iHelp", function () {
                 expect(await iHelp.__tokenPhase()).to.equal(2);
             });
         });
+
+        it("Should set the __processingGasLimit", async function () {
+            await iHelp.connect(operator).setProcessingGasLimit(2);
+            expect(await iHelp.__processingGasLimit()).to.equal(2);
+        });
     });
 
 
@@ -170,21 +179,355 @@ describe("iHelp", function () {
         });
     });
 
-    describe("Drips", function() {
-        it("Should increment status", async function() {
-            await iHelp.dripStage1();
-            expect((await iHelp.processingState()).status).to.equal(1)
-        })
+    describe("Drips and dumps", function () {
+        let charityPool1;
+        let charityPool2;
 
-        it("Should not allow to skip stages", async function() {
-            await iHelp.dripStage1();
-            await expect(iHelp.dripStage3()).to.be.revertedWith("Invalid status");
-        })
+        beforeEach(async function () {
+            const CharityPool = await smock.mock('CharityPool');
+            charityPool1 = await CharityPool.deploy();
+            charityPool2 = await CharityPool.deploy();
 
-        it("Should go trough stages", async function() {
-            await iHelp.dripStage1();
-            await iHelp.dripStage2();
-            await iHelp.dripStage4();
-        })
-    })
+            charityPool1.calculateTotalIncrementalInterest.returns();
+            charityPool2.calculateTotalIncrementalInterest.returns();
+
+            charityPool1.newTotalInterestEarnedUSD.returns(200);
+            charityPool2.newTotalInterestEarnedUSD.returns(200);
+
+            charityPool2.accountedBalanceUSD.returns(200);
+            charityPool1.accountedBalanceUSD.returns(200);
+
+
+            console.log(charityPool1.address, charityPool2.address, "here");
+            await iHelp.registerCharityPool(charityPool1.address);
+            await iHelp.registerCharityPool(charityPool2.address);
+        });
+
+        describe("Drip stage 1", async function () {
+
+
+            it("Should set the correct status", async function () {
+                // Fetch the current  drip status
+                await iHelp.dripStage1();
+
+                const { status, i, ii } = await iHelp.processingState();
+                expect(status).to.equal(1);
+                expect(i).to.equal(0);
+                expect(ii).to.equal(0);
+            });
+
+            it("Should set correct generated interest", async function () {
+                await iHelp.dripStage1();
+
+                expect(await iHelp.charityInterestShare(charityPool1.address)).to.equal(200);
+                expect(await iHelp.charityInterestShare(charityPool2.address)).to.equal(200);
+                const { newInterestUS } = await iHelp.processingState();
+                expect(newInterestUS).to.equal(400);
+            });
+
+
+            it("Should not allow re-entry", async function () {
+                await iHelp.dripStage1();
+
+                // Cannot go back to drip stage 1 have to move forward
+                await expect(iHelp.dripStage1()).to.be.reverted;
+            });
+        });
+
+        describe("Drip stage 2", async function () {
+            it("Should run dripStage2", async function () {
+                await iHelp.dripStage1();
+                // Call drip stage 2
+                await iHelp.dripStage2();
+
+                // Fetch the current  drip status
+                const { status } = await iHelp.processingState();
+
+                // Cannot go back to drip stage 1 have to move forward
+                await expect(iHelp.dripStage2()).to.be.reverted;
+
+                expect(status).to.equal(3);
+                let expectedTokensToCirculate = new BigNumber(400).mul(1.66666666666);
+
+                const { tokensToCirculateInCurrentPhase, tokensToCirculate } = await iHelp.processingState();
+                expect(tokensToCirculateInCurrentPhase).to.equal(0);
+                expect(tokensToCirculate).to.equal(expectedTokensToCirculate.toFixed(0, 3));
+            });
+
+            it("Should set the correct __totalSupply", async function () {
+                await iHelp.dripStage1();
+                const intialSupply = await iHelp.__totalSupply();
+                let tokensToCirculate = new BigNumber(400).mul(1.66666666666);
+                await iHelp.dripStage2();
+
+                // TODO: Is this calculation valid ?? Ask Matt
+                console.log(intialSupply.toString(), tokensToCirculate.toFixed(0, 3));
+                expect(await iHelp.__totalSupply()).to.equal(intialSupply.sub(tokensToCirculate.toFixed(0, 3)));
+            });
+
+            it("Should set the correct __totalCirculating", async function () {
+                await iHelp.dripStage1();
+                const initialTOtalCirculating = await iHelp.__totalCirculating();
+                let tokensToCirculate = new BigNumber(400).mul(1.66666666666);
+                await iHelp.dripStage2();
+                expect(await iHelp.__totalCirculating()).to.equal(initialTOtalCirculating.add(tokensToCirculate.toFixed(0, 3)));
+            });
+
+            it("Should set the correct __tokensLastDripped", async function () {
+                await iHelp.dripStage1();
+                let tokensToCirculate = new BigNumber(400).mul(1.66666666666);
+                await iHelp.dripStage2();
+                expect(await iHelp.__tokensLastDripped()).to.equal(tokensToCirculate.toFixed(0, 3));
+            });
+
+            it("Should run dripStage2, and set status to 2", async function () {
+
+                const tokensPerIntereset = new BigNumber(10000000000000000000000).mul(1e18).toFixed();
+                await iHelp.setVariable('__tokensPerInterestByPhase', {
+                    1: tokensPerIntereset
+                });
+
+                await iHelp.dripStage1();
+                const intialSupply = await iHelp.__totalSupply();
+                await iHelp.dripStage2();
+
+                // Cannot go back to drip stage 1 have to move forward
+                await expect(iHelp.dripStage2()).to.be.reverted;
+
+                // Fetch the current  drip status
+                const { tokensToCirculateInCurrentPhase, tokensToCirculate, status } = await iHelp.processingState();
+                expect(tokensToCirculateInCurrentPhase).to.equal(intialSupply);
+
+                expect(status).to.equal(2);
+                expect(await iHelp.__tokenPhase()).to.equal(2);
+
+                // TODO: Add buisiness logic checks here
+            });
+        });
+
+
+        describe("Drip stage 4", async function () {
+
+            beforeEach(async function () {
+                charityPool1.getContributors.returns([addr1.address, addr2.address]);
+                charityPool2.getContributors.returns([addr1.address, addr2.address]);
+                charityPool1.balanceOfUSD.returns(20);
+                charityPool2.balanceOfUSD.returns(40);
+            });
+
+            it("Should call distribute", async function () {
+                await iHelp.dripStage1();
+                await iHelp.dripStage2();
+
+                const { totalCharityPoolContributions, tokensToCirculate } = await iHelp.processingState();
+
+                const contribution1 = await iHelp.charityPoolContributions(charityPool1.address);
+
+                const share1 = contribution1 / totalCharityPoolContributions;
+                const poolTokens1 = share1 * tokensToCirculate;
+
+                console.log("\n");
+                console.log(totalCharityPoolContributions.toString(), "totalCharityPoolContributions");
+                console.log(contribution1.toString(), "contribution pool 1");
+                console.log(share1.toString(), "pool share1");
+                console.log(poolTokens1, "poolTokens1");
+
+                const contribution2 = await iHelp.charityPoolContributions(charityPool2.address);
+
+                const share2 = contribution2 / totalCharityPoolContributions;
+                const poolTokens2 = share2 * tokensToCirculate;
+
+                console.log(contribution2.toString(), "contribution pool 1");
+                console.log(share2.toString(), " pool share2");
+                console.log(poolTokens2, "poolTokens2");
+
+
+                // User sahre is the pool balance in BUSD deveided by the pool contributution
+                const userSharePool1 = 20 / contribution1;
+                const userSharePool2 = 40 / contribution2;
+
+                const contributionTokens1 = userSharePool1 * poolTokens1;
+                const contributionTokens2 = userSharePool2 * poolTokens2;
+
+
+                await expect(iHelp.dripStage4()).to.not.be.reverted;
+                const userTokenClaim = await iHelp.contributorTokenClaims(addr1.address);
+
+                // Check that the total contribution was added correctly
+                expect(userTokenClaim).to.equal((contributionTokens1 + contributionTokens2).toFixed());
+
+
+            });
+
+            //TODO: will the validations script cover testing for this buisiness logic
+        });
+
+
+        describe("Drip stage 3", async function () {
+
+            beforeEach(async function () {
+                charityPool1.getContributors.returns([addr1.address, addr1.address]);
+                charityPool2.getContributors.returns([addr1.address, addr1.address]);
+                charityPool1.balanceOfUSD.returns(20);
+                charityPool2.balanceOfUSD.returns(40);
+            });
+
+            it("Should call distribute", async function () {
+                const tokensPerIntereset = new BigNumber(10000000000000000000000).mul(1e18).toFixed();
+                await iHelp.setVariable('__tokensPerInterestByPhase', {
+                    1: tokensPerIntereset
+                });
+
+                await iHelp.dripStage1();
+                await iHelp.dripStage2();
+                await expect(iHelp.dripStage3()).to.not.be.reverted;
+            });
+
+            //TODO: will the validations script cover testing for this buisiness logic
+        });
+
+
+        describe("Perfect interest", async function () {
+            it("Should calculate the perfect interest", async function () {
+                await iHelp.dripStage1();
+                expect(await iHelp.calculatePerfectRedeemInterest()).to.equal(400);
+            });
+        });
+
+        describe("Dump", async function () {
+            beforeEach(async function () {
+                charityPool1.getContributors.returns([addr1.address, addr1.address]);
+                charityPool2.getContributors.returns([addr1.address, addr1.address]);
+                charityPool1.balanceOfUSD.returns(20);
+                charityPool2.balanceOfUSD.returns(40);
+
+                mockContract.balanceOf.returns(0);
+
+                const holdingPoolAddr = await iHelp.holdingPool();
+                console.log(holdingPoolAddr, "HERERERE");
+
+                await charityPool1.setVariable('charityWallet', addr3.address);
+
+                charityPool1.redeemInterest.returns(async () => {
+                    mockContract.balanceOf.reset();
+
+                    await mockContract.setVariable('_balances', {
+                        [holdingPoolAddr]: 200
+                    });
+                });
+
+                charityPool2.redeemInterest.returns(async () => {
+                    mockContract.balanceOf.reset();
+                    console.log(holdingPoolAddr);
+                    await mockContract.setVariable('_balances', {
+                        [holdingPoolAddr]: 200
+                    });
+                });
+
+            });
+
+            // Since mocking the second pool is tedious it's sufficient to do calculations for the frist pool
+            it("Should do correct dumo calculations for the first pool", async function () {
+                await iHelp.dripStage1();
+                await iHelp.dripStage2();
+                await iHelp.dripStage4();
+
+                const developmentPool = await iHelp.developmentPool();
+                const charityPoolAddress = addr3.address;
+                const stakingPool = await iHelp.stakingPool();
+
+                const shareOfInterst = {
+                    charity: await iHelp.charityShareOfInterest(),
+                    development: await iHelp.developmentShareOfInterest(),
+                    stakingPool: await iHelp.stakingShareOfInterest()
+                };
+                const previouscCaimableCharityInterest = {
+                    charity: await iHelp.claimableCharityInterest(charityPoolAddress),
+                    development: await iHelp.claimableCharityInterest(developmentPool),
+                    stakingPool: await iHelp.claimableCharityInterest(stakingPool)
+                };
+
+                const interest = await iHelp.calculatePerfectRedeemInterest();
+                const pool1InterestShare = await iHelp.charityInterestShare(charityPool1.address);
+                await iHelp.connect(operator).dump(interest);
+                const { status, totalCharityPoolContributions, newInterestUS } = await iHelp.processingState();
+
+                // TODO: Is the state correct after the drip ?
+                expect(status).to.equal(0);
+                expect(totalCharityPoolContributions).to.equal(0);
+                expect(newInterestUS).to.equal(0);
+
+                const differenceInInterest = 200 / pool1InterestShare;
+                const correctedInterestShare = pool1InterestShare * differenceInInterest;
+                console.log(correctedInterestShare, shareOfInterst.charity);
+
+                const claimableCharityIntrest = await iHelp.claimableCharityInterest(charityPoolAddress);
+                expect(claimableCharityIntrest).to.equal(((correctedInterestShare * shareOfInterst.charity) / 1e19) + previouscCaimableCharityInterest.charity);
+
+                const claimableDevCharityIntrest = await iHelp.claimableCharityInterest(developmentPool);
+                expect(claimableDevCharityIntrest).to.equal(((correctedInterestShare * shareOfInterst.development) / 1e19) + previouscCaimableCharityInterest.development);
+
+                const claimableStakeCharityIntrest = await iHelp.claimableCharityInterest(stakingPool);
+                expect(claimableStakeCharityIntrest).to.equal(((correctedInterestShare * shareOfInterst.stakingPool) / 1e19) + previouscCaimableCharityInterest.stakingPool);
+
+
+                expect(await iHelp.charityInterestShare(charityPool1.address)).to.equal(0);
+
+                expect(charityPool2.redeemInterest).to.have.been.calledOnce;
+
+            });
+        });
+
+    });
+
+    describe("Interest claiming", function () {
+        beforeEach(async function () {
+            await iHelp.setVariable('claimableCharityInterest', {
+                [addr1.address]: 200
+            });
+        });
+
+        it("Should not claim interest if it was not called by the holding pool", async function () {
+            iHelp.isCharityAddress.returns(false);
+            const mockCharityAddress = addr1.address;
+            await iHelp.claimInterest(mockCharityAddress);
+            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
+        });
+
+        it("Should not claim interest if it called by the holding pool but the address is a charity pool", async function () {
+            iHelp.isCharityAddress.returns(true);
+            const mockCharityAddress = addr1.address;
+            await iHelp.connect(holdingPool).claimInterest(holdingPool.address);
+            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
+        });
+
+        it("Should claim ad reset the interest", async function () {
+            iHelp.isCharityAddress.returns(false);
+            const mockCharityAddress = addr1.address;
+            mockContract.transferFrom.returns(1);
+            await iHelp.connect(holdingPool).claimInterest(mockCharityAddress);
+            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(0);
+        });
+
+        it("Should revert if the transfer fails", async function () {
+            iHelp.isCharityAddress.returns(false);
+            const mockCharityAddress = addr1.address;
+            mockContract.transferFrom.returns(0);
+            await expect(iHelp.connect(holdingPool).claimInterest(mockCharityAddress)).to.be.reverted;
+        });
+    });
+
+    describe("Tokens claiming", function () {
+        beforeEach(async function () {
+            await iHelp.setVariable('contributorTokenClaims', {
+                [owner.address]: 200
+            });
+        });
+
+        it("Should claim tokens", async function () {
+            const mockCharityAddress = addr1.address;
+            await iHelp.claimTokens();
+            expect(await iHelp.contributorTokenClaims(mockCharityAddress)).to.equal(0);
+        });
+    });
 });

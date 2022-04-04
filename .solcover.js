@@ -6,5 +6,6 @@ module.exports = {
   "deduplicate": false,
   "cse": false,
   "constantOptimizer": false,
-  "configureYulOptimizer": true
+  "configureYulOptimizer": true,
+  "parallel": true
 };
