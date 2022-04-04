@@ -50,7 +50,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     IERC20 public underlyingToken;
 
     // Processing gas limit
-    uint256 __processingGasLimit;
+    uint256 public __processingGasLimit;
 
     uint256 public __totalCirculating;
     uint256 public __totalSupply;
@@ -261,9 +261,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         require(processingState.status == 0, "Invalid status");
 
-        // TODO: - A bug or a feature? calling dripStage1() twice in a row resets newInterestUS & totalCharityPoolContributions. Is that redundant?
-        processingState.newInterestUS = 0;
-        processingState.totalCharityPoolContributions = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
@@ -322,6 +319,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalCharityPoolContributions = processingState.totalCharityPoolContributions;
 
         console.log("\nnewInterestUSD", newInterestUSD);
+        console.log("totalCharityPoolContributions", totalCharityPoolContributions);
+        console.log("tokenPhase", __tokenPhase);
 
         // based on the total generated interest in the timestep generate the tokens to drip
         uint256 tokensPerInterest = tokensPerInterestByPhase(__tokenPhase);
@@ -357,6 +356,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             __totalSupply -= tokensToCirculateInCurrentPhase;
             __totalCirculating += tokensToCirculateInCurrentPhase;
 
+            // TODO: What happens if this is 0, do we get an underflow @ Line 396??. Can this be 0?
             if (totalCharityPoolContributions > 0) {
                 // Need to call assignTokensToContributors
                 uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
@@ -504,8 +504,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     function dump(uint256 perfectRedeemedInterest) public onlyOperatorOrOwner {
         require(processingState.status == 4, "Invalid status");
 
-        // keep track of incremental amounts
-
         // check the incrementals add up to the total specific charity amounts
         console.log("\ndumping interest...\n");
 
@@ -520,6 +518,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 }
                 // get the balance of the holding pool before and after the redemption
                 uint256 tokenBalanceBefore = underlyingToken.balanceOf(holdingPool);
+                console.log("tokenBalanceBefore \n", tokenBalanceBefore);
 
                 // redeem the charity interest to the holding pool
                 console.log("\nREDEEM START");
@@ -529,6 +528,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 console.log("REDEEM END\n");
 
                 uint256 tokenBalanceAfter = underlyingToken.balanceOf(holdingPool);
+                console.log("tokenBalanceAfter \n", tokenBalanceAfter);
 
                 // this gets the actual interest generated after the swap
                 if (tokenBalanceAfter > tokenBalanceBefore) {
@@ -564,6 +564,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 }
             }
         }
+        processingState.newInterestUS = 0;
+        processingState.totalCharityPoolContributions = 0;
         processingState.status = 0;
     }
 
@@ -666,5 +668,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function getHoldingPool() public view returns (address) {
         return holdingPool;
+    }
+
+    function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
+        require(gasLimit > 0, "Limit cannot be 0");
+        __processingGasLimit = gasLimit;
     }
 }
