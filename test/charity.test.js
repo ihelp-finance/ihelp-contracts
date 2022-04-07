@@ -355,16 +355,21 @@ describe("Charity Pool", function () {
 
         it("Should redeem interest", async function () {
             const interest = 10000;
-            cTokenMock.balanceOfUnderlying.returns(interest);
-            // await cTokenMock.setVariable('_balances', {
-            //     [tokenContract.address]: parseEther('9999999')
-            // });
-            // cTokenMock.redeemUnderlying.returns();
+            await charityPool.setVariable('redeemableInterest', interest);
+            await charityPool.setVariable('currentInterestEarned', interest);
+            cTokenMock.redeemUnderlying.returns(() => {
+                cTokenUnderlyingMock.setVariable('_balances', {
+                    [charityPool.address]: interest
+                });
+                return 0;
+            });
 
             await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest();
-            await charityPool.connect(iHelpMock.wallet).redeemInterest();
 
-            expect(await cTokenUnderlyingMock.balanceOf(swapperPool.address)).to.equal(122); // FIXME
+            await expect(charityPool.connect(iHelpMock.wallet).redeemInterest()).to.emit(charityPool, "Rewarded");
+
+            expect(await charityPool.redeemableInterest()).to.equal(0);
+            expect(await charityPool.currentInterestEarned()).to.equal(0);
         });
 
         it("Should emit rewarded", async function () {

@@ -293,6 +293,7 @@ contract CharityPool is OwnableUpgradeable {
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
+            //TODO: what is the underlying token redeem, do we need this require?
             require(cToken.redeemUnderlying(amount) == 0, "Funding/redeem");
 
             address tokenaddress = address(token());
