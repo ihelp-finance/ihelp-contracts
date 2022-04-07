@@ -594,7 +594,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimableTokens() public view returns (uint256) {
-        return contributorTokenClaims[msg.sender];
+        return getClaimableTokens(msg.sender);
     }
 
     function getClaimableTokens(address _addr) public view returns (uint256) {
@@ -606,7 +606,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function getClaimableCharityInterest() public view returns (uint256) {
-        return claimableCharityInterest[msg.sender];
+        return getClaimableCharityInterestOf(msg.sender);
+    }
+
+    function balance() public view returns (uint256) {
+        return balanceOf(msg.sender);
     }
 
     // must send from holdingPool account
@@ -654,10 +658,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         approve(operator, amount);
         _transfer(operator, msg.sender, amount);
-    }
-
-    function balance() public view returns (uint256) {
-        return balanceOf(msg.sender);
     }
 
     // TODO: NO NEED FOR THIS GETTER underlyingToken is public. Removing it optimzes deplyment costs

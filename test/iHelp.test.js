@@ -530,4 +530,58 @@ describe("iHelp", function () {
             expect(await iHelp.contributorTokenClaims(mockCharityAddress)).to.equal(0);
         });
     });
+
+
+    describe("Getters", function () {
+        it("Should return the totalCirculating", async function () {
+            await iHelp.setVariable("__totalCirculating", 2);
+            expect(await iHelp.__totalCirculating()).to.equal(2);
+        });
+
+        it("Should return the totalAvailableSupply", async function () {
+            await iHelp.setVariable("__totalSupply", 2);
+            expect(await iHelp.__totalSupply()).to.equal(2);
+        });
+
+        it("Should return the tokensLastDripped", async function () {
+            await iHelp.setVariable("__tokensLastDripped", 2);
+            expect(await iHelp.__tokensLastDripped()).to.equal(2);
+        });
+
+        it("Should return the claimableTokens", async function () {
+            await iHelp.setVariable("contributorTokenClaims", {
+                [owner.address]: 2
+            });
+            expect(await iHelp.contributorTokenClaims(owner.address)).to.equal(2);
+        });
+
+        it("Should return the getClaimableCharityInterestOf", async function () {
+            await iHelp.setVariable("claimableCharityInterest", {
+                [owner.address]: 2
+            });
+            expect(await iHelp.claimableCharityInterest(owner.address)).to.equal(2);
+        });
+
+        it("Should return the balance", async function () {
+            await iHelp.setVariable("_balances", {
+                [owner.address]: 2
+            });
+            expect(await iHelp.balanceOf(owner.address)).to.equal(2);
+        });
+    });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
