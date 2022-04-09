@@ -22,7 +22,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //const defaultNetwork = "rinkeby";
 const defaultNetwork = "hardhat";
 
-let forkingData = undefined;
+let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW' };
 
 if (defaultNetwork == 'fuji') {
   forkingData = {

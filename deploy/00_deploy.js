@@ -5,6 +5,7 @@ const Big = require('big.js');
 const Web3 = require('web3');
 const fs = require('fs');
 const web3 = new Web3('http://127.0.0.1:7545');
+const { run } = require("hardhat");
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -112,6 +113,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+
+  console.log(chainId);
 
   const deployMockTokens = true;
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
@@ -582,7 +585,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-  await os.execCommand('hardhat export --export-all ./build/hardhat_contracts.json');
+  await run('export', { "exportAll": "./build/hardhat_contracts.json" });
 
   // write the key addresses to a csv file
   return csvWriter.writeRecords(contractAddresses).then(() => { });
