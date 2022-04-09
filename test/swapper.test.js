@@ -43,7 +43,7 @@ describe("Swapper", function () {
         });
     });
 
-    describe("Eouter swap function", function () {
+    describe("Test swapper functions", function () {
         it("Should call router swap function", async function () {
             routerFake.swapExactTokensForTokens.returns();
             await swapper.swap(mockToken1.address, mockToken2.address, 200, 100, owner.address);

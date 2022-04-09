@@ -7,5 +7,7 @@ module.exports = {
   "cse": false,
   "constantOptimizer": false,
   "configureYulOptimizer": true,
-  "parallel": true
+  "parallel": true,
+  "skipFiles": ["testing/"],
+  "istanbulReporter": ["html", "json-summary"]
 };

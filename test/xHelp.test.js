@@ -201,11 +201,6 @@ describe("xHelp", function () {
             // Allowence should be updated
             const allowance = await tokenContract.allowance(owner.address, addr1.address);
             expect(allowance).to.equal(200);
-
-            // Should transfer and update balances
-            expect(
-                () => tokenContract.connect(addr1).transferFrom(owner.address, addr1.address, 100)
-            ).to.changeTokenBalances(tokenContract, [addr1, owner], [100, -100]);
         });
 
         it("Should decrease allowence after transfer ", async function () {
