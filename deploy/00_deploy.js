@@ -584,8 +584,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-  cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-  await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+  
+  await fs.mkdir('deployments',async (e)=>{
+    cyan('hardhat export --export-all ./build/hardhat_contracts.json');
+    return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+  })
 
   // write the key addresses to a csv file
   return csvWriter.writeRecords(contractAddresses).then(() => { });
