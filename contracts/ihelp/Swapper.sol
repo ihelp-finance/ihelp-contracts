@@ -10,7 +10,7 @@ import "hardhat/console.sol";
 //the contract needs to use swapExactTokensForTokens
 //this will allow us to import swapExactTokensForTokens into our contract
 
-// TODO: import this interface from npm package. Just for code cleanup
+// TODO: BB - import this interface from npm package. Just for code cleanup
 interface IUniswapV2Router {
     function getAmountsOut(uint256 amountIn, address[] memory path) external view returns (uint256[] memory amounts);
 
@@ -54,14 +54,11 @@ interface IUniswapV2Factory {
 
 contract Swapper {
     //address of the swap router (uniswap v2 format)
-    // TODO: Maybe Keep this public just for reference
     address public SWAP_ROUTER;
 
-    // rinkeby WETH address
-    //address private WETH;
-
-    // TODO: User contructor or implement or make this contract upgradable
+    // TODO: BB - User contructor or implement or make this contract upgradable
     function initialize(address _swapRouter) public {
+        // TODO - BB init function here
         SWAP_ROUTER = _swapRouter;
     }
 
@@ -100,17 +97,6 @@ contract Swapper {
         //the deadline is the latest time the trade is valid for
         IUniswapV2Router(SWAP_ROUTER).swapExactTokensForTokens(_amountIn, _amountOutMin, path, _to, block.timestamp + 5 minutes);
     }
-
-    // function swapEth(address _tokenOut, uint256 _amountOutMin, address _to) external payable {
-    //   address[] memory path;
-    //   path = new address[](2);
-    //   path[0] = WETH;
-    //   path[1] = _tokenOut;
-    //   //then we will call swapExactETHForTokens
-    //   //for the deadline we will pass in block.timestamp
-    //   //the deadline is the latest time the trade is valid for
-    //   IUniswapV2Router(SWAP_ROUTER).swapExactETHForTokens{value: msg.value}(_amountOutMin, path, _to, block.timestamp);
-    // }
 
     function getAmountOutMin(
         address _tokenIn,

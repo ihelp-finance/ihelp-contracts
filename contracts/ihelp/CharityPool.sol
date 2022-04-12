@@ -14,6 +14,7 @@ import "../utils/ICErc20.sol";
 import "./iHelpTokenInterface.sol";
 import "./SwapperInterface.sol";
 
+// TODO - MCS hardhat deploy pluging for removing these console logs automatically
 import "hardhat/console.sol";
 
 contract CharityPool is OwnableUpgradeable {
@@ -245,7 +246,7 @@ contract CharityPool is OwnableUpgradeable {
             // 2.5% to developer pool as native currency of pool
             uint256 developerFee = (_amount * 25) / 1000;
 
-            // Do we need this approval TODO:
+            // TODO: MCS - Do we need this approval - to test/remove
             require(token().approve(developmentPool, developerFee), "Funding/developer approve");
             require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
@@ -253,7 +254,7 @@ contract CharityPool is OwnableUpgradeable {
             uint256 stakingFee = (_amount * 25) / 1000;
 
             if (tokenaddress == holdingToken) {
-                // TODO: - is approve required?
+                // TODO: MCS - is approve required? - to test/remove
                 require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
                 require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
             } else {
@@ -293,8 +294,9 @@ contract CharityPool is OwnableUpgradeable {
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
-            //TODO: what is the underlying token redeem, do we need this require?
-            require(cToken.redeemUnderlying(amount) == 0, "Funding/redeem");
+            
+            // redeem the yield
+            cToken.redeemUnderlying(amount);
 
             address tokenaddress = address(token());
 
@@ -373,8 +375,9 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function getUnderlyingTokenPrice() public view returns (uint256) {
-        // (uint80 roundID, int256 price, uint256 startedAt, uint256 timeStamp, uint80 answeredInRound) = priceFeed.latestRoundData();
-        return uint256(100000000); // TESTING - uint(100000000);
+        (uint80 roundID, int256 price, uint256 startedAt, uint256 timeStamp, uint80 answeredInRound) = priceFeed.latestRoundData();
+        // TODO: BB - add mock test of uint(100000000);
+        return uint256(price);
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -382,7 +385,6 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function safepow(uint256 base, uint256 exponent) public pure returns (uint256) {
-        // TODO: can we delegate to lib? Ask Meth
         if (exponent == 0) {
             return 1;
         } else if (exponent == 1) {
@@ -413,7 +415,8 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function setStakingPool(address _pool) public onlyOperatorOrOwner {
-        stakingPool = _pool; // TODO: require address(0)?
+        // TODO - BB - require address(0)? No null staking address
+        stakingPool = _pool; 
     }
 
     // increment and return the total interest generated

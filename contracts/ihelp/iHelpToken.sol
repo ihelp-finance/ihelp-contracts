@@ -1,23 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0
 // prettier-ignore
 
-pragma solidity ^0.8.9;
+pragma solidity ^ 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
+import { PRBMathUD60x18 } from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../utils/IERC20.sol";
 
 import "./CharityPool.sol";
 
+// TODO - MCS hardhat deploy pluging for removing these console logs automatically
+// validate byte code once deployed after auto removal
+// https://github.com/ItsNickBarry/hardhat-log-remover
 import "hardhat/console.sol";
 
 contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
-    using PRBMathUD60x18 for uint256;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using PRBMathUD60x18
+    for uint256;
+    using EnumerableSet
+    for EnumerableSet.AddressSet;
 
     /** Keep track of the current processing state
 
@@ -62,9 +67,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     mapping(uint256 => uint256) public __tokensPerInterestByPhase;
     mapping(uint256 => uint256) public __cumulativeInterestByPhase;
 
-    //TODO: Can we get the charity pool contributions directly, using  __charityPoolRegistry[charity].accountedBalanceUSD(); and remove this mapping?
-    mapping(address => uint256) public charityPoolContributions;
-    mapping(address => address[]) public charityPoolContributors;
     mapping(address => uint256) public contributorTokenClaims;
     mapping(address => uint256) public charityInterestShare;
     mapping(address => uint256) public claimableCharityInterest;
@@ -87,7 +89,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         for (uint256 phase = 1; phase <= numberPhases; phase++) {
             if (phase == 1) {
                 lastInterest = lastInterest;
-            } else {
+            }
+            else {
                 lastInterest = lastInterest * 2;
             }
 
@@ -183,60 +186,53 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __processingGasLimit = 300_000 * 1e9;
     }
 
-    function tokenPhase() public view returns (uint256) {
+    function tokenPhase() public view returns(uint256) {
         return __tokenPhase;
     }
 
-    function interestGenerated() public view returns (uint256) {
+    function interestGenerated() public view returns(uint256) {
         return __interestGenerated;
     }
 
-    function tokensMintedPerPhase() public view returns (uint256) {
+    function tokensMintedPerPhase() public view returns(uint256) {
         return __tokensMintedPerPhase;
     }
 
-    function currentTokensPerInterest() public view returns (uint256) {
+    function currentTokensPerInterest() public view returns(uint256) {
         return __tokensPerInterestByPhase[__tokenPhase];
     }
 
-    function tokensPerInterestByPhase(uint256 phase) public view returns (uint256) {
+    function tokensPerInterestByPhase(uint256 phase) public view returns(uint256) {
         return __tokensPerInterestByPhase[phase];
     }
 
-    function interestPerTokenByPhase(uint256 phase) public view returns (uint256) {
+    function interestPerTokenByPhase(uint256 phase) public view returns(uint256) {
         return __cumulativeInterestByPhase[phase].div(__tokensMintedPerPhase);
     }
 
-    function setTokenPhase(uint256 phase) public onlyOperatorOrOwner returns (uint256) {
+    function setTokenPhase(uint256 phase) public onlyOperatorOrOwner returns(uint256) {
         console.log("setting token phase", phase);
         __tokenPhase = phase;
         return __tokenPhase;
     }
 
-    function registerCharityPool(address _addr) public onlyOperatorOrOwner returns (address) {
-        // TODO: Where is this called from, do we need a require here???
+    function registerCharityPool(address _addr) public onlyOperatorOrOwner returns(address) {
+        // TODO: BB - called from charity deploy script - should never be null - add require check
         if (charityPoolInRegistry(_addr) == address(0)) {
             console.log("adding charity...");
             __charityPoolRegistry[_addr] = CharityPool(_addr);
             charityPoolList.add(_addr);
-        } else {
-            //TODO: Remove this code when swithcing to production
-            console.log("charity already added...");
         }
         return address(__charityPoolRegistry[_addr]);
     }
 
-    function charityPoolInRegistry(address _addr) public view returns (address) {
+    function charityPoolInRegistry(address _addr) public view returns(address) {
+        // TODO - BB replace this function with direct __charityPoolRegistry[_addr] access
         console.log("checking if in registry:", _addr, address(__charityPoolRegistry[_addr]));
         return address(__charityPoolRegistry[_addr]);
     }
 
-    // TODO: charityPoolInRegistry and  isCharityAddress can be merged into the same function ??
-    function isCharityAddress(address _addr) public view returns (bool) {
-        return charityPoolList.contains(_addr);
-    }
-
-    function numberOfCharities() public view returns (uint256) {
+    function numberOfCharities() public view returns(uint256) {
         return charityPoolList.length();
     }
 
@@ -247,7 +243,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         charityPoolList.remove(_addr);
     }
 
-    function getTotalCharityPoolInterest() external view returns (uint256) {
+    function getTotalCharityPoolInterest() external view returns(uint256) {
         uint256 totalInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
@@ -256,7 +252,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return totalInterest;
     }
 
-    function dripStage1() external {
+    function dripStage1() external onlyOperatorOrOwner {
         // the number of tokens that go to each user is based on their currently allocated capital across all pools
         console.log("calculating incremental charity pool interest generation...");
         uint256 initialGas = gasleft();
@@ -296,11 +292,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             processingState.totalCharityPoolContributions += charityAccountedBalance;
 
-            // TODO: Is this assignment needed ? Cann we use  __charityPoolRegistry[charity].accountedBalanceUSD(); directly?
-            charityPoolContributions[charity] = charityAccountedBalance;
-
-            // TODO: Is this assignment needed ? Cann we use  ___charityPoolRegistry[charity].getContributors(); directly?
-            charityPoolContributors[charity] = __charityPoolRegistry[charity].getContributors();
         }
 
         __interestGenerated += processingState.newInterestUS;
@@ -310,7 +301,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("\nincremental calc done...");
     }
 
-    function dripStage2() external {
+    function dripStage2() external onlyOperatorOrOwner {
         require(processingState.status == 1, "Invalid status");
 
         console.log("DRIPPING...\n");
@@ -360,7 +351,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             __totalSupply -= tokensToCirculateInCurrentPhase;
             __totalCirculating += tokensToCirculateInCurrentPhase;
 
-            // TODO: What happens if this is 0, do we get an underflow @ Line 396??. Can this be 0?
+            // TODO: BB - look into. What happens if this is 0, do we get an underflow @ Line 396??. Can this be 0?
             if (totalCharityPoolContributions > 0) {
                 // Need to call assignTokensToContributors
                 uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
@@ -401,7 +392,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __tokensLastDripped = tokensToCirculate + tokensToCirculateInCurrentPhase;
     }
 
-    function dripStage3() external {
+    function dripStage3() external onlyOperatorOrOwner {
         require(processingState.status == 2, "Invalid status");
 
         uint256 tokensToCirculateInCurrentPhase = processingState.tokensToCirculateInCurrentPhase;
@@ -413,7 +404,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function dripStage4() external {
+    function dripStage4() external onlyOperatorOrOwner {
         require(processingState.status == 3, "Invalid status");
         uint256 tokensToCirculate = processingState.tokensToCirculate;
         bool done = distribute(tokensToCirculate);
@@ -424,7 +415,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function distribute(uint256 tokensToCirculate) internal returns (bool) {
+    function distribute(uint256 tokensToCirculate) internal returns(bool) {
         console.log("Starting distribution", tokensToCirculate);
 
         bool success = true;
@@ -443,7 +434,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             console.log("pool:", charity);
 
-            uint256 poolContribution = charityPoolContributions[charity];
+            uint256 poolContribution = __charityPoolRegistry[charity].accountedBalanceUSD();
             console.log("poolContribution", poolContribution);
 
             if (poolContribution > 0) {
@@ -454,9 +445,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 uint256 poolTokens = poolShare.mul(tokensToCirculate);
                 console.log("poolTokens", poolTokens);
 
-                address[] memory contributorList = charityPoolContributors[charity];
+                address[] memory contributorList = __charityPoolRegistry[charity].getContributors();
 
-                /// TODO: The following for loop can be handle on user claim
                 for (uint256 ii = processingState.ii; ii < contributorList.length; ii++) {
                     // Check how much gas was used and break
                     consumedGas = initialGas - gasleft();
@@ -488,11 +478,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return success;
     }
 
-    function calculatePerfectRedeemInterest() public view returns (uint256) {
-        // incrementalDevelopmentInterest;
-        // incrementalStakingInterest;
-        // incrementalCharityInterest
-
+    function calculatePerfectRedeemInterest() public view returns(uint256) {
         uint256 perfectRedeemedInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             perfectRedeemedInterest += charityInterestShare[charityPoolList.at(i)];
@@ -500,12 +486,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return perfectRedeemedInterest;
     }
 
-    // incremental dump of interest
-    // development pool
-    // staking pool
-    // charity interest pool
-
-    //TODO: call this after calling calculatePerfectRedeemInterest off chain
+    // NOTE: call this after calling calculatePerfectRedeemInterest off chain
     function dump(uint256 perfectRedeemedInterest) public onlyOperatorOrOwner {
         require(processingState.status == 4, "Invalid status");
 
@@ -542,19 +523,21 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("perfectRedeemedInterest,realRedeemedInterest");
                     console.log(charityInterestShare[charity], realRedeemedInterest);
 
-                    uint256 differenceInInterest = realRedeemedInterest.div(charityInterestShare[charity]);
-                    console.log("differenceInInterest", differenceInInterest);
+                    // TODO: MCS - run tests on the math here
+                    // uint256 differenceInInterest = realRedeemedInterest.div(charityInterestShare[charity]);
+                    // console.log("differenceInInterest", differenceInInterest);
 
                     // make the redeem interest portion available to the charity
                     address charityWalletAddress = __charityPoolRegistry[charity].charityWallet();
 
                     /**
-                        TODO: Ask Mat. 
+                        TODO: MCS 
                         correctedInterestShare = CISH[charity] * diffInIn 
                                                = CISH[charity] * realRedeemedInterest /  CISH[charity]
                                                = realRedeemedInterest
                      */
-                    uint256 correctedInterestShare = charityInterestShare[charity].mul(differenceInInterest);
+                    // uint256 correctedInterestShare = charityInterestShare[charity].mul(differenceInInterest);
+                    uint256 correctedInterestShare = realRedeemedInterest;
                     console.log("correctedInterestShare", correctedInterestShare);
 
                     // divide this amongst holding, dev and staking pools (and charities)
@@ -562,7 +545,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
                     if (charityWalletAddress == holdingPool) {
                         claimableCharityInterest[charity] += correctedInterestShare.mul(charityShareOfInterest);
-                    } else {
+                    }
+                    else {
                         console.log("Sending tokens to the charity wallet", charityWalletAddress);
                         claimableCharityInterest[charityWalletAddress] += correctedInterestShare.mul(charityShareOfInterest);
                     }
@@ -571,7 +555,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
                     // reset the charity interest share
                     charityInterestShare[charity] = 0;
-                } else {
+                }
+                else {
                     console.log("NO CHANGE IN DUMPED STATE.");
                 }
             }
@@ -581,47 +566,44 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         processingState.status = 0;
     }
 
-    function totalCirculating() public view returns (uint256) {
+    function totalCirculating() public view returns(uint256) {
         return __totalCirculating;
     }
 
-    function totalAvailableSupply() public view returns (uint256) {
+    function totalAvailableSupply() public view returns(uint256) {
         return __totalSupply;
     }
 
-    function tokensLastDripped() public view returns (uint256) {
+    function tokensLastDripped() public view returns(uint256) {
         return __tokensLastDripped;
     }
 
-    function claimableTokens() public view returns (uint256) {
+    function claimableTokens() public view returns(uint256) {
         return getClaimableTokens(msg.sender);
     }
 
-    function getClaimableTokens(address _addr) public view returns (uint256) {
+    function getClaimableTokens(address _addr) public view returns(uint256) {
         return contributorTokenClaims[_addr];
     }
 
-    function getClaimableCharityInterestOf(address _addr) public view returns (uint256) {
+    function getClaimableCharityInterestOf(address _addr) public view returns(uint256) {
         return claimableCharityInterest[_addr];
     }
 
-    function getClaimableCharityInterest() public view returns (uint256) {
+    function getClaimableCharityInterest() public view returns(uint256) {
         return getClaimableCharityInterestOf(msg.sender);
     }
 
-    function balance() public view returns (uint256) {
+    function balance() public view returns(uint256) {
         return balanceOf(msg.sender);
     }
 
-    // must send from holdingPool account
+    // must send from holdingPool account for on-chain transfers
     function claimInterest(address _addr) public {
         console.log("CLAIMING INTEREST");
         console.log(msg.sender, holdingPool, _addr);
-
-        // TODO: Dont understant what pools are we resetting the interest on.
-        if (isCharityAddress(_addr) || holdingPool == _addr) {
-            console.log("off-chain transfer to charity wallet - not touching anything"); // TODO: IMPORTANT. Remove all uncecessary branching when moving to production
-        } else {
+        // specific for on-chain transfer. off-chain transfers to charity wallet.
+        if (charityPoolList.contains(_addr) == false && holdingPool != _addr) {
             if (msg.sender == holdingPool) {
                 uint256 amount = claimableCharityInterest[_addr];
 
@@ -660,18 +642,18 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         _transfer(operator, msg.sender, amount);
     }
 
-    // TODO: NO NEED FOR THIS GETTER underlyingToken is public. Removing it optimzes deplyment costs
-    function getUnderlyingToken() public view returns (IERC20) {
+    // getters used for iHelp interface definition
+    function getUnderlyingToken() public view returns(IERC20) {
         return underlyingToken;
     }
 
-    // TODO: NO NEED FOR THIS GETTER stakingPool is public. Removing it optimzes deplyment costs
-    function getStakingPool() public view returns (address) {
+    // getters used for iHelp interface definition
+    function getStakingPool() public view returns(address) {
         return stakingPool;
     }
 
-    // TODO: NO NEED FOR THIS GETTER holdingPool is public. Removing it optimzes deplyment costs
-    function getHoldingPool() public view returns (address) {
+    // getters used for iHelp interface definition
+    function getHoldingPool() public view returns(address) {
         return holdingPool;
     }
 

@@ -20,7 +20,6 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 internal __rewardAwarded;
     EnumerableSet.AddressSet private stakeholders;
 
-    // TODO: Use this to keep track of claimed rewards. Cosider if it's necessary to support partial claims
     mapping(address => uint256) public claimed;
 
     function initialize(
