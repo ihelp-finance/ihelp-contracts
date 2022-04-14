@@ -5,7 +5,8 @@ const Big = require('big.js');
 const Web3 = require('web3');
 const fs = require('fs');
 const web3 = new Web3('http://127.0.0.1:7545');
-const { run } = require("hardhat");
+
+const { run, network } = require("hardhat");
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -584,11 +585,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-  
-  await fs.mkdir('deployments',async (e)=>{
+
+  await fs.mkdir('deployments', async (e) => {
     cyan('hardhat export --export-all ./build/hardhat_contracts.json');
     return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
-  })
+  });
 
   // write the key addresses to a csv file
   return csvWriter.writeRecords(contractAddresses).then(() => { });

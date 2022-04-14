@@ -3,63 +3,20 @@
 pragma solidity ^0.8.9;
 
 import "../utils/IERC20.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "hardhat/console.sol";
-
-//import the uniswap router
-//the contract needs to use swapExactTokensForTokens
-//this will allow us to import swapExactTokensForTokens into our contract
-
-// TODO: BB - import this interface from npm package. Just for code cleanup
-interface IUniswapV2Router {
-    function getAmountsOut(uint256 amountIn, address[] memory path) external view returns (uint256[] memory amounts);
-
-    function swapExactTokensForTokens(
-        //amount of tokens we are sending in
-        uint256 amountIn,
-        //the minimum amount of tokens we want out of the trade
-        uint256 amountOutMin,
-        //list of token addresses we are going to trade in.  this is necessary to calculate amounts
-        address[] calldata path,
-        //this is the address we are going to send the output tokens to
-        address to,
-        //the last time that the trade is valid for
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactETHForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
-}
-
-interface IUniswapV2Pair {
-    function token0() external view returns (address);
-
-    function token1() external view returns (address);
-
-    function swap(
-        uint256 amount0Out,
-        uint256 amount1Out,
-        address to,
-        bytes calldata data
-    ) external;
-}
-
-interface IUniswapV2Factory {
-    function getPair(address token0, address token1) external returns (address);
-}
-
-contract Swapper {
+contract Swapper is OwnableUpgradeable {
     //address of the swap router (uniswap v2 format)
     address public SWAP_ROUTER;
 
-    // TODO: BB - User contructor or implement or make this contract upgradable
-    function initialize(address _swapRouter) public {
-        // TODO - BB init function here
+    function initialize(address _swapRouter) public initializer {
         SWAP_ROUTER = _swapRouter;
+    }
+
+    function setRouter(address newRouter) external onlyOwner {
+        require(newRouter != address(0), "Router cannot be null");
+        SWAP_ROUTER = newRouter;
     }
 
     //this swap function is used to trade from one token to another
@@ -77,8 +34,6 @@ contract Swapper {
         uint256 _amountOutMin,
         address _to
     ) external {
-        console.log("calling swapper...");
-
         //first we need to transfer the amount in tokens from the msg.sender to this contract
         //this contract will have the amount of in tokens
         IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amountIn);
@@ -95,7 +50,13 @@ contract Swapper {
         //then we will call swapExactTokensForTokens
         //for the deadline we will pass in block.timestamp
         //the deadline is the latest time the trade is valid for
-        IUniswapV2Router(SWAP_ROUTER).swapExactTokensForTokens(_amountIn, _amountOutMin, path, _to, block.timestamp + 5 minutes);
+        IUniswapV2Router02(SWAP_ROUTER).swapExactTokensForTokens(
+            _amountIn,
+            _amountOutMin,
+            path,
+            _to,
+            block.timestamp + 5 minutes
+        );
     }
 
     function getAmountOutMin(
@@ -108,7 +69,8 @@ contract Swapper {
         path[0] = _tokenIn;
         path[1] = _tokenOut;
 
-        uint256[] memory amountOutMins = IUniswapV2Router(SWAP_ROUTER).getAmountsOut(_amountIn, path);
+        uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER)
+            .getAmountsOut(_amountIn, path);
         return amountOutMins[path.length - 1];
     }
 }

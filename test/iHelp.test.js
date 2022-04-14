@@ -97,11 +97,6 @@ describe("iHelp", function () {
             expect(await iHelp.__tokensLastDripped()).to.be.equal(0);
         });
 
-        it("Should call setTokenPhases", async function () {
-            //TODO: Is this checked in the validation script ????
-            // expect(iHelp.setTokenPhases).to.be.calledOnce;
-        });
-
         it("Should mint operator balance", async function () {
             expect(await iHelp.balanceOf(operator.address).then(data => Number(data) / 1e18)).to.equal(1000000);
         });
@@ -260,7 +255,6 @@ describe("iHelp", function () {
                 let tokensToCirculate = new BigNumber(400).mul(1.66666666666);
                 await iHelp.dripStage2();
 
-                // TODO: Is this calculation valid ?? Ask Matt
                 console.log(intialSupply.toString(), tokensToCirculate.toFixed(0, 3));
                 expect(await iHelp.__totalSupply()).to.equal(intialSupply.sub(tokensToCirculate.toFixed(0, 3)));
             });
@@ -300,8 +294,6 @@ describe("iHelp", function () {
 
                 expect(status).to.equal(2);
                 expect(await iHelp.__tokenPhase()).to.equal(2);
-
-                // TODO: Add buisiness logic checks here
             });
         });
 
@@ -355,11 +347,7 @@ describe("iHelp", function () {
 
                 // Check that the total contribution was added correctly
                 expect(userTokenClaim).to.equal((contributionTokens1 + contributionTokens2).toFixed());
-
-
             });
-
-            //TODO: will the validations script cover testing for this buisiness logic
         });
 
 
@@ -382,8 +370,6 @@ describe("iHelp", function () {
                 await iHelp.dripStage2();
                 await expect(iHelp.dripStage3()).to.not.be.reverted;
             });
-
-            //TODO: will the validations script cover testing for this buisiness logic
         });
 
 
@@ -452,7 +438,6 @@ describe("iHelp", function () {
                 await iHelp.connect(operator).dump(interest);
                 const { status, totalCharityPoolContributions, newInterestUS } = await iHelp.processingState();
 
-                // TODO: Is the state correct after the drip ?
                 expect(status).to.equal(0);
                 expect(totalCharityPoolContributions).to.equal(0);
                 expect(newInterestUS).to.equal(0);

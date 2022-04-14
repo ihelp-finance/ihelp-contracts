@@ -20,7 +20,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //const defaultNetwork = "fuji";
 //const defaultNetwork = "mainnet";
 //const defaultNetwork = "rinkeby";
-const defaultNetwork = "hardhat";
+const defaultNetwork = "localhost";
 
 let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW' };
 
@@ -69,7 +69,7 @@ module.exports = {
   networks: {
     hardhat: {
       gasPrice: 225000000000,
-      forking: forkingData
+      forking: forkingData,
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
