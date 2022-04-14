@@ -2,6 +2,7 @@ const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
 const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
+const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
 use(smock.matchers);
 describe("Charity Pool", function () {
     let charityPool;
@@ -18,11 +19,13 @@ describe("Charity Pool", function () {
 
         const Mock = await smock.mock("ERC20MintableMock");
         const CTokenMock = await smock.mock("CTokenMock");
+        const aggregator = await smock.fake(abi);
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
 
         cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
         cTokenMock = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
+
         charityPool = await CharityPool.deploy();
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
@@ -34,12 +37,16 @@ describe("Charity Pool", function () {
             "XTC",
             cTokenMock.address,
             holdingMock.address, //_holdingToken,
-            cTokenUnderlyingMock.address,// address _priceFeed,
+            aggregator.address,// address _priceFeed,
             iHelpMock.address,
             swapperMock.address,
             stakingPool.address,
             developmentPool.address,
         );
+
+
+        aggregator.latestRoundData.returns([0, 100000000, 0, 0, 0]);
+        charityPool.getUnderlyingTokenPrice.returns(100000000);
     });
 
     describe("Deployment", function () {

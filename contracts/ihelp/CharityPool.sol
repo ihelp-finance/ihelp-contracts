@@ -76,15 +76,8 @@ contract CharityPool is OwnableUpgradeable {
     ICErc20 public cToken;
     iHelpTokenInterface public ihelpToken;
 
-    function transferOperator(address newOperator)
-        public
-        virtual
-        onlyOperatorOrOwner
-    {
-        require(
-            newOperator != address(0),
-            "Ownable: new operator is the zero address"
-        );
+    function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
+        require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
     }
 
@@ -103,10 +96,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     modifier onlyOperatorOrOwner() {
-        require(
-            msg.sender == operator || msg.sender == owner(),
-            "is-operator-or-owner"
-        );
+        require(msg.sender == operator || msg.sender == owner(), "is-operator-or-owner");
         _;
     }
 
@@ -165,10 +155,7 @@ contract CharityPool is OwnableUpgradeable {
     function deposit(uint256 _amount) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
-        require(
-            token().transferFrom(msg.sender, address(this), _amount),
-            "Funding/t-fail"
-        );
+        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
         contributors.add(msg.sender);
         // Deposit the funds
@@ -180,10 +167,7 @@ contract CharityPool is OwnableUpgradeable {
     function sponsor(uint256 _amount) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
-        require(
-            token().transferFrom(msg.sender, address(this), _amount),
-            "Funding/t-fail"
-        );
+        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
         // only push a new contributor if not already present
         contributors.add(msg.sender);
@@ -263,48 +247,24 @@ contract CharityPool is OwnableUpgradeable {
             uint256 developerFee = (_amount * 25) / 1000;
 
             // TODO: MCS - Do we need this approval - to test/remove
-            require(
-                token().approve(developmentPool, developerFee),
-                "Funding/developer approve"
-            );
-            require(
-                token().transferFrom(msg.sender, developmentPool, developerFee),
-                "Funding/developer transfer"
-            );
+            require(token().approve(developmentPool, developerFee), "Funding/developer approve");
+            require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
             // 2.5% to staking pool as swapped dai
             uint256 stakingFee = (_amount * 25) / 1000;
 
             if (tokenaddress == holdingToken) {
                 // TODO: MCS - is approve required? - to test/remove
-                require(
-                    token().approve(stakingPool, stakingFee),
-                    "Funding/staking approve"
-                );
-                require(
-                    token().transferFrom(msg.sender, stakingPool, stakingFee),
-                    "Funding/staking transfer"
-                );
+                require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
+                require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
             } else {
                 console.log("Swapping");
                 uint256 minAmount = (stakingFee * 50) / 100;
 
-                require(
-                    token().transferFrom(msg.sender, address(this), stakingFee),
-                    "Funding/staking swap transfer"
-                );
+                require(token().transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
 
-                require(
-                    token().approve(swapperPool, stakingFee),
-                    "Funding/staking swapper approve"
-                );
-                swapper.swap(
-                    tokenaddress,
-                    holdingToken,
-                    stakingFee,
-                    minAmount,
-                    stakingPool
-                );
+                require(token().approve(swapperPool, stakingFee), "Funding/staking swapper approve");
+                swapper.swap(tokenaddress, holdingToken, stakingFee, minAmount, stakingPool);
             }
 
             // 95% to charity as native currency of pool
@@ -315,37 +275,13 @@ contract CharityPool is OwnableUpgradeable {
             console.log(charityWallet, holdingPool);
 
             if (charityWallet == holdingPool) {
-                console.log(
-                    "direct to contract",
-                    address(this),
-                    charityDonation
-                );
-                require(
-                    token().approve(address(this), charityDonation),
-                    "Funding/approve"
-                );
-                require(
-                    token().transferFrom(
-                        msg.sender,
-                        address(this),
-                        charityDonation
-                    ),
-                    "Funding/t-fail"
-                );
+                console.log("direct to contract", address(this), charityDonation);
+                require(token().approve(address(this), charityDonation), "Funding/approve");
+                require(token().transferFrom(msg.sender, address(this), charityDonation), "Funding/t-fail");
             } else {
                 // deposit the charity share directly to the charities wallet address
-                require(
-                    token().approve(charityWallet, charityDonation),
-                    "Funding/approve"
-                );
-                require(
-                    token().transferFrom(
-                        msg.sender,
-                        charityWallet,
-                        charityDonation
-                    ),
-                    "Funding/t-fail"
-                );
+                require(token().approve(charityWallet, charityDonation), "Funding/approve");
+                require(token().transferFrom(msg.sender, charityWallet, charityDonation), "Funding/t-fail");
             }
 
             emit Rewarded(charityWallet, _amount);
@@ -364,10 +300,7 @@ contract CharityPool is OwnableUpgradeable {
             address tokenaddress = address(token());
 
             if (tokenaddress == holdingToken) {
-                require(
-                    token().transfer(holdingPool, amount),
-                    "Funding/transfer"
-                );
+                require(token().transfer(holdingPool, amount), "Funding/transfer");
             } else {
                 console.log("\nSWAPPING", swapperPool, amount);
 
@@ -375,18 +308,9 @@ contract CharityPool is OwnableUpgradeable {
                 uint256 minAmount = (amount * 50) / 100;
                 // console.log( holdingToken, amount, minAmount, holdingPool);
 
-                require(
-                    token().approve(swapperPool, amount),
-                    "Funding/approve"
-                );
+                require(token().approve(swapperPool, amount), "Funding/approve");
 
-                swapper.swap(
-                    tokenaddress,
-                    holdingToken,
-                    amount,
-                    minAmount,
-                    holdingPool
-                );
+                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
             }
 
             // reset the lastinterestearned incrementer
@@ -437,11 +361,7 @@ contract CharityPool is OwnableUpgradeable {
      * @param _blocks The number of block that interest accrued for
      * @return The total estimated interest as a 18 point fixed decimal.
      */
-    function estimatedInterestRate(uint256 _blocks)
-        public
-        view
-        returns (uint256)
-    {
+    function estimatedInterestRate(uint256 _blocks) public view returns (uint256) {
         return supplyRatePerBlock() * _blocks;
     }
 
@@ -454,13 +374,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function getUnderlyingTokenPrice() public view returns (uint256) {
-        (
-            uint80 roundID,
-            int256 price,
-            uint256 startedAt,
-            uint256 timeStamp,
-            uint80 answeredInRound
-        ) = priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
         return uint256(price);
     }
 
@@ -468,11 +382,7 @@ contract CharityPool is OwnableUpgradeable {
         return contributors.values();
     }
 
-    function safepow(uint256 base, uint256 exponent)
-        public
-        pure
-        returns (uint256)
-    {
+    function safepow(uint256 base, uint256 exponent) public pure returns (uint256) {
         if (exponent == 0) {
             return 1;
         } else if (exponent == 1) {
@@ -489,6 +399,8 @@ contract CharityPool is OwnableUpgradeable {
     function convertToUsd(uint256 value) internal view returns (uint256) {
         uint256 tokenPrice = getUnderlyingTokenPrice();
         uint256 convertExchangeRateToWei = 100000000;
+
+        // TODO: Ask Matt,  Is the token price not in wei allready?
         uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
 
         uint256 valueUSD = value.mul(tokenPriceWei);

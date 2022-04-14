@@ -121,6 +121,15 @@ describe("iHelp", function () {
                 await iHelp.connect(operator).setTokenPhase(2);
                 expect(await iHelp.__tokenPhase()).to.equal(2);
             });
+
+            it("Should transfer the operator ", async function () {
+                await iHelp.transferOperator(addr1.address);
+                expect(await iHelp.operator()).to.equal(addr1.address);
+            });
+
+            it("Should fail to transfer the operator to null", async function () {
+                await expect(iHelp.transferOperator(0)).to.be.reverted;
+            });
         });
 
         it("Should set the __processingGasLimit", async function () {
@@ -138,7 +147,7 @@ describe("iHelp", function () {
 
             it("Should register a new charity pool", async function () {
                 await iHelp.registerCharityPool(addr2.address);
-                expect(await iHelp.charityPoolInRegistry(addr2.address)).to.not.equal('0x0000000000000000000000000000000000000000');
+                expect(await iHelp.__charityPoolRegistry(addr2.address)).to.not.equal('0x0000000000000000000000000000000000000000');
 
                 expect(await iHelp.numberOfCharities()).to.equal(1);
             });
@@ -152,7 +161,7 @@ describe("iHelp", function () {
             it("Should deregister a new charity pool", async function () {
                 await iHelp.registerCharityPool(addr2.address);
                 await iHelp.deregisterCharityPool(addr2.address);
-                expect(await iHelp.charityPoolInRegistry(addr2.address)).to.equal('0x0000000000000000000000000000000000000000');
+                expect(await iHelp.__charityPoolRegistry(addr2.address)).to.equal('0x0000000000000000000000000000000000000000');
 
                 expect(await iHelp.numberOfCharities()).to.equal(0);
             });
@@ -226,6 +235,32 @@ describe("iHelp", function () {
 
                 // Cannot go back to drip stage 1 have to move forward
                 await expect(iHelp.dripStage1()).to.be.reverted;
+            });
+
+            describe("Upkeep -- dripStage1", function () {
+                it("Should set processing state", async function () {
+                    await iHelp.setProcessiongState(1, 1, 1, 1, 1, 1, 1);
+                    const processingState = await iHelp.processingState();
+                    for (const val of Object.values(processingState)) {
+                        expect(val).to.be.equal(1);
+                    }
+                });
+
+                it("Should save contract state when running out of gas", async function () {
+                    await iHelp.setProcessingGasLimit(8_000);
+                    await iHelp.dripStage1();
+
+                    let state = await iHelp.processingState();
+
+                    expect(state.i).to.equal(1);
+                    await expect(iHelp.dripStage2()).to.be.reverted;
+                    await iHelp.dripStage1();
+                    state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(1);
+                    expect(state.i).to.equal(0);
+                    expect(state.ii).to.equal(0);
+                });
             });
         });
 
@@ -312,8 +347,7 @@ describe("iHelp", function () {
                 await iHelp.dripStage2();
 
                 const { totalCharityPoolContributions, tokensToCirculate } = await iHelp.processingState();
-
-                const contribution1 = await iHelp.charityPoolContributions(charityPool1.address);
+                const contribution1 = await charityPool1.accountedBalanceUSD();
 
                 const share1 = contribution1 / totalCharityPoolContributions;
                 const poolTokens1 = share1 * tokensToCirculate;
@@ -324,7 +358,7 @@ describe("iHelp", function () {
                 console.log(share1.toString(), "pool share1");
                 console.log(poolTokens1, "poolTokens1");
 
-                const contribution2 = await iHelp.charityPoolContributions(charityPool2.address);
+                const contribution2 = await await charityPool2.accountedBalanceUSD();
 
                 const share2 = contribution2 / totalCharityPoolContributions;
                 const poolTokens2 = share2 * tokensToCirculate;
@@ -348,6 +382,42 @@ describe("iHelp", function () {
                 // Check that the total contribution was added correctly
                 expect(userTokenClaim).to.equal((contributionTokens1 + contributionTokens2).toFixed());
             });
+
+            describe("Upkeep -- dripStage4", function () {
+                it("Should save contract state when running out of gas", async function () {
+                    await iHelp.dripStage1();
+                    await iHelp.dripStage2();
+
+                    await iHelp.setProcessingGasLimit(24_000);
+                    await iHelp.dripStage4();
+                    let state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(3);
+                    expect(state.i).to.equal(0);
+                    expect(state.ii).to.equal(1);
+
+                    console.log(state.status, state.i, state.ii);
+                    await iHelp.dripStage4();
+                    state = await iHelp.processingState();
+                    expect(state.status).to.equal(3);
+                    expect(state.i).to.equal(1);
+                    expect(state.ii).to.equal(0);
+
+                    await iHelp.dripStage4();
+                    state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(3);
+                    expect(state.i).to.equal(1);
+                    expect(state.ii).to.equal(1);
+
+                    await iHelp.dripStage4();
+                    state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(4);
+                    expect(state.i).to.equal(0);
+                    expect(state.ii).to.equal(0);
+                });
+            });
         });
 
 
@@ -370,6 +440,47 @@ describe("iHelp", function () {
                 await iHelp.dripStage2();
                 await expect(iHelp.dripStage3()).to.not.be.reverted;
             });
+
+
+            describe("Upkeep -- dripStage3", function () {
+                it("Should save contract state when running out of gas", async function () {
+                    const tokensPerIntereset = new BigNumber(10000000000000000000000).mul(1e18).toFixed();
+                    await iHelp.setVariable('__tokensPerInterestByPhase', {
+                        1: tokensPerIntereset
+                    });
+                    await iHelp.dripStage1();
+                    await iHelp.dripStage2();
+
+                    await iHelp.setProcessingGasLimit(24_000);
+                    await iHelp.dripStage3();
+                    let state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(2);
+                    expect(state.i).to.equal(0);
+                    expect(state.ii).to.equal(1);
+
+                    console.log(state.status, state.i, state.ii);
+                    await iHelp.dripStage3();
+                    state = await iHelp.processingState();
+                    expect(state.status).to.equal(2);
+                    expect(state.i).to.equal(1);
+                    expect(state.ii).to.equal(0);
+
+                    await iHelp.dripStage3();
+                    state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(2);
+                    expect(state.i).to.equal(1);
+                    expect(state.ii).to.equal(1);
+
+                    await iHelp.dripStage3();
+                    state = await iHelp.processingState();
+
+                    expect(state.status).to.equal(3);
+                    expect(state.i).to.equal(0);
+                    expect(state.ii).to.equal(0);
+                });
+            });
         });
 
 
@@ -390,8 +501,6 @@ describe("iHelp", function () {
                 mockContract.balanceOf.returns(0);
 
                 const holdingPoolAddr = await iHelp.holdingPool();
-                console.log(holdingPoolAddr, "HERERERE");
-
                 await charityPool1.setVariable('charityWallet', addr3.address);
 
                 charityPool1.redeemInterest.returns(async () => {
@@ -473,21 +582,21 @@ describe("iHelp", function () {
         });
 
         it("Should not claim interest if it was not called by the holding pool", async function () {
-            iHelp.isCharityAddress.returns(false);
+
             const mockCharityAddress = addr1.address;
             await iHelp.claimInterest(mockCharityAddress);
             expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
         });
 
         it("Should not claim interest if it called by the holding pool but the address is a charity pool", async function () {
-            iHelp.isCharityAddress.returns(true);
             const mockCharityAddress = addr1.address;
+            await iHelp.registerCharityPool(addr1.address);
             await iHelp.connect(holdingPool).claimInterest(holdingPool.address);
             expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
         });
 
         it("Should claim ad reset the interest", async function () {
-            iHelp.isCharityAddress.returns(false);
+
             const mockCharityAddress = addr1.address;
             mockContract.transferFrom.returns(1);
             await iHelp.connect(holdingPool).claimInterest(mockCharityAddress);
@@ -495,7 +604,7 @@ describe("iHelp", function () {
         });
 
         it("Should revert if the transfer fails", async function () {
-            iHelp.isCharityAddress.returns(false);
+
             const mockCharityAddress = addr1.address;
             mockContract.transferFrom.returns(0);
             await expect(iHelp.connect(holdingPool).claimInterest(mockCharityAddress)).to.be.reverted;
@@ -530,14 +639,14 @@ describe("iHelp", function () {
 
         it("Should return the tokensLastDripped", async function () {
             await iHelp.setVariable("__tokensLastDripped", 2);
-            expect(await iHelp.__tokensLastDripped()).to.equal(2);
+            expect(await iHelp.tokensLastDripped()).to.equal(2);
         });
 
         it("Should return the claimableTokens", async function () {
             await iHelp.setVariable("contributorTokenClaims", {
                 [owner.address]: 2
             });
-            expect(await iHelp.contributorTokenClaims(owner.address)).to.equal(2);
+            expect(await iHelp.claimableTokens()).to.equal(2);
         });
 
         it("Should return the getClaimableCharityInterestOf", async function () {
@@ -553,7 +662,42 @@ describe("iHelp", function () {
             });
             expect(await iHelp.balanceOf(owner.address)).to.equal(2);
         });
+
+        it("Should return correct sender balance", async function () {
+            await iHelp.setVariable("_balances", {
+                [owner.address]: 2
+            });
+            expect(await iHelp.balance()).to.equal(2);
+        });
+
+        it("Should return correct interestPerTokenByPhase", async function () {
+            await iHelp.setVariable("__tokensMintedPerPhase", 2);
+            await iHelp.setVariable("__cumulativeInterestByPhase", {
+                [1]: 20
+            });
+            expect(await iHelp.interestPerTokenByPhase(1)).to.equal((10 * 1e18).toFixed());
+        });
+
+        it("Should return correct interestGenerated", async function () {
+            await iHelp.setVariable("__interestGenerated", 2);
+            expect(await iHelp.interestGenerated()).to.equal(2);
+        });
+
+        it("Should return correct tokensMintedPerPhase", async function () {
+            await iHelp.setVariable("__tokensMintedPerPhase", 2);
+            expect(await iHelp.tokensMintedPerPhase()).to.equal(2);
+        });
+
+        it("Should return correct currentTokensPerInterest", async function () {
+            await iHelp.setVariable("__tokenPhase", 1);
+            await iHelp.setVariable("__tokensPerInterestByPhase", {
+                [1]: 20
+            });
+            expect(await iHelp.currentTokensPerInterest()).to.equal(20);
+        });
     });
+
+
 });
 
 

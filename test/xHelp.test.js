@@ -146,6 +146,12 @@ describe("xHelp", function () {
             await tokenContract.deposit(50);
             expect(await tokenContract.balanceOf(owner.address)).to.equal(50);
         });
+
+        it("Should return correct sender balance ", async function () {
+            // Deposit tokens
+            await tokenContract.deposit(50);
+            expect(await tokenContract.balance()).to.equal(50);
+        });
     });
 
     describe("Rewards claiming", function () {
