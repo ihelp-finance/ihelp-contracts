@@ -90,6 +90,7 @@ contract CharityPool is OwnableUpgradeable {
         _;
     }
 
+    //TODO:  MSC --- This modifire is never used
     modifier onlyOperator() {
         require(msg.sender == operator, "is-operator");
         _;
