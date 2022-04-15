@@ -16,3 +16,4 @@ build
 coverage.json
 .DS_Store
 contracts/.DS_Store
+contracts/ihelp/ihelp-contracts.code-workspace
