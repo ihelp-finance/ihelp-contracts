@@ -62,15 +62,11 @@ describe("iHelp", function () {
         });
 
         it("Should set correct developmentShareOfInterest", async function () {
-            expect(await iHelp.developmentShareOfInterest()).to.be.equal((0.05 * 1e18).toFixed());
+            expect(await iHelp.developmentShareOfInterest()).to.be.equal((0.10 * 1e18).toFixed());
         });
 
         it("Should set correct stakingShareOfInterest", async function () {
-            expect(await iHelp.stakingShareOfInterest()).to.be.equal((0.15 * 1e18).toFixed());
-        });
-
-        it("Should set correct charityShareOfInterest", async function () {
-            expect(await iHelp.charityShareOfInterest()).to.be.equal((0.80 * 1e18).toFixed());
+            expect(await iHelp.stakingShareOfInterest()).to.be.equal((0.10 * 1e18).toFixed());
         });
 
         it("Should set correct charityShareOfInterest", async function () {

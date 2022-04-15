@@ -14,7 +14,6 @@ import "../utils/ICErc20.sol";
 import "./iHelpTokenInterface.sol";
 import "./SwapperInterface.sol";
 
-// TODO - MCS hardhat deploy pluging for removing these console logs automatically
 import "hardhat/console.sol";
 
 contract CharityPool is OwnableUpgradeable {
@@ -90,12 +89,6 @@ contract CharityPool is OwnableUpgradeable {
         _;
     }
 
-    //TODO:  MSC --- This modifire is never used
-    modifier onlyOperator() {
-        require(msg.sender == operator, "is-operator");
-        _;
-    }
-
     modifier onlyOperatorOrOwner() {
         require(msg.sender == operator || msg.sender == owner(), "is-operator-or-owner");
         _;
@@ -123,6 +116,8 @@ contract CharityPool is OwnableUpgradeable {
 
         require(_cToken != address(0), "Funding/ctoken-zero");
         require(_operator != address(0), "Funding/operator-zero");
+        
+        console.log('Initializing Charity Pool Contract:',_name);
 
         cToken = ICErc20(_cToken);
         priceFeed = AggregatorV3Interface(_priceFeed);
@@ -246,17 +241,12 @@ contract CharityPool is OwnableUpgradeable {
 
             // 2.5% to developer pool as native currency of pool
             uint256 developerFee = (_amount * 25) / 1000;
-
-            // TODO: MCS - Do we need this approval - to test/remove
-            require(token().approve(developmentPool, developerFee), "Funding/developer approve");
             require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
             // 2.5% to staking pool as swapped dai
             uint256 stakingFee = (_amount * 25) / 1000;
 
             if (tokenaddress == holdingToken) {
-                // TODO: MCS - is approve required? - to test/remove
-                require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
                 require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
             } else {
                 console.log("Swapping");
@@ -400,10 +390,7 @@ contract CharityPool is OwnableUpgradeable {
     function convertToUsd(uint256 value) internal view returns (uint256) {
         uint256 tokenPrice = getUnderlyingTokenPrice();
         uint256 convertExchangeRateToWei = 100000000;
-
-        // TODO: Ask Matt,  Is the token price not in wei allready?
         uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
-
         uint256 valueUSD = value.mul(tokenPriceWei);
         // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
         if (decimals() < holdingDecimals) {
@@ -411,7 +398,6 @@ contract CharityPool is OwnableUpgradeable {
         } else if (decimals() > holdingDecimals) {
             valueUSD = valueUSD * safepow(10, decimals() - holdingDecimals);
         }
-
         return valueUSD;
     }
 

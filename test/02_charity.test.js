@@ -87,7 +87,7 @@ describe("Charity Pool", function () {
             expect(await charityPool.operator()).to.equal(addr1.address);
         });
 
-        it("Should set new operator", async function () {
+        it("Should set new operator as operator", async function () {
             await expect(charityPool.connect(operator).transferOperator(addr1.address)).not.to.be.reverted;
             expect(await charityPool.operator()).to.equal(addr1.address);
         });

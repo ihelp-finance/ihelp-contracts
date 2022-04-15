@@ -13,9 +13,6 @@ import "../utils/IERC20.sol";
 
 import "./CharityPool.sol";
 
-// TODO - MCS hardhat deploy pluging for removing these console logs automatically
-// validate byte code once deployed after auto removal
-// https://github.com/ItsNickBarry/hardhat-log-remover
 import "hardhat/console.sol";
 
 contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
@@ -125,12 +122,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         operator = newOperator;
     }
 
-    // TODO: MCS -- Is this used??
-    modifier onlyOperator() {
-        require(msg.sender == operator, "Funding/is-operator");
-        _;
-    }
-
     modifier onlyOperatorOrOwner() {
         require(msg.sender == operator || msg.sender == owner(), "Funding/is-operator-or-owner");
         _;
@@ -150,6 +141,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __ERC20_init(_name, _symbol);
         __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
         __Ownable_init();
+        
+        console.log('Initializing iHelp Token Contract...');
 
         operator = _operator;
         stakingPool = _stakingPool;
@@ -160,8 +153,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __tokensMintedPerPhase = 1000000;
 
         // scale these later in the contract based on the charity pool decicals
-        developmentShareOfInterest = 0.05 * 1e18;
-        stakingShareOfInterest = 0.15 * 1e18;
+        developmentShareOfInterest = 0.10 * 1e18;
+        stakingShareOfInterest = 0.10 * 1e18;
         charityShareOfInterest = 0.80 * 1e18;
 
         __totalSupply = __tokensMintedPerPhase * 1e18;
@@ -216,7 +209,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     function registerCharityPool(address _addr) public onlyOperatorOrOwner returns (address) {
         require(_addr != address(0), "Charity pool cannot be null");
         if (address(__charityPoolRegistry[_addr]) == address(0)) {
-            console.log("adding charity...");
+            console.log("Registering Charity:",_addr);
             __charityPoolRegistry[_addr] = CharityPool(_addr);
             charityPoolList.add(_addr);
         }
@@ -510,25 +503,14 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("perfectRedeemedInterest,realRedeemedInterest");
                     console.log(charityInterestShare[charity], realRedeemedInterest);
 
-                    // TODO: MCS - run tests on the math here
-                    // uint256 differenceInInterest = realRedeemedInterest.div(charityInterestShare[charity]);
-                    // console.log("differenceInInterest", differenceInInterest);
-
                     // make the redeem interest portion available to the charity
                     address charityWalletAddress = __charityPoolRegistry[charity].charityWallet();
 
-                    /**
-                        TODO: MCS 
-                        correctedInterestShare = CISH[charity] * diffInIn 
-                                               = CISH[charity] * realRedeemedInterest /  CISH[charity]
-                                               = realRedeemedInterest
-                     */
-                    // uint256 correctedInterestShare = charityInterestShare[charity].mul(differenceInInterest);
                     uint256 correctedInterestShare = realRedeemedInterest;
                     console.log("correctedInterestShare", correctedInterestShare);
 
                     // divide this amongst holding, dev and staking pools (and charities)
-
+                    
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
                     if (charityWalletAddress == holdingPool) {
                         claimableCharityInterest[charity] += correctedInterestShare.mul(charityShareOfInterest);

@@ -1,7 +1,7 @@
 const { expect, use } = require("chai");
 const { run } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
-const { validate } = require("./validation/validation_v4");
+const { validate } = require("./validation/validation_v5");
 use(smock.matchers);
 const exec = require('child_process').exec;
 

@@ -15,6 +15,9 @@ require("hardhat-deploy");
 
 require("@eth-optimism/hardhat-ovm");
 
+require('hardhat-preprocessor');
+const { removeConsoleLog } = require('hardhat-preprocessor');
+
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
 //const defaultNetwork = "fuji";
@@ -23,6 +26,17 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 const defaultNetwork = "localhost";
 
 let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW' };
+
+// OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
+// can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
+let removeLogStatements = true;
+
+let preprocessOptions = null;
+if (removeLogStatements){
+  preprocessOptions = {
+    eachLine: removeConsoleLog()
+  }
+}
 
 if (defaultNetwork == 'fuji') {
   forkingData = {
@@ -43,7 +57,8 @@ else if (defaultNetwork == 'localhost') {
 function mnemonic() {
   try {
     return fs.readFileSync("./mnemonic.txt").toString().trim();
-  } catch (e) {
+  }
+  catch (e) {
     if (defaultNetwork !== "localhost") {
       console.log(
         "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
@@ -153,6 +168,9 @@ module.exports = {
       default: 10
     }
   },
+
+  preprocess: preprocessOptions
+
 };
 
 const DEBUG = true;
@@ -163,7 +181,7 @@ function debug(text) {
   }
 }
 
-task("wallet", "Create a wallet (pk) link", async (_, { ethers }) => {
+task("wallet", "Create a wallet (pk) link", async(_, { ethers }) => {
   const randomWallet = ethers.Wallet.createRandom();
   const privateKey = randomWallet._signingKey().privateKey;
   console.log("🔐 WALLET Generated as " + randomWallet.address + "");
@@ -176,7 +194,7 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     "Amount of ETH to send to wallet after generating"
   )
   .addOptionalParam("url", "URL to add pk to")
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     const randomWallet = ethers.Wallet.createRandom();
     const privateKey = randomWallet._signingKey().privateKey;
     console.log("🔐 WALLET Generated as " + randomWallet.address + "");
@@ -186,7 +204,8 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     try {
       localDeployerMnemonic = fs.readFileSync("./mnemonic.txt");
       localDeployerMnemonic = localDeployerMnemonic.toString().trim();
-    } catch (e) {
+    }
+    catch (e) {
       /* do nothing - this file isn't always there */
     }
 
@@ -213,7 +232,8 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
       let sendresult = await deployerWallet.sendTransaction(tx);
       console.log("\n" + url + "/pk#" + privateKey + "\n");
       return;
-    } else {
+    }
+    else {
       console.log(
         "💵 Sending " +
         amount +
@@ -229,7 +249,7 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
 task(
   "generate",
   "Create a mnemonic for builder deploys",
-  async (_, { ethers }) => {
+  async(_, { ethers }) => {
     const bip39 = require("bip39");
     const hdkey = require("ethereumjs-wallet/hdkey");
     const mnemonic = bip39.generateMnemonic();
@@ -262,11 +282,11 @@ task(
 );
 
 task(
-  "mineContractAddress",
-  "Looks for a deployer account that will give leading zeros"
-)
+    "mineContractAddress",
+    "Looks for a deployer account that will give leading zeros"
+  )
   .addParam("searchFor", "String to search for")
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     let contract_address = "";
     let address;
 
@@ -330,7 +350,7 @@ task(
 task(
   "account",
   "Get balance informations for the deployment account.",
-  async (_, { ethers }) => {
+  async(_, { ethers }) => {
     const hdkey = require("ethereumjs-wallet/hdkey");
     const bip39 = require("bip39");
     let mnemonic = fs.readFileSync("./mnemonic.txt").toString().trim();
@@ -364,7 +384,8 @@ task(
         console.log(
           "   nonce: " + (await provider.getTransactionCount(address))
         );
-      } catch (e) {
+      }
+      catch (e) {
         if (DEBUG) {
           console.log(e);
         }
@@ -384,19 +405,19 @@ async function addr(ethers, addr) {
   throw `Could not normalize address: ${addr}`;
 }
 
-task("accounts", "Prints the list of accounts", async (_, { ethers }) => {
+task("accounts", "Prints the list of accounts", async(_, { ethers }) => {
   const accounts = await ethers.provider.listAccounts();
   accounts.forEach((account) => console.log(account));
 });
 
-task("blockNumber", "Prints the block number", async (_, { ethers }) => {
+task("blockNumber", "Prints the block number", async(_, { ethers }) => {
   const blockNumber = await ethers.provider.getBlockNumber();
   console.log(blockNumber);
 });
 
 task("balance", "Prints an account's balance")
   .addPositionalParam("account", "The account's address")
-  .setAction(async (taskArgs, { ethers }) => {
+  .setAction(async(taskArgs, { ethers }) => {
     const balance = await ethers.provider.getBalance(
       await addr(ethers, taskArgs.account)
     );
@@ -413,7 +434,7 @@ function send(signer, txparams) {
   });
 }
 
-task("snapshot").setAction(async () => {
+task("snapshot").setAction(async() => {
   const id = await hre.network.provider.request({
     method: "evm_snapshot",
   });
@@ -422,7 +443,7 @@ task("snapshot").setAction(async () => {
 });
 
 task("revert")
-  .addParam("id", "Snapshot id").setAction(async (taskArgs) => {
+  .addParam("id", "Snapshot id").setAction(async(taskArgs) => {
     await hre.network.provider.request({
       method: "evm_revert",
       params: [taskArgs.id]
@@ -443,7 +464,7 @@ task("send", "Send ETH")
   .addOptionalParam("gasPrice", "Price you are willing to pay in gwei")
   .addOptionalParam("gasLimit", "Limit of how much gas to spend")
 
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     const from = await addr(ethers, taskArgs.from);
     debug(`Normalized from address: ${from}`);
     const fromSigner = await ethers.provider.getSigner(from);
