@@ -509,7 +509,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       //console.log(devTx2Approve['hash']);
       await devTx2Approve.wait();
 
-      const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, Math.floor(Date.now() / 1000) + 300);
+
+      const timestamp = (await mainnetInfura.getBlock()).timestamp;
+      console.log('Adding liquidity...', timestamp);
+
+      const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, timestamp + 3000000);
       await addLiquid.wait();
 
       let pairSupply1 = 0;
