@@ -3,16 +3,20 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const dotenv = require('dotenv');
-dotenv.config({path:'/core/ihelp/ihelp-dev-local/packages/hardhat/.env'})
+dotenv.config({ path: '/core/ihelp/ihelp-dev-local/packages/hardhat/.env' });
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
+require("solidity-coverage");
 
 require("hardhat-deploy");
 
 require("@eth-optimism/hardhat-ovm");
+
+require('hardhat-preprocessor');
+const { removeConsoleLog } = require('hardhat-preprocessor');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -21,7 +25,18 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //const defaultNetwork = "rinkeby";
 const defaultNetwork = "localhost";
 
-let forkingData = undefined;
+let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW' };
+
+// OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
+// can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
+let removeLogStatements = true;
+
+let preprocessOptions = null;
+if (removeLogStatements){
+  preprocessOptions = {
+    eachLine: removeConsoleLog()
+  }
+}
 
 if (defaultNetwork == 'fuji') {
   forkingData = {
@@ -35,14 +50,15 @@ else if (defaultNetwork == 'mainnet') {
 }
 else if (defaultNetwork == 'localhost') {
   forkingData = {
-    url: process.env.FORKING_URL
-  }
+    url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW'
+  };
 }
 
 function mnemonic() {
   try {
     return fs.readFileSync("./mnemonic.txt").toString().trim();
-  } catch (e) {
+  }
+  catch (e) {
     if (defaultNetwork !== "localhost") {
       console.log(
         "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
@@ -62,40 +78,36 @@ const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
 
 module.exports = {
-  
+
   defaultNetwork,
 
   networks: {
     hardhat: {
       gasPrice: 225000000000,
-      forking: forkingData
+      forking: forkingData,
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43113,
-      accounts: [
-        `0x${deployerPrivateKey}`, // deployer
-        `0x${stakingPoolPrivateKey}`, // stakingPool
-        `0x${holdingPoolPrivateKey}`, // holdingPool
-      ]
+      accounts: {
+        mnemonic: mnemonic(),
+      },
     },
     mainnet: {
-        url: 'https://api.avax.network/ext/bc/C/rpc',
-        gasPrice: 225000000000,
-        chainId: 43114,
-        accounts: [
-          `0x${deployerPrivateKey}`, // deployer
-          `0x${stakingPoolPrivateKey}`, // stakingPool
-          `0x${holdingPoolPrivateKey}`, // holdingPool
-        ]
+      url: 'https://api.avax.network/ext/bc/C/rpc',
+      gasPrice: 225000000000,
+      chainId: 43114,
+      accounts: {
+        mnemonic: mnemonic(),
       },
+    },
     localhost: {
       url: "http://localhost:7545",
-      //forking: forkingData
+      forking: forkingData
     },
     rinkeby: {
-      url: process.env.FORKING_URL,
+      url: "http://localhost:7545",
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -104,17 +116,18 @@ module.exports = {
     }
   },
   solidity: {
-    compilers: [
-      {
-        version: "0.8.9",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          },
+    version: "0.8.9",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      },
+      outputSelection: {
+        "*": {
+          "*": ["storageLayout"],
         },
-      }
-    ],
+      },
+    }
   },
   namedAccounts: {
     developmentPool: {
@@ -125,7 +138,7 @@ module.exports = {
       default: 0,
     },
     stakingPool: {
-      default: 1, 
+      default: 1,
     },
     holdingPool: {
       default: 2,
@@ -134,10 +147,10 @@ module.exports = {
       default: 3,
     },
     charity1wallet: {
-      default: 4, 
+      default: 4,
     },
     charity2wallet: {
-      default: 5, 
+      default: 5,
     },
     charity3wallet: {
       default: 6
@@ -146,7 +159,7 @@ module.exports = {
       default: 7
     },
     userAccount: {
-      default: 8 
+      default: 8
     },
     userAccount1: {
       default: 9
@@ -155,6 +168,9 @@ module.exports = {
       default: 10
     }
   },
+
+  preprocess: preprocessOptions
+
 };
 
 const DEBUG = true;
@@ -165,7 +181,7 @@ function debug(text) {
   }
 }
 
-task("wallet", "Create a wallet (pk) link", async (_, { ethers }) => {
+task("wallet", "Create a wallet (pk) link", async(_, { ethers }) => {
   const randomWallet = ethers.Wallet.createRandom();
   const privateKey = randomWallet._signingKey().privateKey;
   console.log("🔐 WALLET Generated as " + randomWallet.address + "");
@@ -178,7 +194,7 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     "Amount of ETH to send to wallet after generating"
   )
   .addOptionalParam("url", "URL to add pk to")
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     const randomWallet = ethers.Wallet.createRandom();
     const privateKey = randomWallet._signingKey().privateKey;
     console.log("🔐 WALLET Generated as " + randomWallet.address + "");
@@ -188,7 +204,8 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     try {
       localDeployerMnemonic = fs.readFileSync("./mnemonic.txt");
       localDeployerMnemonic = localDeployerMnemonic.toString().trim();
-    } catch (e) {
+    }
+    catch (e) {
       /* do nothing - this file isn't always there */
     }
 
@@ -207,21 +224,22 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
       deployerWallet = deployerWallet.connect(ethers.provider);
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using deployer account"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using deployer account"
       );
       let sendresult = await deployerWallet.sendTransaction(tx);
       console.log("\n" + url + "/pk#" + privateKey + "\n");
       return;
-    } else {
+    }
+    else {
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using local node"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using local node"
       );
       console.log("\n" + url + "/pk#" + privateKey + "\n");
       return send(ethers.provider.getSigner(), tx);
@@ -231,7 +249,7 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
 task(
   "generate",
   "Create a mnemonic for builder deploys",
-  async (_, { ethers }) => {
+  async(_, { ethers }) => {
     const bip39 = require("bip39");
     const hdkey = require("ethereumjs-wallet/hdkey");
     const mnemonic = bip39.generateMnemonic();
@@ -251,8 +269,8 @@ task(
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
     console.log(
       "🔐 Account Generated as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -264,11 +282,11 @@ task(
 );
 
 task(
-  "mineContractAddress",
-  "Looks for a deployer account that will give leading zeros"
-)
+    "mineContractAddress",
+    "Looks for a deployer account that will give leading zeros"
+  )
   .addParam("searchFor", "String to search for")
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     let contract_address = "";
     let address;
 
@@ -311,12 +329,12 @@ task(
 
     console.log(
       "⛏  Account Mined as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "📜 This will create the first contract: " +
-        chalk.magenta("0x" + contract_address)
+      chalk.magenta("0x" + contract_address)
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -332,7 +350,7 @@ task(
 task(
   "account",
   "Get balance informations for the deployment account.",
-  async (_, { ethers }) => {
+  async(_, { ethers }) => {
     const hdkey = require("ethereumjs-wallet/hdkey");
     const bip39 = require("bip39");
     let mnemonic = fs.readFileSync("./mnemonic.txt").toString().trim();
@@ -366,7 +384,8 @@ task(
         console.log(
           "   nonce: " + (await provider.getTransactionCount(address))
         );
-      } catch (e) {
+      }
+      catch (e) {
         if (DEBUG) {
           console.log(e);
         }
@@ -386,19 +405,19 @@ async function addr(ethers, addr) {
   throw `Could not normalize address: ${addr}`;
 }
 
-task("accounts", "Prints the list of accounts", async (_, { ethers }) => {
+task("accounts", "Prints the list of accounts", async(_, { ethers }) => {
   const accounts = await ethers.provider.listAccounts();
   accounts.forEach((account) => console.log(account));
 });
 
-task("blockNumber", "Prints the block number", async (_, { ethers }) => {
+task("blockNumber", "Prints the block number", async(_, { ethers }) => {
   const blockNumber = await ethers.provider.getBlockNumber();
   console.log(blockNumber);
 });
 
 task("balance", "Prints an account's balance")
   .addPositionalParam("account", "The account's address")
-  .setAction(async (taskArgs, { ethers }) => {
+  .setAction(async(taskArgs, { ethers }) => {
     const balance = await ethers.provider.getBalance(
       await addr(ethers, taskArgs.account)
     );
@@ -415,6 +434,28 @@ function send(signer, txparams) {
   });
 }
 
+task("snapshot").setAction(async() => {
+  const id = await hre.network.provider.request({
+    method: "evm_snapshot",
+  });
+  debug(`Snapshotid: ${id}`);
+
+});
+
+task("revert")
+  .addParam("id", "Snapshot id").setAction(async(taskArgs) => {
+    await hre.network.provider.request({
+      method: "evm_revert",
+      params: [taskArgs.id]
+    });
+
+    const newId = await hre.network.provider.request({
+      method: "evm_snapshot",
+    });
+    debug(`New Snapshotid: ${newId}`);
+  });
+
+
 task("send", "Send ETH")
   .addParam("from", "From address or account index")
   .addOptionalParam("to", "To address or account index")
@@ -423,7 +464,7 @@ task("send", "Send ETH")
   .addOptionalParam("gasPrice", "Price you are willing to pay in gwei")
   .addOptionalParam("gasLimit", "Limit of how much gas to spend")
 
-  .setAction(async (taskArgs, { network, ethers }) => {
+  .setAction(async(taskArgs, { network, ethers }) => {
     const from = await addr(ethers, taskArgs.from);
     debug(`Normalized from address: ${from}`);
     const fromSigner = await ethers.provider.getSigner(from);

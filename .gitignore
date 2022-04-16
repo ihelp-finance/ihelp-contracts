@@ -12,3 +12,8 @@ mnemonic.txt
 yarn.lock
 yarn-error.log
 build
+.prettierrc
+coverage.json
+.DS_Store
+contracts/.DS_Store
+contracts/ihelp/ihelp-contracts.code-workspace

@@ -20,7 +20,6 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 internal __rewardAwarded;
     EnumerableSet.AddressSet private stakeholders;
 
-    // TODO: Use this to keep track of claimed rewards. Cosider if it's necessary to support partial claims
     mapping(address => uint256) public claimed;
 
     function initialize(
@@ -87,6 +86,7 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 claimedAmount = claimed[_addr];
         console.log("claimed", reward);
+
         return reward - claimedAmount;
     }
 
@@ -114,14 +114,10 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return stakeholders.values();
     }
 
-    function distributeRewards() public onlyOwner {
-        // leave this bnank for not just for the sake of not breaking tests
-    }
-
     function claimReward() public {
         uint256 claimAmount = claimableRewardOf(msg.sender);
         console.log("claiming reward", msg.sender, claimAmount);
-        rewardToken().transferFrom(address(this), msg.sender, claimAmount);
+        rewardToken().transfer(msg.sender, claimAmount);
     }
 
     function claimSpecificReward(uint256 amount) public {
@@ -133,6 +129,6 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         claimed[msg.sender] += amount;
 
-        rewardToken().transferFrom(address(this), msg.sender, amount);
+        rewardToken().transfer(msg.sender, amount);
     }
 }

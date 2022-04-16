@@ -89,11 +89,6 @@ contract CharityPool is OwnableUpgradeable {
         _;
     }
 
-    modifier onlyOperator() {
-        require(msg.sender == operator, "is-operator");
-        _;
-    }
-
     modifier onlyOperatorOrOwner() {
         require(msg.sender == operator || msg.sender == owner(), "is-operator-or-owner");
         _;
@@ -121,6 +116,8 @@ contract CharityPool is OwnableUpgradeable {
 
         require(_cToken != address(0), "Funding/ctoken-zero");
         require(_operator != address(0), "Funding/operator-zero");
+        
+        console.log('Initializing Charity Pool Contract:',_name);
 
         cToken = ICErc20(_cToken);
         priceFeed = AggregatorV3Interface(_priceFeed);
@@ -152,7 +149,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function deposit(uint256 _amount) public {
-        require(_amount >= 0, "Funding/small-amount");
+        require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
@@ -164,7 +161,7 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function sponsor(uint256 _amount) public {
-        require(_amount >= 0, "Funding/small-amount");
+        require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
@@ -244,19 +241,17 @@ contract CharityPool is OwnableUpgradeable {
 
             // 2.5% to developer pool as native currency of pool
             uint256 developerFee = (_amount * 25) / 1000;
-            require(token().approve(developmentPool, developerFee), "Funding/developer approve");
             require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
             // 2.5% to staking pool as swapped dai
             uint256 stakingFee = (_amount * 25) / 1000;
 
             if (tokenaddress == holdingToken) {
-                require(token().approve(stakingPool, stakingFee), "Funding/staking approve");
                 require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
             } else {
+                console.log("Swapping");
                 uint256 minAmount = (stakingFee * 50) / 100;
 
-                require(token().approve(address(this), stakingFee), "Funding/staking swap approve");
                 require(token().transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
 
                 require(token().approve(swapperPool, stakingFee), "Funding/staking swapper approve");
@@ -290,7 +285,8 @@ contract CharityPool is OwnableUpgradeable {
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
-            require(cToken.redeemUnderlying(amount) == 0, "Funding/redeem");
+            // redeem the yield
+            cToken.redeemUnderlying(amount);
 
             address tokenaddress = address(token());
 
@@ -337,11 +333,11 @@ contract CharityPool is OwnableUpgradeable {
      * @notice Returns the underlying balance of this contract in the cToken.
      * @return The cToken underlying balance for this contract.
      */
-    function balance() public returns (uint256) {
+    function balance() public view returns (uint256) {
         return cToken.balanceOfUnderlying(address(this));
     }
 
-    function interestEarned() public returns (uint256) {
+    function interestEarned() public view returns (uint256) {
         uint256 _balance = balance();
 
         if (_balance > accountedBalance) {
@@ -369,8 +365,8 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function getUnderlyingTokenPrice() public view returns (uint256) {
-        // (uint80 roundID, int256 price, uint256 startedAt, uint256 timeStamp, uint80 answeredInRound) = priceFeed.latestRoundData();
-        return uint256(100000000); // TESTING - uint(100000000);
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+        return uint256(price);
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -395,17 +391,18 @@ contract CharityPool is OwnableUpgradeable {
         uint256 tokenPrice = getUnderlyingTokenPrice();
         uint256 convertExchangeRateToWei = 100000000;
         uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
-
         uint256 valueUSD = value.mul(tokenPriceWei);
         // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
-        if (decimals() != holdingDecimals) {
+        if (decimals() < holdingDecimals) {
             valueUSD = valueUSD * safepow(10, holdingDecimals - decimals());
+        } else if (decimals() > holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, decimals() - holdingDecimals);
         }
-
         return valueUSD;
     }
 
     function setStakingPool(address _pool) public onlyOperatorOrOwner {
+        require(_pool != address(0), "Pool cannot be null");
         stakingPool = _pool;
     }
 

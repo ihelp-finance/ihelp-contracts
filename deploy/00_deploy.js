@@ -6,6 +6,8 @@ const Web3 = require('web3');
 const fs = require('fs');
 const web3 = new Web3('http://127.0.0.1:7545');
 
+const { run, network } = require("hardhat");
+
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
   path: 'contractAddresses.csv',
@@ -112,6 +114,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+
+  console.log(chainId);
 
   const deployMockTokens = true;
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
@@ -505,7 +509,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       //console.log(devTx2Approve['hash']);
       await devTx2Approve.wait();
 
-      const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, Math.floor(Date.now() / 1000) + 300);
+
+      const timestamp = (await mainnetInfura.getBlock()).timestamp;
+      console.log('Adding liquidity...', timestamp);
+
+      const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, timestamp + 3000000);
       await addLiquid.wait();
 
       let pairSupply1 = 0;
@@ -581,8 +589,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-  cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-  await os.execCommand('hardhat export --export-all ./build/hardhat_contracts.json');
+
+  fs.mkdir('deployments', async (e) => {
+    cyan('hardhat export --export-all ./build/hardhat_contracts.json');
+    return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+  });
 
   // write the key addresses to a csv file
   return csvWriter.writeRecords(contractAddresses).then(() => { });
