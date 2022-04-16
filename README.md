@@ -24,6 +24,12 @@ yarn chain
 yarn deploy
 ```
 
+You can run through the extensive battery of tests (almost full coverage) using the command below:
+
+```
+yarn test
+```
+
 ## Deployed Contracts
 
 ### iHelp (ERC20Upgradeable)
