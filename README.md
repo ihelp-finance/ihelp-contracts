@@ -5,6 +5,7 @@
 | ![Statements](https://img.shields.io/badge/statements-97.87%25-brightgreen.svg?style=flat) | ![Functions](https://img.shields.io/badge/functions-93.26%25-brightgreen.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-97.45%25-brightgreen.svg?style=flat) |
 
 <em>Test Coverage Reports: <a href="https://ihelp-finance.github.io/ihelp-contracts/coverage" target="_blank">https://ihelp-finance.github.io/ihelp-contracts/coverage</a></em>
+<em>Internal Audit Report: <a href="https://ihelp-finance.github.io/ihelp-contracts/audits/iHelpAuditReport.pdf" target="_blank">https://ihelp-finance.github.io/ihelp-contracts/audits/iHelpAuditReport.pdf</a></em>
 
 ## Overview
 
