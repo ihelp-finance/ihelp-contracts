@@ -8,6 +8,7 @@ const ethersLib = require('ethers');
 const ethers = require('ethers');
 const axios = require('axios');
 const csv = require('csvtojson');
+const { writeFileSync } = require('fs');
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -236,39 +237,59 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const deployCharityPool = async (contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
 
     const charityAddresses = await getTokenAddresses(charityToken, lendingProtocol);
+    const factoryDeployment = await deployments.get("CharityPoolCloneFactory");
+    const factory = await ethers.getContractAt("CharityPoolCloneFactory", factoryDeployment.address);
 
-    const charityResult = await deploy(contractName, {
-      contract: 'CharityPool',
-      proxy: {
-        from: deployer,
-        proxyContract: "OpenZeppelinTransparentProxy",
-        execute: {
-          init: {
-            methodName: "initialize",
-            args: [
-              charityName, // pool name
-              signer._address, // operator
-              holdingPool, // holding pool address
-              charityWalletAddress, // charity wallet address
-              charityToken, // token as string
-              charityAddresses['lendingtoken'], // lending token address
-              holdingtokenAddress, // address of the holding token
-              charityAddresses['pricefeed'], // chainlink price feed
-              ihelpAddress, // ihelp token for getting interest
-              swapperAddress, // swapper contract
-              stakingPool, // staking pool
-              developmentPool, // staking pool
-            ]
-          },
-          onUpgrade: {
-            methodName: "postUpgrade",
-            args: []
-          }
-        }
-      },
-      from: deployer,
-      skipIfAlreadyDeployed: skipIfAlreadyDeployed
+    const tx = await factory.createCharityPool({
+      charityName: charityName,
+      operatorAddress: signer._address,
+      holdingPoolAddress: holdingPool,
+      charityWalletAddress: charityWalletAddress,
+      charityTokenName: charityToken,
+      lendingTokenAddress: charityAddresses['lendingtoken'],
+      holdingTokenAddress: holdingtokenAddress,
+      priceFeedAddress: charityAddresses['pricefeed'],
+      ihelpAddress: ihelpAddress,
+      swapperAddress: swapperAddress,
+      stakingPoolAddress: stakingPool,
+      developmentPoolAddress: developmentPool
     });
+
+    const { gasUsed: createGasUsed, events } = await tx.wait();
+    const charityResult = events.find(Boolean);
+
+    // const charityResult = await deploy(contractName, {
+    //   contract: 'CharityPool',
+    //   proxy: {
+    //     from: deployer,
+    //     proxyContract: "OpenZeppelinTransparentProxy",
+    //     execute: {
+    //       init: {
+    //         methodName: "initialize",
+    //         args: [
+    //           charityName, // pool name
+    //           signer._address, // operator
+    //           holdingPool, // holding pool address
+    //           charityWalletAddress, // charity wallet address
+    //           charityToken, // token as string
+    //           charityAddresses['lendingtoken'], // lending token address
+    //           holdingtokenAddress, // address of the holding token
+    //           charityAddresses['pricefeed'], // chainlink price feed
+    //           ihelpAddress, // ihelp token for getting interest
+    //           swapperAddress, // swapper contract
+    //           stakingPool, // staking pool
+    //           developmentPool, // staking pool
+    //         ]
+    //       },
+    //       onUpgrade: {
+    //         methodName: "postUpgrade",
+    //         args: []
+    //       }
+    //     }
+    //   },
+    //   from: deployer,
+    //   skipIfAlreadyDeployed: skipIfAlreadyDeployed
+    // });
 
     deployedCharities.push([contractName, charityResult]);
 
@@ -361,3 +382,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 };
 
 module.exports.tags = ["charityDeployment"];
+module.exports.dependencies = ['FactoryDeployments'];
