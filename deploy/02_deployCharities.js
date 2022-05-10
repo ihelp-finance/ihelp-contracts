@@ -9,6 +9,7 @@ const ethers = require('ethers');
 const axios = require('axios');
 const csv = require('csvtojson');
 const { writeFileSync } = require('fs');
+const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypools/CharityPool.sol/CharityPool.json');
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -109,7 +110,7 @@ const chainName = (chainId) => {
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
 
-  const { deploy } = deployments;
+  const { deploy, save } = deployments;
 
   let {
     deployer,
@@ -257,6 +258,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
     const { gasUsed: createGasUsed, events } = await tx.wait();
     const charityResult = events.find(Boolean);
+    deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
 
     // const charityResult = await deploy(contractName, {
     //   contract: 'CharityPool',
