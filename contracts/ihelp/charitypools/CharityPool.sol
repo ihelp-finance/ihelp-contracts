@@ -8,11 +8,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUp
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
-import "../utils/IERC20.sol";
-import "../utils/ICErc20.sol";
+import "../../utils/IERC20.sol";
+import "../../utils/ICErc20.sol";
 
-import "./iHelpTokenInterface.sol";
-import "./SwapperInterface.sol";
+import "../iHelpTokenInterface.sol";
+import "../SwapperInterface.sol";
 
 import "hardhat/console.sol";
 
@@ -116,8 +116,8 @@ contract CharityPool is OwnableUpgradeable {
 
         require(_cToken != address(0), "Funding/ctoken-zero");
         require(_operator != address(0), "Funding/operator-zero");
-        
-        console.log('Initializing Charity Pool Contract:',_name);
+
+        console.log("Initializing Charity Pool Contract:", _name);
 
         cToken = ICErc20(_cToken);
         priceFeed = AggregatorV3Interface(_priceFeed);

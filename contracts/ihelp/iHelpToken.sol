@@ -11,7 +11,7 @@ import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../utils/IERC20.sol";
 
-import "./CharityPool.sol";
+import "./charitypools/CharityPool.sol";
 
 import "hardhat/console.sol";
 
@@ -141,8 +141,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __ERC20_init(_name, _symbol);
         __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
         __Ownable_init();
-        
-        console.log('Initializing iHelp Token Contract...');
+
+        console.log("Initializing iHelp Token Contract...");
 
         operator = _operator;
         stakingPool = _stakingPool;
@@ -209,7 +209,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     function registerCharityPool(address _addr) public onlyOperatorOrOwner returns (address) {
         require(_addr != address(0), "Charity pool cannot be null");
         if (address(__charityPoolRegistry[_addr]) == address(0)) {
-            console.log("Registering Charity:",_addr);
+            console.log("Registering Charity:", _addr);
             __charityPoolRegistry[_addr] = CharityPool(_addr);
             charityPoolList.add(_addr);
         }
@@ -510,7 +510,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("correctedInterestShare", correctedInterestShare);
 
                     // divide this amongst holding, dev and staking pools (and charities)
-                    
+
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
                     if (charityWalletAddress == holdingPool) {
                         claimableCharityInterest[charity] += correctedInterestShare.mul(charityShareOfInterest);
