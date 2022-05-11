@@ -5,7 +5,6 @@ const web3 = new Web3('http://127.0.0.1:7545');
 const fs = require('fs');
 const chalk = require('chalk');
 const ethersLib = require('ethers');
-const ethers = require('ethers');
 const axios = require('axios');
 const csv = require('csvtojson');
 const { writeFileSync } = require('fs');
@@ -24,6 +23,8 @@ const csvWriter = createCsvWriter({
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
+const { deployCharityPoolToNetwork } = require("../scripts/charityDeployUtils");
+const { network } = require("hardhat");
 
 let userAccount, userSigner;
 let signer;
@@ -109,8 +110,6 @@ const chainName = (chainId) => {
 };
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
-
-  const { deploy, save } = deployments;
 
   let {
     deployer,
@@ -238,10 +237,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const deployCharityPool = async (contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
 
     const charityAddresses = await getTokenAddresses(charityToken, lendingProtocol);
-    const factoryDeployment = await deployments.get("CharityPoolCloneFactory");
-    const factory = await ethers.getContractAt("CharityPoolCloneFactory", factoryDeployment.address);
 
-    const tx = await factory.createCharityPool({
+    const charityResult = await deployCharityPoolToNetwork({
       charityName: charityName,
       operatorAddress: signer._address,
       holdingPoolAddress: holdingPool,
@@ -254,10 +251,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       swapperAddress: swapperAddress,
       stakingPoolAddress: stakingPool,
       developmentPoolAddress: developmentPool
-    });
+    }, network.name);
 
-    const { gasUsed: createGasUsed, events } = await tx.wait();
-    const charityResult = events.find(Boolean);
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
 
     // const charityResult = await deploy(contractName, {
