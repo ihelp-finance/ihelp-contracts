@@ -4,8 +4,7 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 /**
  * @title TokenVesting
@@ -289,8 +288,11 @@ contract TokenVesting is Ownable {
             uint256 timeFromStart = currentTime - vestingSchedule.start;
             uint256 secondsPerSlice = vestingSchedule.slicePeriodSeconds;
             uint256 vestedSlicePeriods = timeFromStart / secondsPerSlice;
-            uint256 vestedSeconds = vestedSlicePeriods * secondsPerSlice;
-            uint256 vestedAmount = (vestingSchedule.amountTotal * vestedSeconds) / vestingSchedule.duration;
+
+            uint256 slices = vestingSchedule.duration / secondsPerSlice;
+            uint256 emissionPerSlice = (vestingSchedule.amountTotal * 1000) / slices;
+
+            uint256 vestedAmount = (emissionPerSlice * vestedSlicePeriods) / 1000;
             vestedAmount = vestedAmount - vestingSchedule.released;
             return vestedAmount;
         }
