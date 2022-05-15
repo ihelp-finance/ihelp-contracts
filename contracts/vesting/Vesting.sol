@@ -3,12 +3,12 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * @title TokenVesting
  */
-contract TokenVesting is Ownable {
+contract TokenVesting is OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct VestingSchedule {
@@ -34,7 +34,7 @@ contract TokenVesting is Ownable {
     }
 
     // address of the ERC20 token
-    IERC20 private immutable _token;
+    IERC20 private _token;
 
     bytes32[] private vestingSchedulesIds;
     mapping(bytes32 => VestingSchedule) private vestingSchedules;
@@ -73,8 +73,9 @@ contract TokenVesting is Ownable {
      * @dev Creates a vesting contract.
      * @param token_ address of the ERC20 token contract
      */
-    constructor(address token_) {
+    function initialize(address token_) public initializer {
         require(token_ != address(0x0));
+        __Ownable_init();
         _token = IERC20(token_);
     }
 

@@ -23,7 +23,8 @@ describe("TokenVesting", function () {
         await testToken.deployed();
         await testToken.mint(owner.address, parseEther('100000000000'));
 
-        tokenVesting = await TokenVesting.deploy(testToken.address);
+        tokenVesting = await TokenVesting.deploy();
+        await tokenVesting.initialize(testToken.address);
 
         const blockBefore = await ethers.provider.getBlock();
         baseTime = blockBefore.timestamp;
@@ -246,7 +247,8 @@ describe("TokenVesting", function () {
         });
 
         it("Should compute vesting schedule index", async function () {
-            const tokenVesting = await TokenVesting.deploy(testToken.address);
+            const tokenVesting = await TokenVesting.deploy();
+            await tokenVesting.initialize(testToken.address);
             const expectedVestingScheduleId =
                 "0xa279197a1d7a4b7398aa0248e95b8fcc6cdfb43220ade05d01add9c5468ea097";
             const readlVestingScheduleId = await tokenVesting.computeVestingScheduleIdForAddressAndIndex(addr1.address, 0);
@@ -256,8 +258,8 @@ describe("TokenVesting", function () {
         });
 
         it("Should check input parameters for createVestingSchedule method", async function () {
-            const tokenVesting = await TokenVesting.deploy(testToken.address);
-            await tokenVesting.deployed();
+            const tokenVesting = await TokenVesting.deploy();
+            tokenVesting.initialize(testToken.address);
             await testToken.transfer(tokenVesting.address, 1000);
             const time = Date.now();
             await expect(
@@ -299,8 +301,9 @@ describe("TokenVesting", function () {
     describe('Cliff tests', function () {
         let tokenVestingTimeSensitive, time, cliff;
         beforeEach(async () => {
-            tokenVestingTimeSensitive = await TokenVesting.deploy(testToken.address);
-            await tokenVesting.deployed();
+            tokenVestingTimeSensitive = await TokenVesting.deploy();
+            await tokenVestingTimeSensitive.initialize(testToken.address);
+
             await testToken.transfer(tokenVestingTimeSensitive.address, 1000);
             const blockBefore = await ethers.provider.getBlock();
             time = blockBefore.timestamp;
@@ -350,8 +353,9 @@ describe("TokenVesting", function () {
     describe('Period slice tests', function () {
         let tokenVestingTimeSensitive, time, cliff, duration;
         beforeEach(async () => {
-            tokenVestingTimeSensitive = await TokenVesting.deploy(testToken.address);
-            await tokenVesting.deployed();
+            tokenVestingTimeSensitive = await TokenVesting.deploy();
+            await tokenVestingTimeSensitive.initialize(testToken.address);
+
             await testToken.transfer(tokenVestingTimeSensitive.address, 1000);
             const blockBefore = await ethers.provider.getBlock();
             time = blockBefore.timestamp;
