@@ -44,8 +44,15 @@ contract TokenVesting is Ownable {
     uint256 private vestingSchedulesTotalAmount;
     mapping(address => uint256) private holdersVestingCount;
 
-    event Released(uint256 amount);
-    event Revoked();
+    /**
+     * @dev  Emits the released amount for a given beneficiary when the release action is performed
+     */
+    event Released(address indexed beneficiary, uint256 releasedAmount);
+
+    /**
+     * @dev Emits the unreleased amount for a given beneficiary
+     */
+    event Revoked(address indexed beneficiary, uint256 unreleasedAmount);
 
     /**
      * @dev Reverts if no vesting schedule matches the passed identifier.
@@ -176,6 +183,7 @@ contract TokenVesting is Ownable {
         uint256 unreleased = vestingSchedule.amountTotal - vestingSchedule.released;
         vestingSchedulesTotalAmount = vestingSchedulesTotalAmount - unreleased;
         vestingSchedule.revoked = true;
+        emit Revoked(vestingSchedule.beneficiary, unreleased);
     }
 
     /**
@@ -205,6 +213,7 @@ contract TokenVesting is Ownable {
         vestingSchedule.released = vestingSchedule.released + amount;
         vestingSchedulesTotalAmount = vestingSchedulesTotalAmount - amount;
         _token.safeTransfer(vestingSchedule.beneficiary, amount);
+        emit Released(vestingSchedule.beneficiary, amount);
     }
 
     /**
