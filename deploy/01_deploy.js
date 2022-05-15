@@ -338,7 +338,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   green('iHelp Proxy:', ihelpAddress);
   green('iHelp Implementation:', ihelpResult.implementation);
 
-  let ihelp = await ethers.getContractAt('iHelpToken', ihelpAddress);
+  // let ihelp = await ethers.getContractAt('iHelpToken', ihelpAddress);
 
   // let currentSupply = await ihelp.totalSupply();
   // if (currentSupply.toString() == '0') {
