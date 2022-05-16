@@ -29,7 +29,6 @@ describe("End TO End", function () {
     beforeEach(async function () {
 
         await run("deploy");
-        // await os.execCommand('hh deploy --network hardhat');
     });
 
 

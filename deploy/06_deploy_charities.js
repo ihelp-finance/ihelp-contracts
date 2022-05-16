@@ -7,7 +7,6 @@ const chalk = require('chalk');
 const ethersLib = require('ethers');
 const axios = require('axios');
 const csv = require('csvtojson');
-const { writeFileSync } = require('fs');
 const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypools/CharityPool.sol/CharityPool.json');
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
@@ -23,91 +22,12 @@ const csvWriter = createCsvWriter({
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolToNetwork } = require("../scripts/charityDeployUtils");
+const { deployCharityPoolToNetwork, dim, yellow, chainName, fromBigNumber, green } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
 let signer;
 let xhelp, ihelp, dai, cdai, swapper;
-
-const fromBigNumber = (number, decimals) => {
-  if (decimals == undefined) {
-    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)));
-  }
-  else {
-    return parseFloat(ethersLib.utils.formatUnits(number, decimals));
-  }
-};
-
-function dim() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.dim.call(chalk, ...arguments));
-  }
-}
-
-function cyan() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.cyan.call(chalk, ...arguments));
-  }
-}
-
-function yellow() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.yellow.call(chalk, ...arguments));
-  }
-}
-
-function green() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.green.call(chalk, ...arguments));
-  }
-}
-
-function displayResult(name, result) {
-  if (!result.newlyDeployed) {
-    yellow(`Re-used existing ${name} at ${result.address}`);
-  }
-  else {
-    green(`${name} deployed at ${result.address}`);
-  }
-}
-
-const chainName = (chainId) => {
-  switch (chainId) {
-    case 1:
-      return 'Mainnet';
-    case 3:
-      return 'Ropsten';
-    case 4:
-      return 'Rinkeby';
-    case 5:
-      return 'Goerli';
-    case 42:
-      return 'Kovan';
-    case 56:
-      return 'Binance Smart Chain';
-    case 77:
-      return 'POA Sokol';
-    case 97:
-      return 'Binance Smart Chain (testnet)';
-    case 99:
-      return 'POA';
-    case 100:
-      return 'xDai';
-    case 137:
-      return 'Matic';
-    case 31337:
-      return 'localhost';
-    case 43113:
-      return 'Fuji';
-    case 43114:
-      return 'Avalanche';
-    case 80001:
-      return 'Matic (Mumbai)';
-    default:
-      return 'Unknown';
-  }
-};
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
 
@@ -127,9 +47,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   const signer = await ethers.provider.getSigner(deployer);
 
-  dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-  dim("Charity Contracts - Deploy Script");
-  dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+  yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+  yellow("Charity Contracts - Deploy Script");
+  yellow("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
   const chainId = parseInt(await getChainId(), 10);
 
@@ -237,7 +157,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const deployCharityPool = async (contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
 
     const charityAddresses = await getTokenAddresses(charityToken, lendingProtocol);
-
     const charityResult = await deployCharityPoolToNetwork({
       charityName: charityName,
       operatorAddress: signer._address,
@@ -252,50 +171,13 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       stakingPoolAddress: stakingPool,
       developmentPoolAddress: developmentPool
     }, network.name);
-
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
-
-    // const charityResult = await deploy(contractName, {
-    //   contract: 'CharityPool',
-    //   proxy: {
-    //     from: deployer,
-    //     proxyContract: "OpenZeppelinTransparentProxy",
-    //     execute: {
-    //       init: {
-    //         methodName: "initialize",
-    //         args: [
-    //           charityName, // pool name
-    //           signer._address, // operator
-    //           holdingPool, // holding pool address
-    //           charityWalletAddress, // charity wallet address
-    //           charityToken, // token as string
-    //           charityAddresses['lendingtoken'], // lending token address
-    //           holdingtokenAddress, // address of the holding token
-    //           charityAddresses['pricefeed'], // chainlink price feed
-    //           ihelpAddress, // ihelp token for getting interest
-    //           swapperAddress, // swapper contract
-    //           stakingPool, // staking pool
-    //           developmentPool, // staking pool
-    //         ]
-    //       },
-    //       onUpgrade: {
-    //         methodName: "postUpgrade",
-    //         args: []
-    //       }
-    //     }
-    //   },
-    //   from: deployer,
-    //   skipIfAlreadyDeployed: skipIfAlreadyDeployed
-    // });
-
     deployedCharities.push([contractName, charityResult]);
 
-    console.log('   deployed:', contractName, charityResult.address);
-
+    yellow('   deployed:', contractName, charityResult.address);
   };
 
   if (isTestEnvironment == true) {
-
     await deployCharityPool('charityPool1', 'Charity Pool 1', holdingPool, 'DAI', 'compound');
     await deployCharityPool('charityPool2', 'Charity Pool 2', holdingPool, 'USDC', 'compound');
     await deployCharityPool('charityPool3', 'Charity Pool 3', holdingPool, 'DAI', 'compound');
@@ -379,4 +261,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 };
 
 module.exports.tags = ["charityDeployment"];
-module.exports.dependencies = ['FactoryDeployments'];
+module.exports.dependencies = ['FactoryDeployments',];

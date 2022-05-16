@@ -6,12 +6,6 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CharityPool.sol";
 import "./CharityPoolUtils.sol";
 
-/**
-    TODO: Ask Matt : do we need the charity deployments to be upgradable?
-    Using clone means less gas fees to pay on each deployment
-    Using upgragable contracts means more expensive deployment but we have the advantage of the contracts being upgragable
- */
-
 contract CharityPoolCloneFactory {
     address immutable charityPoolImplementation;
 

@@ -30,7 +30,7 @@ let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lb
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
-let removeLogStatements = true;
+let removeLogStatements = false;
 
 let preprocessOptions = null;
 if (removeLogStatements) {
@@ -75,6 +75,7 @@ const stakingPoolPrivateKey = process.env.STAKINGPOOL_PRIVATE_KEY;
 const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
 // const proxyAdminPrivateKey = process.env.PROXYADMIN_PRIVATE_KEY;
 const reportGas = process.env.REPORT_GAS;
+const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER || "0x00bE248f907B25cb10a6dad52051e3427e0ba037";
 
 // gnosis-safe
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
@@ -109,7 +110,7 @@ module.exports = {
       forking: forkingData
     },
     rinkeby: {
-      url: "http://localhost:7545",
+      url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW',
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -147,6 +148,9 @@ module.exports = {
     },
     proxyAdmin: {
       default: 3,
+      //TODO: @Matt add multi sign address here 
+      4: proxyAdminOwner,
+      'localhost': "0x346abB57CfB43aD3Bb8210E3DD1dB12353160A0b"
     },
     charity1wallet: {
       default: 4,
