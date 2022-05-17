@@ -16,7 +16,7 @@
     "hardhat-log-remover": "^2.0.2",
     "hardhat-preprocessor": "^0.1.4",
     "istanbul-badges-readme": "^1.8.1",
-    "solidity-coverage": "^0.7.20"
+    "solidity-coverage": "^0.7.21"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.2.1",

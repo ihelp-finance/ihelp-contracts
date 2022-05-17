@@ -81,7 +81,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ],
       contract: 'ERC20MintableMock',
       from: deployer,
-      skipIfAlreadyDeployed: true
     });
 
     cyan("\nDeploying cUSDC...");
@@ -93,7 +92,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ],
       contract: 'CTokenMock',
       from: deployer,
-      skipIfAlreadyDeployed: true
     });
 
     // cyan("\nDeploying WETH...")
@@ -150,10 +148,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
 
-  fs.mkdir('deployments', async (e) => {
-    cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-    return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
-  });
+
+  cyan('hardhat export --export-all ./build/hardhat_contracts.json');
+  return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+
 };
 
 module.exports.tags = ['Mocks'];

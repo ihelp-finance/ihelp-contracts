@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Code coverage report for utils\ICErc20.sol</title>
+    <title>Code coverage report for ihelp\charitypools\CharityPoolCloneFactory.sol</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../prettify.css" />
-    <link rel="stylesheet" href="../base.css" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -16,13 +16,13 @@
 <div class='wrapper'>
   <div class='pad1'>
     <h1>
-      <a href="../index.html">all files</a> / <a href="index.html">utils/</a> ICErc20.sol
+      <a href="../../index.html">all files</a> / <a href="index.html">ihelp/charitypools/</a> CharityPoolCloneFactory.sol
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>0/0</span>
+        <span class='fraction'>4/4</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -32,12 +32,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Functions</span>
-        <span class='fraction'>0/0</span>
+        <span class='fraction'>2/2</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>0/0</span>
+        <span class='fraction'>4/4</span>
       </div>
     </div>
   </div>
@@ -68,7 +68,39 @@
 23
 24
 25
-26</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -82,41 +114,45 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: GPL-3.0
 &nbsp;
 pragma solidity ^0.8.9;
 &nbsp;
-interface ICErc20 {
-    // address public underlying;
-    function mint(uint256 mintAmount) external returns (uint256);
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./CharityPool.sol";
+import "./CharityPoolUtils.sol";
 &nbsp;
-    function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
+contract CharityPoolCloneFactory {
+    address immutable charityPoolImplementation;
 &nbsp;
-    function balanceOfUnderlying(address owner) external view returns (uint256);
+    constructor() {
+        charityPoolImplementation = address(new CharityPool());
+    }
 &nbsp;
-    function getCash() external view returns (uint256);
-&nbsp;
-    function supplyRatePerBlock() external view returns (uint256);
-&nbsp;
-    function totalSupply() external view returns (uint256);
-&nbsp;
-    function balanceOf(address user) external view returns (uint256);
-&nbsp;
-    function burn(uint256 amount) external;
-&nbsp;
-    // Links to public address variable from CERC200Storage
-    function underlying() external view returns (address);
+    function createCharityPool(CharityPoolUtils.CharityPoolConfiguration memory configuration)
+        external
+        returns (address)
+    {
+        address clone = Clones.clone(charityPoolImplementation);
+        CharityPool(clone).initialize(
+            configuration.charityName,
+            configuration.operatorAddress,
+            configuration.holdingPoolAddress,
+            configuration.charityWalletAddress,
+            configuration.charityTokenName,
+            configuration.lendingTokenAddress,
+            configuration.holdingTokenAddress,
+            configuration.priceFeedAddress,
+            configuration.ihelpAddress,
+            configuration.swapperAddress,
+            configuration.stakingPoolAddress,
+            configuration.developmentPoolAddress
+        );
+        return clone;
+    }
 }
 &nbsp;</pre></td></tr>
 </table></pre>
@@ -127,7 +163,7 @@ interface ICErc20 {
   generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Tue May 17 2022 13:25:53 GMT+0800 (Singapore Standard Time)
 </div>
 </div>
-<script src="../prettify.js"></script>
+<script src="../../prettify.js"></script>
 <script>
 window.onload = function () {
         if (typeof prettyPrint === 'function') {
@@ -135,6 +171,6 @@ window.onload = function () {
         }
 };
 </script>
-<script src="../sorter.js"></script>
+<script src="../../sorter.js"></script>
 </body>
 </html>

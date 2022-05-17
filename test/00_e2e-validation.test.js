@@ -27,7 +27,6 @@ describe("End TO End", function () {
 
 
     beforeEach(async function () {
-
         await run("deploy");
     });
 
