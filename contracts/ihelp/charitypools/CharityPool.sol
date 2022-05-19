@@ -65,7 +65,10 @@ contract CharityPool is OwnableUpgradeable {
     string public name;
     string public tokenname;
 
+    uint256 public __currentProcessingIndex;
+    uint256 public __processingGasLimit;
     SwapperInterface internal swapper;
+
     EnumerableSet.AddressSet private contributors;
 
     // TODO: Ask Matt, is this a valid way of keeping track of the multiple balances
@@ -75,9 +78,9 @@ contract CharityPool is OwnableUpgradeable {
     mapping(address => uint256) public balancesUSD;
 
     /**
-        Nested maaping of protocol cToken (BankerJoe, AAVE) -> token DAI, USDT , etc
+        CTokens Mapping
      */
-    mapping(address => bool) public cTokens;
+    EnumerableSet.AddressSet private cTokens;
 
     iHelpTokenInterface public ihelpToken;
 
@@ -135,10 +138,25 @@ contract CharityPool is OwnableUpgradeable {
         newTotalInterestEarnedUSD = 0;
         lastTotalInterest = 0;
         redeemableInterest = 0;
+
+        __processingGasLimit = 300_000 * 1e9;
     }
 
-    function setYieldProtocol(address cTokenAddress, bool status) external onlyOperatorOrOwner {
-        cTokens[cTokenAddress] = status;
+    function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
+        require(gasLimit > 0, "Limit cannot be 0");
+        __processingGasLimit = gasLimit;
+    }
+
+    function addCToken(address _cTokenAddress) external onlyOperatorOrOwner {
+        cTokens.add(_cTokenAddress);
+    }
+
+    function removeCtoken(address _cTokenAddress) external onlyOperatorOrOwner {
+        cTokens.remove(_cTokenAddress);
+    }
+
+    function getCTokens() public view returns (address[] memory) {
+        return cTokens.values();
     }
 
     function deposit(address _cTokenAddress, uint256 _amount) public {
@@ -192,7 +210,7 @@ contract CharityPool is OwnableUpgradeable {
         uint256 _amount
     ) internal {
         require(_amount != 0, "Funding/deposit-zero");
-        require(cTokens[_cTokenAddress], "Invalid configuration");
+        require(cTokens.contains(_cTokenAddress), "Invalid configuration");
         // Update the user's balance
         balances[_spender][_cTokenAddress] += _amount;
 
@@ -413,8 +431,23 @@ contract CharityPool is OwnableUpgradeable {
         stakingPool = _pool;
     }
 
+    function calculateTotalIncrementalInterest() public onlyHelpToken {
+        uint256 initialGas = gasleft();
+        uint256 consumedGas = 0;
+        for (uint256 i = __currentProcessingIndex; i < cTokens.length(); i++) {
+            consumedGas = initialGas - gasleft();
+            if (consumedGas >= __processingGasLimit) {
+                __currentProcessingIndex = i;
+                return;
+            }
+            calculateTotalIncrementalInterestForAddress(cTokens.at(i));
+        }
+
+        __currentProcessingIndex = 0;
+    }
+
     // increment and return the total interest generated
-    function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
+    function calculateTotalIncrementalInterestForAddress(address _cTokenAddress) public onlyHelpToken {
         // get the overall new balance
         console.log("");
 
@@ -425,7 +458,7 @@ contract CharityPool is OwnableUpgradeable {
         console.log("currentInterestEarned", currentInterestEarned);
 
         // MAY HAVE TO TAKE INTO ACCOUNT THE ACTUAL CHANGE IN CONTRIBUTION BALANCE HERE
-
+        // TODO: Ask Matt ^^^
         if (newEarned > currentInterestEarned) {
             newTotalInterestEarned = newEarned - currentInterestEarned;
             console.log("__newTotalInterestEarned", newTotalInterestEarned);

@@ -258,8 +258,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             console.log(charity);
 
-            // string memory charityToken = __charityPoolRegistry[charity].tokenname();
-
             // get the total from each charity - this represents an accumulated value not just the current capital or interest
             __charityPoolRegistry[charity].calculateTotalIncrementalInterest();
 

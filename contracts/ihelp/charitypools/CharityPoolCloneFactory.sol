@@ -18,20 +18,7 @@ contract CharityPoolCloneFactory {
         returns (address)
     {
         address clone = Clones.clone(charityPoolImplementation);
-        CharityPool(clone).initialize(
-            configuration.charityName,
-            configuration.operatorAddress,
-            configuration.holdingPoolAddress,
-            configuration.charityWalletAddress,
-            configuration.charityTokenName,
-            configuration.cTokenAddress,
-            configuration.holdingTokenAddress,
-            configuration.priceFeedAddress,
-            configuration.ihelpAddress,
-            configuration.swapperAddress,
-            configuration.stakingPoolAddress,
-            configuration.developmentPoolAddress
-        );
+        CharityPool(clone).initialize(configuration);
         return clone;
     }
 }
