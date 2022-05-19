@@ -24,7 +24,7 @@ contract CharityPoolCloneFactory {
             configuration.holdingPoolAddress,
             configuration.charityWalletAddress,
             configuration.charityTokenName,
-            configuration.lendingTokenAddress,
+            configuration.cTokenAddress,
             configuration.holdingTokenAddress,
             configuration.priceFeedAddress,
             configuration.ihelpAddress,

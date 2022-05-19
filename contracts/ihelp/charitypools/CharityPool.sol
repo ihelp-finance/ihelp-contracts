@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.9;
-
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "./CharityPoolUtils.sol";
+
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../../utils/IERC20.sol";
@@ -70,6 +71,11 @@ contract CharityPool is OwnableUpgradeable {
     mapping(address => uint256) public balancesUSD;
 
     /**
+        Nested maaping of protocol cToken (BankerJoe, AAVE) -> token DAI, USDT , etc
+     */
+    mapping(address => bool) public cTokens;
+
+    /**
      * The Compound cToken that this Pool is bound to.
      */
     ICErc20 public cToken;
@@ -98,43 +104,30 @@ contract CharityPool is OwnableUpgradeable {
 
     AggregatorV3Interface internal priceFeed;
 
-    function initialize(
-        string memory _name,
-        address _operator,
-        address _holdingPool,
-        address _charityWallet,
-        string memory _charityPoolCurrency,
-        address _cToken,
-        address _holdingToken,
-        address _priceFeed,
-        address _ihelpToken,
-        address _swapperPool,
-        address _stakingPool,
-        address _developmentPool
-    ) public initializer {
+    function initialize(CharityPoolUtils.CharityPoolConfiguration memory configuration) public initializer {
         __Ownable_init();
 
-        require(_cToken != address(0), "Funding/ctoken-zero");
-        require(_operator != address(0), "Funding/operator-zero");
+        require(configuration.cTokenAddress != address(0), "Funding/ctoken-zero");
+        require(configuration.operatorAddress != address(0), "Funding/operator-zero");
 
-        console.log("Initializing Charity Pool Contract:", _name);
+        console.log("Initializing Charity Pool Contract:", configuration.charityName);
 
-        cToken = ICErc20(_cToken);
-        priceFeed = AggregatorV3Interface(_priceFeed);
-        ihelpToken = iHelpTokenInterface(_ihelpToken);
-        swapper = SwapperInterface(_swapperPool);
+        cToken = ICErc20(configuration.cTokenAddress);
+        priceFeed = AggregatorV3Interface(configuration.priceFeedAddress);
+        ihelpToken = iHelpTokenInterface(configuration.ihelpAddress);
+        swapper = SwapperInterface(configuration.swapperAddress);
 
-        name = _name;
-        tokenname = _charityPoolCurrency;
+        name = configuration.charityName;
+        tokenname = configuration.charityTokenName;
 
-        operator = _operator;
-        holdingPool = _holdingPool;
-        swapperPool = _swapperPool;
-        stakingPool = _stakingPool;
-        developmentPool = _developmentPool;
-        charityWallet = _charityWallet;
-        holdingToken = _holdingToken;
-        holdingDecimals = IERC20(holdingToken).decimals();
+        operator = configuration.operatorAddress;
+        holdingPool = configuration.holdingPoolAddress;
+        swapperPool = configuration.swapperAddress;
+        stakingPool = configuration.stakingPoolAddress;
+        developmentPool = configuration.developmentPoolAddress;
+        charityWallet = configuration.developmentPoolAddress;
+        holdingToken = configuration.holdingPoolAddress;
+        holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
 
         totalInterestEarned = 0;
         totalInterestEarnedUSD = 0;
@@ -148,30 +141,35 @@ contract CharityPool is OwnableUpgradeable {
         accountedBalanceUSD = 0;
     }
 
-    function deposit(uint256 _amount) public {
+    function setYieldProtocol(address cTokenAddress, bool status) external onlyOperatorOrOwner {
+        cTokens[cTokenAddress] = status;
+    }
+
+    function deposit(address _cTokenAddress, uint256 _amount) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
-        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
+        require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
         contributors.add(msg.sender);
         // Deposit the funds
-        _depositFrom(msg.sender, _amount);
+        _depositFrom(msg.sender, _cTokenAddress, _amount);
 
         emit Deposited(msg.sender, _amount);
     }
 
-    function sponsor(uint256 _amount) public {
-        require(_amount > 0, "Funding/small-amount");
-        // Transfer the tokens into this contract
-        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
+    // TODO:  @Matt, this is the same as the deposit
+    // function sponsor(address _cTokenAddress, uint256 _amount) public {
+    //     require(_amount > 0, "Funding/small-amount");
+    //     // Transfer the tokens into this contract
+    //     require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
-        // only push a new contributor if not already present
-        contributors.add(msg.sender);
+    //     // only push a new contributor if not already present
+    //     contributors.add(msg.sender);
 
-        _depositFrom(msg.sender, _amount);
+    //     _depositFrom(msg.sender, _cTokenAddress, _amount);
 
-        emit Deposited(msg.sender, _amount);
-    }
+    //     emit Deposited(msg.sender, _amount);
+    // }
 
     /**
      * @notice Withdraw the sender's entire balance back to them.
@@ -192,8 +190,13 @@ contract CharityPool is OwnableUpgradeable {
      * @param _spender The user who is depositing
      * @param _amount The amount they are depositing
      */
-    function _depositFrom(address _spender, uint256 _amount) internal {
+    function _depositFrom(
+        address _spender,
+        address _cTokenAddress,
+        uint256 _amount
+    ) internal {
         require(_amount != 0, "Funding/deposit-zero");
+        require(cTokens[_cTokenAddress], "Invalid configuration");
         // Update the user's balance
         balances[_spender] = balances[_spender] + _amount;
 
@@ -201,8 +204,8 @@ contract CharityPool is OwnableUpgradeable {
         accountedBalance = accountedBalance + _amount;
 
         // Deposit into Compound
-        require(token().approve(address(cToken), _amount), "Funding/approve");
-        require(cToken.mint(_amount) == 0, "Funding/supply");
+        require(getUnderlying(_cTokenAddress).approve(address(cToken), _amount), "Funding/approve");
+        require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
     }
 
     /**
@@ -318,6 +321,14 @@ contract CharityPool is OwnableUpgradeable {
      */
     function token() public view returns (IERC20) {
         return IERC20(cToken.underlying());
+    }
+
+    /**
+     * @notice Returns the token underlying the cToken.
+     * @return An ERC20 token address
+     */
+    function getUnderlying(address cTokenAddress) public view returns (IERC20) {
+        return IERC20(ICErc20(cTokenAddress).underlying());
     }
 
     /**

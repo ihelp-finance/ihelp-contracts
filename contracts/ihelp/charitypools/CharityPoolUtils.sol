@@ -9,7 +9,7 @@ library CharityPoolUtils {
         address holdingPoolAddress;
         address charityWalletAddress;
         string charityTokenName;
-        address lendingTokenAddress;
+        address cTokenAddress;
         address holdingTokenAddress;
         address priceFeedAddress;
         address ihelpAddress;
