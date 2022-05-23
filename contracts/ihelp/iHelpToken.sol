@@ -231,7 +231,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
-            totalInterest += __charityPoolRegistry[charity].totalInterestEarned();
+            address[] memory cTokens = CharityPool(charity).getCTokens();
+            for (uint256 ii = 0; i < cTokens.length; ii++) {
+                totalInterest += __charityPoolRegistry[charity].totalInterestEarned(cTokens[ii]);
+            }
         }
         return totalInterest;
     }
