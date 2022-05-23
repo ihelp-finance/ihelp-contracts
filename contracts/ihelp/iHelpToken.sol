@@ -258,8 +258,18 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             console.log(charity);
 
-            // get the total from each charity - this represents an accumulated value not just the current capital or interest
-            __charityPoolRegistry[charity].calculateTotalIncrementalInterest();
+            address[] memory cTokens = CharityPool(charity).getCTokens();
+            for (uint256 ii = processingState.ii; i < cTokens.length; ii++) {
+                consumedGas = initialGas - gasleft();
+
+                if (consumedGas >= __processingGasLimit) {
+                    processingState.i = i;
+                    processingState.ii = ii;
+                    return;
+                }
+                // get the total from each charity - this represents an accumulated value not just the current capital or interest
+                __charityPoolRegistry[charity].calculateTotalIncrementalInterest(cTokens[i]);
+            }
 
             uint256 totalInterestUSDofCharity = __charityPoolRegistry[charity].newTotalInterestEarnedUSD();
 
@@ -437,6 +447,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                         processingState.ii = ii;
                         return false;
                     }
+
                     // get the contributors balance
                     uint256 userContribution = __charityPoolRegistry[charity].balanceOfUSD(contributorList[ii]);
 
@@ -488,7 +499,19 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 console.log("\nREDEEM START");
                 address charity = charityPoolList.at(i);
                 console.log(charity);
-                __charityPoolRegistry[charity].redeemInterest();
+
+                address[] memory cTokens = CharityPool(charity).getCTokens();
+                for (uint256 ii = processingState.ii; i < cTokens.length; ii++) {
+                    consumedGas = initialGas - gasleft();
+
+                    if (consumedGas >= __processingGasLimit) {
+                        processingState.i = i;
+                        processingState.ii = ii;
+                        return;
+                    }
+                    __charityPoolRegistry[charity].redeemInterest(charity);
+                }
+
                 console.log("REDEEM END\n");
 
                 uint256 tokenBalanceAfter = underlyingToken.balanceOf(holdingPool);

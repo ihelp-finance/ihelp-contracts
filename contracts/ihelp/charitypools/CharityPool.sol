@@ -110,7 +110,6 @@ contract CharityPool is OwnableUpgradeable {
     function initialize(CharityPoolUtils.CharityPoolConfiguration memory configuration) public initializer {
         __Ownable_init();
 
-        require(configuration.cTokenAddress != address(0), "Funding/ctoken-zero");
         require(configuration.operatorAddress != address(0), "Funding/operator-zero");
 
         console.log("Initializing Charity Pool Contract:", configuration.charityName);
@@ -151,7 +150,7 @@ contract CharityPool is OwnableUpgradeable {
         cTokens.add(_cTokenAddress);
     }
 
-    function removeCtoken(address _cTokenAddress) external onlyOperatorOrOwner {
+    function removeCToken(address _cTokenAddress) external onlyOperatorOrOwner {
         cTokens.remove(_cTokenAddress);
     }
 
@@ -431,23 +430,8 @@ contract CharityPool is OwnableUpgradeable {
         stakingPool = _pool;
     }
 
-    function calculateTotalIncrementalInterest() public onlyHelpToken {
-        uint256 initialGas = gasleft();
-        uint256 consumedGas = 0;
-        for (uint256 i = __currentProcessingIndex; i < cTokens.length(); i++) {
-            consumedGas = initialGas - gasleft();
-            if (consumedGas >= __processingGasLimit) {
-                __currentProcessingIndex = i;
-                return;
-            }
-            calculateTotalIncrementalInterestForAddress(cTokens.at(i));
-        }
-
-        __currentProcessingIndex = 0;
-    }
-
     // increment and return the total interest generated
-    function calculateTotalIncrementalInterestForAddress(address _cTokenAddress) public onlyHelpToken {
+    function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
         // get the overall new balance
         console.log("");
 
