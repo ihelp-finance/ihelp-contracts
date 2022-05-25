@@ -58,7 +58,6 @@ contract CharityPool is OwnableUpgradeable {
     address public holdingToken;
 
     string public name;
-    string public tokenname;
 
     uint256 public __currentProcessingIndex;
     uint256 public __processingGasLimit;
@@ -117,7 +116,6 @@ contract CharityPool is OwnableUpgradeable {
         swapper = SwapperInterface(configuration.swapperAddress);
 
         name = configuration.charityName;
-        tokenname = configuration.charityTokenName;
 
         operator = configuration.operatorAddress;
         holdingPool = configuration.holdingPoolAddress;
@@ -125,7 +123,7 @@ contract CharityPool is OwnableUpgradeable {
         stakingPool = configuration.stakingPoolAddress;
         developmentPool = configuration.developmentPoolAddress;
         charityWallet = configuration.charityWalletAddress;
-        holdingToken = configuration.holdingPoolAddress;
+        holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
 
         totalInterestEarnedUSD = 0;
@@ -307,10 +305,10 @@ contract CharityPool is OwnableUpgradeable {
             // redeem the yield
             cToken.redeemUnderlying(amount);
 
-            address tokenaddress = _cTokenAddress;
-
             // Get The underlying token for this cToken
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
+
+            address tokenaddress = address(underlyingToken);
 
             if (tokenaddress == holdingToken) {
                 require(underlyingToken.transfer(holdingPool, amount), "Funding/transfer");
@@ -323,6 +321,7 @@ contract CharityPool is OwnableUpgradeable {
 
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
+                console.log("TOKEN::", tokenaddress, holdingToken);
                 swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
             }
 

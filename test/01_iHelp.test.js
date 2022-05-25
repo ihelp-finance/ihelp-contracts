@@ -13,6 +13,7 @@ describe("iHelp", function () {
     let addr2;
     let addr3;
     let addrs;
+    let cTokenMock;
     let stakingPool, mockContract, developmentPool, holdingPool;
 
 
@@ -21,6 +22,10 @@ describe("iHelp", function () {
         const Mock = await smock.mock("ERC20MintableMock");
 
         [owner, addr1, addr2, addr3, stakingPool, developmentPool, holdingPool, operator, ...addrs] = await ethers.getSigners();
+        const CTokenMock = await smock.mock("CTokenMock");
+
+        let cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
+        cTokenMock = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
 
         mockContract = await Mock.deploy("Mock", "MOK", 18);
         iHelp = await IHelp.deploy();
@@ -169,9 +174,19 @@ describe("iHelp", function () {
             const charityPool1 = await CharityPool.deploy();
             const charityPool2 = await CharityPool.deploy();
 
-            charityPool1.totalInterestEarned.returns(20);
-            charityPool2.totalInterestEarned.returns(40);
+            await charityPool1.setVariable('operator', owner.address);
+            await charityPool2.setVariable('operator', owner.address);
 
+            await charityPool1.addCToken(cTokenMock.address);
+            await charityPool2.addCToken(cTokenMock.address);
+
+            await charityPool1.setVariable('totalInterestEarned', {
+                [cTokenMock.address]: 20
+            });
+
+            await charityPool2.setVariable('totalInterestEarned', {
+                [cTokenMock.address]: 40
+            });
             await iHelp.registerCharityPool(charityPool1.address);
             await iHelp.registerCharityPool(charityPool2.address);
 
@@ -187,6 +202,12 @@ describe("iHelp", function () {
             const CharityPool = await smock.mock('CharityPool');
             charityPool1 = await CharityPool.deploy();
             charityPool2 = await CharityPool.deploy();
+
+            await charityPool1.setVariable('operator', owner.address);
+            await charityPool2.setVariable('operator', owner.address);
+
+            await charityPool1.addCToken(cTokenMock.address);
+            await charityPool2.addCToken(cTokenMock.address);
 
             charityPool1.calculateTotalIncrementalInterest.returns();
             charityPool2.calculateTotalIncrementalInterest.returns();
@@ -242,8 +263,8 @@ describe("iHelp", function () {
                     }
                 });
 
-                it("Should save contract state when running out of gas", async function () {
-                    await iHelp.setProcessingGasLimit(8_000);
+                it("Should save contract state when running out of gas dp1", async function () {
+                    await iHelp.setProcessingGasLimit(25_000);
                     await iHelp.dripStage1();
 
                     let state = await iHelp.processingState();

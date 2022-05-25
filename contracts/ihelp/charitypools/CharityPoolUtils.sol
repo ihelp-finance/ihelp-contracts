@@ -8,7 +8,6 @@ library CharityPoolUtils {
         address operatorAddress;
         address holdingPoolAddress;
         address charityWalletAddress;
-        string charityTokenName;
         address holdingTokenAddress;
         address priceFeedAddress;
         address ihelpAddress;

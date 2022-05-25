@@ -172,9 +172,15 @@ const validate = async () => {
   usdc = await hardhat.ethers.getContractAt('ERC20MintableMock', usdcAddress, signer);
   cusdc = await hardhat.ethers.getContractAt('CTokenMock', cUsdcAddress, signer);
   swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
+
+  yellow("Configurating charity pools...");
   charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
   charityPool2 = await hardhat.ethers.getContractAt('CharityPool', charity2Address, signer);
   charityPool3 = await hardhat.ethers.getContractAt('CharityPool', charity3Address, signer);
+
+  await charityPool1.addCToken(cdai.address);
+  await charityPool2.addCToken(cusdc.address);
+  await charityPool3.addCToken(cdai.address);
 
   const daiDecimals = await dai.decimals();
   const usdcDecimals = await usdc.decimals();
@@ -287,13 +293,13 @@ const validate = async () => {
     }
     // console.log(result);
 
-    const c1contributionsTx = await charityPool1.accountedBalance();
+    const c1contributionsTx = await charityPool1.accountedBalances(cDaiAddress);
     const c1contributions = fromBigNumber(c1contributionsTx, daiDecimals);
 
-    const c2contributionsTx = await charityPool2.accountedBalance();
+    const c2contributionsTx = await charityPool2.accountedBalances(cUsdcAddress);
     const c2contributions = fromBigNumber(c2contributionsTx, usdcDecimals);
 
-    const c3contributionsTx = await charityPool3.accountedBalance();
+    const c3contributionsTx = await charityPool3.accountedBalances(cDaiAddress);
     const c3contributions = fromBigNumber(c3contributionsTx, daiDecimals);
 
     const phaseTx = await ihelp.tokenPhase();
@@ -577,17 +583,17 @@ const validate = async () => {
   INPUT = 1;
   console.log('\n*** INPUT', INPUT, '***');
 
+  yellow("Here");
   // make a deposit
   const approvalTx1u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('100'));
   await approvalTx1u1.wait();
-  const sponsorTx1u1 = await charityPool1.connect(userSigner1).sponsor(web3.utils.toWei('100'));
+  const sponsorTx1u1 = await charityPool1.connect(userSigner1).sponsor(cDaiAddress, web3.utils.toWei('100'));
   await sponsorTx1u1.wait();
 
   const approvalTx1u2 = await dai.connect(userSigner2).approve(charityPool1.address, web3.utils.toWei('2500'));
   await approvalTx1u2.wait();
-  const sponsorTx1u2 = await charityPool1.connect(userSigner2).sponsor(web3.utils.toWei('2500'));
+  const sponsorTx1u2 = await charityPool1.connect(userSigner2).sponsor(cDaiAddress, web3.utils.toWei('2500'));
   await sponsorTx1u2.wait();
-
   await getOutputs(INPUT);
 
   INPUT = 2;
@@ -596,19 +602,20 @@ const validate = async () => {
   // make a deposit for user 1
   const approvalTx2u1 = await usdc.connect(userSigner1).approve(charityPool2.address, ethers.utils.parseUnits('1000', usdcDecimals));
   await approvalTx2u1.wait();
-  const sponsorTx2u1 = await charityPool2.connect(userSigner1).sponsor(ethers.utils.parseUnits('1000', usdcDecimals));
+  const sponsorTx2u1 = await charityPool2.connect(userSigner1).sponsor(cUsdcAddress, ethers.utils.parseUnits('1000', usdcDecimals));
   await sponsorTx2u1.wait();
 
   const approval2Tx2u1 = await dai.connect(userSigner1).approve(charityPool3.address, web3.utils.toWei('1500'));
   await approval2Tx2u1.wait();
-  const sponsor2Tx2u1 = await charityPool3.connect(userSigner1).sponsor(web3.utils.toWei('1500'));
+  const sponsor2Tx2u1 = await charityPool3.connect(userSigner1).sponsor(cDaiAddress, web3.utils.toWei('1500'));
   await sponsor2Tx2u1.wait();
 
   // make a deposit for user 2
   const approvalTx2u2 = await usdc.connect(userSigner2).approve(charityPool2.address, ethers.utils.parseUnits('1500', usdcDecimals));
   await approvalTx2u2.wait();
-  const sponsorTx2u2 = await charityPool2.connect(userSigner2).sponsor(ethers.utils.parseUnits('1500', usdcDecimals));
+  const sponsorTx2u2 = await charityPool2.connect(userSigner2).sponsor(cUsdcAddress, ethers.utils.parseUnits('1500', usdcDecimals));
   await sponsorTx2u2.wait();
+
 
   await getOutputs(INPUT);
 

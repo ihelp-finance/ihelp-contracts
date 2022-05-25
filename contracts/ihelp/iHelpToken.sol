@@ -232,7 +232,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
             address[] memory cTokens = CharityPool(charity).getCTokens();
-            for (uint256 ii = 0; i < cTokens.length; ii++) {
+            for (uint256 ii = 0; ii < cTokens.length; ii++) {
                 totalInterest += __charityPoolRegistry[charity].totalInterestEarned(cTokens[ii]);
             }
         }
@@ -262,16 +262,16 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             console.log(charity);
 
             address[] memory cTokens = CharityPool(charity).getCTokens();
-            for (uint256 ii = processingState.ii; i < cTokens.length; ii++) {
+            for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                 consumedGas = initialGas - gasleft();
-
+                console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
                 if (consumedGas >= __processingGasLimit) {
                     processingState.i = i;
                     processingState.ii = ii;
                     return;
                 }
                 // get the total from each charity - this represents an accumulated value not just the current capital or interest
-                __charityPoolRegistry[charity].calculateTotalIncrementalInterest(cTokens[i]);
+                __charityPoolRegistry[charity].calculateTotalIncrementalInterest(cTokens[ii]);
             }
 
             uint256 totalInterestUSDofCharity = __charityPoolRegistry[charity].newTotalInterestEarnedUSD();
@@ -291,6 +291,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __interestGenerated += processingState.newInterestUS;
         processingState.status = 1;
         processingState.i = 0;
+        processingState.ii = 0;
         // keep track of the last interest processed so we only processed the changed aggregate interest amount
         console.log("\nincremental calc done...");
     }
@@ -504,7 +505,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 console.log(charity);
 
                 address[] memory cTokens = CharityPool(charity).getCTokens();
-                for (uint256 ii = processingState.ii; i < cTokens.length; ii++) {
+                for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                     consumedGas = initialGas - gasleft();
 
                     if (consumedGas >= __processingGasLimit) {
@@ -512,7 +513,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                         processingState.ii = ii;
                         return;
                     }
-                    __charityPoolRegistry[charity].redeemInterest(charity);
+                    __charityPoolRegistry[charity].redeemInterest(cTokens[ii]);
                 }
 
                 console.log("REDEEM END\n");
