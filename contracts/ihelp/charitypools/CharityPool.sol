@@ -43,12 +43,8 @@ contract CharityPool is OwnableUpgradeable {
     event Rewarded(address indexed receiver, uint256 amount);
 
     uint8 internal holdingDecimals;
-    uint256 public totalInterestEarnedUSD;
-    uint256 public newTotalInterestEarnedUSD;
 
-    // TODO: Ask Mat, should we aggregate all the balances to USD
-    uint256 public accountedBalanceUSD;
-
+    string public name;
     address public operator;
     address public charityWallet;
     address public holdingPool;
@@ -57,15 +53,9 @@ contract CharityPool is OwnableUpgradeable {
     address public developmentPool;
     address public holdingToken;
 
-    string public name;
-
     uint256 public __currentProcessingIndex;
     uint256 public __processingGasLimit;
-    SwapperInterface internal swapper;
 
-    EnumerableSet.AddressSet private contributors;
-
-    // TODO: Ask Matt, is this a valid way of keeping track of the multiple balances
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => uint256) public accountedBalances;
 
@@ -74,14 +64,13 @@ contract CharityPool is OwnableUpgradeable {
     mapping(address => uint256) public lastTotalInterest;
     mapping(address => uint256) public newTotalInterestEarned;
     mapping(address => uint256) public redeemableInterest;
-    mapping(address => uint256) public balancesUSD;
 
-    /**
-        CTokens Mapping
-     */
+    SwapperInterface internal swapper;
+    iHelpTokenInterface public ihelpToken;
+    
+    EnumerableSet.AddressSet private contributors;
     EnumerableSet.AddressSet private cTokens;
 
-    iHelpTokenInterface public ihelpToken;
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
@@ -125,8 +114,6 @@ contract CharityPool is OwnableUpgradeable {
         charityWallet = configuration.charityWalletAddress;
         holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
-
-        totalInterestEarnedUSD = 0;
 
         __processingGasLimit = 300_000 * 1e9;
     }
@@ -248,10 +235,7 @@ contract CharityPool is OwnableUpgradeable {
             uint256 developerFee = (_amount * 25) / 1000;
 
             console.log("Developper Fee::", developerFee);
-            require(
-                underlyingToken.transferFrom(msg.sender, developmentPool, developerFee),
-                "Funding/developer transfer"
-            );
+            require(underlyingToken.transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
 
             // 2.5% to staking pool as swapped dai
             uint256 stakingFee = (_amount * 25) / 1000;
@@ -262,10 +246,7 @@ contract CharityPool is OwnableUpgradeable {
                 console.log("Swapping");
                 uint256 minAmount = (stakingFee * 50) / 100;
 
-                require(
-                    underlyingToken.transferFrom(msg.sender, address(this), stakingFee),
-                    "Funding/staking swap transfer"
-                );
+                require(underlyingToken.transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
 
                 require(underlyingToken.approve(swapperPool, stakingFee), "Funding/staking swapper approve");
                 console.log("Current Token Balance::", IERC20(tokenaddress).balanceOf(address(this)));
@@ -326,7 +307,6 @@ contract CharityPool is OwnableUpgradeable {
             }
 
             // reset the lastinterestearned incrementer
-            //TODO: Ask Mat do we need to discrimatre currentIntersestEarned and reedemableIntrest by cToken address
             currentInterestEarned[_cTokenAddress] = 0;
             redeemableInterest[_cTokenAddress] = 0;
 
@@ -439,8 +419,6 @@ contract CharityPool is OwnableUpgradeable {
         console.log("newEarned", newEarned);
         console.log("currentInterestEarned", currentInterestEarned[_cTokenAddress]);
 
-        // MAY HAVE TO TAKE INTO ACCOUNT THE ACTUAL CHANGE IN CONTRIBUTION BALANCE HERE
-        // TODO: Ask Matt ^^^
         if (newEarned > currentInterestEarned[_cTokenAddress]) {
             newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];
             console.log("__newTotalInterestEarned", newTotalInterestEarned[_cTokenAddress]);
@@ -454,16 +432,48 @@ contract CharityPool is OwnableUpgradeable {
         } else {
             newTotalInterestEarned[_cTokenAddress] = 0;
         }
+    }
 
-        // set the new usd values
-        newTotalInterestEarnedUSD = convertToUsd(newTotalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
-        totalInterestEarnedUSD = convertToUsd(totalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
-        accountedBalanceUSD = convertToUsd(accountedBalances[_cTokenAddress], decimals(_cTokenAddress));
 
-        for (uint256 ii = 0; ii < contributors.length(); ii++) {
-            address contributor = contributors.at(ii);
-            balancesUSD[contributor] = convertToUsd(balances[contributor][_cTokenAddress], decimals(_cTokenAddress));
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function accountedBalanceUSD() public view returns (uint256) {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length(); i++) {
+        result  += convertToUsd(accountedBalances[cTokens.at(i)], decimals(cTokens.at(i)));
         }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function newTotalInterestEarnedUSD() public view returns (uint256) {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length(); i++) {
+            result += newCTokenTotalUSDInterest(cTokens.at(i));
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function totalInterestEarnedUSD() public view returns (uint256) {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length(); i++) {
+            result += cTokenTotalUSDInterest(cTokens.at(i));
+        }
+        return result;
+    }
+
+    function cTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
+        return convertToUsd(totalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
+    }
+
+    function newCTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
+        return convertToUsd(newTotalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
     }
 
     function decimals(address _cTokenAddress) public view returns (uint8) {
@@ -471,6 +481,10 @@ contract CharityPool is OwnableUpgradeable {
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
-        return balancesUSD[_addr];
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length(); i++) {
+            result += convertToUsd(balances[_addr][cTokens.at(i)], decimals(cTokens.at(i)));
+        }
+        return result; 
     }
 }

@@ -163,8 +163,6 @@ describe("Charity Pool", function () {
             const expectedBalanceInUsd = deposit * 1e9; // 18-9 decimalls
 
             await charityPool.deposit(cTokenMock.address, deposit);
-            expect(await charityPool.balanceOfUSD(owner.address)).to.equal(0);
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
             expect(await charityPool.balanceOfUSD(owner.address)).to.equal(expectedBalanceInUsd);
         });
     });
