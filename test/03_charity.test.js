@@ -167,42 +167,6 @@ describe("Charity Pool", function () {
         });
     });
 
-    describe("Sponsor", function () {
-        beforeEach(async function () {
-            await cTokenUnderlyingMock.mint(owner.address, 10000);
-            await cTokenUnderlyingMock.increaseAllowance(charityPool.address, 1000);
-        });
-
-        it("Should fail to deposit 0", async function () {
-            await expect(charityPool.sponsor(cTokenMock.address, 0)).to.be.revertedWith("Funding/small-amount");
-        });
-
-        it("Should emit deposit event", async function () {
-            await expect(charityPool.sponsor(cTokenMock.address, 15))
-                .to.emit(charityPool, "Deposited");
-        });
-
-        it("Should add address to contributors", async function () {
-            await charityPool.sponsor(cTokenMock.address, 15);
-            expect(await charityPool.getContributors()).to.have.members([owner.address]);
-        });
-
-        it("Should increase contributor's balance", async function () {
-            await charityPool.sponsor(cTokenMock.address, 15);
-            expect(await charityPool.balanceOf(owner.address, cTokenMock.address)).to.equal(15);
-        });
-
-        it("Should increase total balance", async function () {
-            await charityPool.sponsor(cTokenMock.address, 15);
-            expect(await charityPool.accountedBalances(cTokenMock.address)).to.equal(15);
-        });
-
-        it("Should mint to cToken", async function () {
-            await charityPool.sponsor(cTokenMock.address, 15);
-            expect(await charityPool.balance(cTokenMock.address)).to.equal(15);
-        });
-    });
-
     describe("Withdraw", function () {
         beforeEach(async function () {
             await cTokenUnderlyingMock.mint(owner.address, 100);

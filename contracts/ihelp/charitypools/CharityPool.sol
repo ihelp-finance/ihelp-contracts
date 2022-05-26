@@ -146,21 +146,7 @@ contract CharityPool is OwnableUpgradeable {
 
         emit Deposited(msg.sender, _cTokenAddress, _amount);
     }
-
-    // TODO:  @Matt, this is the same as the deposit
-    function sponsor(address _cTokenAddress, uint256 _amount) public {
-        require(_amount > 0, "Funding/small-amount");
-        // Transfer the tokens into this contract
-        require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
-
-        // only push a new contributor if not already present
-        contributors.add(msg.sender);
-
-        _depositFrom(msg.sender, _cTokenAddress, _amount);
-
-        emit Deposited(msg.sender, _cTokenAddress, _amount);
-    }
-
+    
     /**
      * @notice Withdraw the sender's entire balance back to them.
      */
