@@ -210,7 +210,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         require(_addr != address(0), "Charity pool cannot be null");
         if (address(__charityPoolRegistry[_addr]) == address(0)) {
             console.log("Registering Charity:", _addr);
-            __charityPoolRegistry[_addr] = CharityPool(_addr);
+            __charityPoolRegistry[_addr] = CharityPool(payable(_addr));
             charityPoolList.add(_addr);
         }
         return address(__charityPoolRegistry[_addr]);
@@ -231,7 +231,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
-            address[] memory cTokens = CharityPool(charity).getCTokens();
+            address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
             for (uint256 ii = 0; ii < cTokens.length; ii++) {
                 totalInterest += __charityPoolRegistry[charity].totalInterestEarned(cTokens[ii]);
             }
@@ -261,7 +261,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             console.log(charity);
 
-            address[] memory cTokens = CharityPool(charity).getCTokens();
+            address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
             for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                 consumedGas = initialGas - gasleft();
                 console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
@@ -504,7 +504,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 address charity = charityPoolList.at(i);
                 console.log(charity);
 
-                address[] memory cTokens = CharityPool(charity).getCTokens();
+                address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
                 for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                     consumedGas = initialGas - gasleft();
 

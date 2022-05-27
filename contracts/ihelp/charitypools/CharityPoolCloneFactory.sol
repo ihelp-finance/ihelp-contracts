@@ -18,7 +18,7 @@ contract CharityPoolCloneFactory {
         returns (address)
     {
         address clone = Clones.clone(charityPoolImplementation);
-        CharityPool(clone).initialize(configuration);
+        CharityPool(payable(clone)).initialize(configuration);
         return clone;
     }
 }

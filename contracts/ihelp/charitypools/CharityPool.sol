@@ -160,9 +160,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
         require(_amount > 0, "Funding/small-amount");
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
-
-        wrappedNative.withdraw(_amount);
+       
+        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
         _withdraw(msg.sender, _cTokenAddress, _amount);
+        wrappedNative.withdraw(_amount);
         payable(msg.sender).transfer(_amount);
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
@@ -509,4 +510,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         }
         return result; 
     }
+
+    receive() payable external {}
 }
