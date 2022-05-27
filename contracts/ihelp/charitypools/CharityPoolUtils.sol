@@ -14,5 +14,6 @@ library CharityPoolUtils {
         address swapperAddress;
         address stakingPoolAddress;
         address developmentPoolAddress;
+        address wrappedNativeAddress;
     }
 }

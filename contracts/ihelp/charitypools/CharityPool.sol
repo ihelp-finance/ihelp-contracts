@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./CharityPoolUtils.sol";
 
@@ -11,13 +12,14 @@ import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../../utils/IERC20.sol";
 import "../../utils/ICErc20.sol";
+import "../../utils/IWrappedNative.sol";
 
 import "../iHelpTokenInterface.sol";
 import "../SwapperInterface.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is OwnableUpgradeable {
+contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -65,9 +67,10 @@ contract CharityPool is OwnableUpgradeable {
     mapping(address => uint256) public newTotalInterestEarned;
     mapping(address => uint256) public redeemableInterest;
 
-    SwapperInterface internal swapper;
+    IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
     
+    SwapperInterface internal swapper;
     EnumerableSet.AddressSet private contributors;
     EnumerableSet.AddressSet private cTokens;
 
@@ -114,6 +117,7 @@ contract CharityPool is OwnableUpgradeable {
         charityWallet = configuration.charityWalletAddress;
         holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
+        wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
 
         __processingGasLimit = 300_000 * 1e9;
     }
@@ -135,7 +139,35 @@ contract CharityPool is OwnableUpgradeable {
         return cTokens.values();
     }
 
-    function deposit(address _cTokenAddress, uint256 _amount) public {
+    /**
+     * Allows depositing native tokens to the charity contract
+     */
+    function depositNative(address _cTokenAddress) public payable {
+        require(msg.value > 0, "Native-Funding/small-amount");
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
+        wrappedNative.deposit{value: msg.value}();
+
+        contributors.add(msg.sender);
+        // Deposit the funds
+        _depositFrom(msg.sender, _cTokenAddress, msg.value);
+
+        emit Deposited(msg.sender, _cTokenAddress, msg.value);
+    }
+
+    /**
+     * Allows withdrawing native tokens to the charity contract
+     */
+    function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
+        require(_amount > 0, "Funding/small-amount");
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
+
+        wrappedNative.withdraw(_amount);
+        _withdraw(msg.sender, _cTokenAddress, _amount);
+        payable(msg.sender).transfer(_amount);
+        emit Withdrawn(msg.sender, _cTokenAddress, _amount);
+    }
+
+    function depositTokens(address _cTokenAddress, uint256 _amount) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
@@ -150,14 +182,22 @@ contract CharityPool is OwnableUpgradeable {
     /**
      * @notice Withdraw the sender's entire balance back to them.
      */
-    function withdraw(address _cTokenAddress) public {
+    function withdrawTokens(address _cTokenAddress) public {
         uint256 _balance = balances[msg.sender][_cTokenAddress];
         _withdraw(msg.sender, _cTokenAddress, _balance);
+        // Withdraw from Compound and transfer
+        require(ICErc20(_cTokenAddress).redeemUnderlying(_balance) == 0, "Funding/redeem");
+        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _balance), "Funding/transfer");
         emit Withdrawn(msg.sender, _cTokenAddress, _balance);
     }
 
     function withdrawAmount(address _cTokenAddress, uint256 _amount) public {
         _withdraw(msg.sender, _cTokenAddress, _amount);
+        
+        // Withdraw from Compound and transfer
+        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
+        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
+        
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
 
@@ -201,10 +241,6 @@ contract CharityPool is OwnableUpgradeable {
         } else {
             accountedBalances[_cTokenAddress] = 0;
         }
-
-        // Withdraw from Compound and transfer
-        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
-        require(getUnderlying(_cTokenAddress).transfer(_sender, _amount), "Funding/transfer");
     }
 
     function directDonation(address _cTokenAddress, uint256 _amount) public {
