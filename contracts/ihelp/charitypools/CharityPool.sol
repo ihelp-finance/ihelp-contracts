@@ -132,7 +132,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     }
 
     function removeCToken(address _cTokenAddress) external onlyOperatorOrOwner {
+        _calculateTotalIncrementalInterest(_cTokenAddress);
+        _redeemInterest(_cTokenAddress);
         cTokens.remove(_cTokenAddress);
+
     }
 
     function getCTokens() public view returns (address[] memory) {
@@ -301,6 +304,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     }
 
     function redeemInterest(address _cTokenAddress) public onlyHelpToken {
+        _redeemInterest(_cTokenAddress);
+    }
+
+     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         ICErc20 cToken = ICErc20(_cTokenAddress);
         console.log("redeemAmount", amount);
@@ -433,6 +440,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     // increment and return the total interest generated
     function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
+      _calculateTotalIncrementalInterest(_cTokenAddress);
+    }
+
+     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
         // get the overall new balance
         console.log("");
 

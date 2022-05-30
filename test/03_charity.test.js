@@ -12,6 +12,7 @@ describe("Charity Pool", function () {
     let addrs;
     let stakingPool, cTokenUnderlyingMock, developmentPool, holdingPool, cTokenMock, iHelpMock, holdingMock;
     let wTokenMock;
+    let CTokenMock;
 
     beforeEach(async function () {
         const CharityPool = await smock.mock("CharityPool");
@@ -20,7 +21,7 @@ describe("Charity Pool", function () {
 
         const Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
-        const CTokenMock = await smock.mock("CTokenMock");
+        CTokenMock = await smock.mock("CTokenMock");
         const aggregator = await smock.fake(abi);
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
 
@@ -62,17 +63,6 @@ describe("Charity Pool", function () {
 
         it("Should set the right development pool", async function () {
             expect(await charityPool.developmentPool()).to.equal(developmentPool.address);
-        });
-
-        it("Should add cToken", async function () {
-            const tokens = await charityPool.getCTokens();
-            expect(tokens[0]).to.equal(cTokenMock.address);
-        });
-
-        it("Should remove cToken", async function () {
-            await charityPool.removeCToken(cTokenMock.address);
-            const tokens = await charityPool.getCTokens();
-            expect(tokens.length).to.equal(0);
         });
 
         it("Should set the right supplyRatePerBlock", async function () {
@@ -294,6 +284,45 @@ describe("Charity Pool", function () {
         });
     });
 
+    describe("CToken Management", function() {
+        it("Should add cTokens ", async function() {
+            let cTokenMock1 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
+            let cTokenMock2 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
+            let cTokenMock3 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
+
+            await charityPool.addCToken(cTokenMock1.address);
+            await charityPool.addCToken(cTokenMock2.address);
+            await charityPool.addCToken(cTokenMock3.address);
+
+            expect((await charityPool.getCTokens()).length).to.equal(4);
+        });
+
+        it("Should remove cTokens ", async function() {
+            const interest = 10000;
+            await charityPool.setVariable('redeemableInterest', {
+                [cTokenMock.address]: interest
+            });
+            await charityPool.setVariable('currentInterestEarned', {
+                [cTokenMock.address]: interest
+            });
+
+
+            cTokenMock.redeemUnderlying.returns(() => {
+                cTokenUnderlyingMock.setVariable('_balances', {
+                    [charityPool.address]: interest
+                });
+                return 0;
+            });
+
+            await charityPool.removeCToken(cTokenMock.address);
+            
+            expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(0);
+            expect(await charityPool.currentInterestEarned(cTokenMock.address)).to.equal(0);
+            console.log(await charityPool.getCTokens());
+            expect((await charityPool.getCTokens()).length).to.equal(0);
+        })
+    })
+
     describe("Interest", function () {
         beforeEach(async function () {
             await cTokenUnderlyingMock.mint(owner.address, parseEther("200"));
@@ -343,8 +372,6 @@ describe("Charity Pool", function () {
             expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(interest);
         });
 
-
-        //TODO: Test with multiple cTokens
         it("Should calculate usd interest", async function () {
             const interest = 10000;
             const expectedInterestInUsd = interest * 1e9; // 18-9 decimalls
