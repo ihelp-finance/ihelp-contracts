@@ -60,6 +60,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public stakingShareOfInterest;
     uint256 public charityShareOfInterest;
 
+    // TODO: @Matt can we use mapping default getters and rename these variables so that they dont have the
+    // "__" anymore. eg __tokensPerInterestByPhase ==> tokensPerInterestByPhase
     mapping(uint256 => uint256) public __tokensPerInterestByPhase;
     mapping(uint256 => uint256) public __cumulativeInterestByPhase;
 
@@ -93,6 +95,14 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             lastCumulative = cumulativeInterest;
         }
+    }
+
+    function setCumulativeEmissionRate(uint256 _phase, uint256 _newRate) external onlyOperatorOrOwner {
+        __cumulativeInterestByPhase[_phase] = _newRate;
+    }
+
+    function setTokensPerInterestPhase(uint256 _phase, uint256 _newRate) external onlyOperatorOrOwner {
+        __tokensPerInterestByPhase[_phase] = _newRate;
     }
 
     function setProcessiongState(

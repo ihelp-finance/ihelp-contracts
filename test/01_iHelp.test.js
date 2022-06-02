@@ -137,6 +137,24 @@ describe("iHelp", function () {
             await iHelp.connect(operator).setProcessingGasLimit(2);
             expect(await iHelp.__processingGasLimit()).to.equal(2);
         });
+
+        it("Should set __cumulativeInterestByPhase", async function () {
+            await iHelp.setCumulativeEmissionRate(0, 2);
+            expect(await iHelp.__cumulativeInterestByPhase(0)).to.equal(2);
+        });
+
+        it("Should only allow operator or owner to set the __cumulativeInterestByPhase", async function () {
+             await expect(iHelp.connect(addr1).setCumulativeEmissionRate(0, 2)).to.be.reverted;
+        });
+
+        it("Should set __tokensPerInterestByPhase", async function () {
+            await iHelp.setTokensPerInterestPhase(0, 2);
+            expect(await iHelp.__tokensPerInterestByPhase(0)).to.equal(2);
+        });
+
+        it("Should only allow operator or owner to set the __tokensPerInterestByPhase", async function () {
+            await expect(iHelp.connect(addr1).setCumulativeEmissionRate(0, 2)).to.be.reverted;
+       });
     });
 
 
