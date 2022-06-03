@@ -142,6 +142,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         return cTokens.values();
     }
 
+    function hasCToken(address _cTokenAddress) external view returns(bool) {
+        return cTokens.contains(_cTokenAddress);
+    }
+
     /**
      * Allows depositing native tokens to the charity contract
      */
@@ -475,7 +479,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function accountedBalanceUSD() public view returns (uint256) {
         uint256 result;
         for (uint256 i = 0; i < cTokens.length(); i++) {
-        result  += convertToUsd(accountedBalances[cTokens.at(i)], decimals(cTokens.at(i)));
+            result += convertToUsd(accountedBalances[cTokens.at(i)], decimals(cTokens.at(i)));
         }
         return result;
     }
@@ -498,6 +502,17 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         uint256 result;
         for (uint256 i = 0; i < cTokens.length(); i++) {
             result += cTokenTotalUSDInterest(cTokens.at(i));
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function calculateTotalInterestEarned() public view returns (uint256) {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length(); i++) {
+            result += totalInterestEarned[cTokens.at(i)];
         }
         return result;
     }
