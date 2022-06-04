@@ -1,8 +1,8 @@
 const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
-const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
 const BigNumber = require('big.js');
+const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
 
 use(smock.matchers);
 
@@ -144,7 +144,7 @@ describe("iHelp", function () {
         });
 
         it("Should only allow operator or owner to set the __cumulativeInterestByPhase", async function () {
-             await expect(iHelp.connect(addr1).setCumulativeEmissionRate(0, 2)).to.be.reverted;
+            await expect(iHelp.connect(addr1).setCumulativeEmissionRate(0, 2)).to.be.reverted;
         });
 
         it("Should set __tokensPerInterestByPhase", async function () {
@@ -154,7 +154,7 @@ describe("iHelp", function () {
 
         it("Should only allow operator or owner to set the __tokensPerInterestByPhase", async function () {
             await expect(iHelp.connect(addr1).setCumulativeEmissionRate(0, 2)).to.be.reverted;
-       });
+        });
     });
 
 
@@ -192,6 +192,12 @@ describe("iHelp", function () {
             const charityPool1 = await CharityPool.deploy();
             const charityPool2 = await CharityPool.deploy();
 
+            const aggregator = await smock.fake(abi);
+            aggregator.latestRoundData.returns([0, 100000000, 0, 0, 0]);
+
+            await charityPool1.setVariable('priceFeed', aggregator.address);
+            await charityPool2.setVariable('priceFeed', aggregator.address);
+            
             await charityPool1.setVariable('operator', owner.address);
             await charityPool2.setVariable('operator', owner.address);
 
@@ -220,12 +226,37 @@ describe("iHelp", function () {
             const CharityPool = await smock.mock('CharityPool');
             charityPool1 = await CharityPool.deploy();
             charityPool2 = await CharityPool.deploy();
+           
+            const aggregator = await smock.fake(abi);
+            aggregator.latestRoundData.returns([0, 100000000, 0, 0, 0]);
 
+            await charityPool1.setVariable('priceFeed', aggregator.address);
+            await charityPool2.setVariable('priceFeed', aggregator.address);
+            
             await charityPool1.setVariable('operator', owner.address);
             await charityPool2.setVariable('operator', owner.address);
 
-            await charityPool1.addCToken(cTokenMock.address);
-            await charityPool2.addCToken(cTokenMock.address);
+
+            await charityPool2.setVariable("balances", {
+                [owner.address]: {
+                    [cTokenMock.address]: 100
+                },
+                [addr1.address]: {
+                    [cTokenMock.address]: 100
+                }
+            });
+
+            await charityPool1.setVariable("balances", {
+                [owner.address]: {
+                    [cTokenMock.address]: 100
+                },
+                [addr1.address]: {
+                    [cTokenMock.address]: 100
+                }
+            });
+
+            await iHelp.registerCharityPool(charityPool1.address);
+            await iHelp.registerCharityPool(charityPool2.address);
 
             charityPool1.calculateTotalIncrementalInterest.returns();
             charityPool2.calculateTotalIncrementalInterest.returns();
@@ -235,16 +266,9 @@ describe("iHelp", function () {
 
             charityPool2.accountedBalanceUSD.returns(200);
             charityPool1.accountedBalanceUSD.returns(200);
-
-
-            console.log(charityPool1.address, charityPool2.address, "here");
-            await iHelp.registerCharityPool(charityPool1.address);
-            await iHelp.registerCharityPool(charityPool2.address);
         });
 
         describe("Drip stage 1", async function () {
-
-
             it("Should set the correct status", async function () {
                 // Fetch the current  drip status
                 await iHelp.dripStage1();
@@ -373,6 +397,7 @@ describe("iHelp", function () {
             beforeEach(async function () {
                 charityPool1.getContributors.returns([addr1.address, addr2.address]);
                 charityPool2.getContributors.returns([addr1.address, addr2.address]);
+
                 charityPool1.balanceOfUSD.returns(20);
                 charityPool2.balanceOfUSD.returns(40);
             });
@@ -413,6 +438,12 @@ describe("iHelp", function () {
 
                 await expect(iHelp.dripStage4()).to.not.be.reverted;
                 const userTokenClaim = await iHelp.contributorTokenClaims(addr1.address);
+                const totalUserTokenClaimCharity1 = await iHelp.contirbutorGeneratedInterest(addr1.address, charityPool1.address);
+                const totalUserTokenClaimCharity2 = await iHelp.contirbutorGeneratedInterest(addr1.address, charityPool2.address);
+
+                // Should keep track of the total claimable tokens
+                expect(totalUserTokenClaimCharity1).to.equal((contributionTokens1).toFixed());
+                expect(totalUserTokenClaimCharity2).to.equal((contributionTokens2).toFixed());
 
                 // Check that the total contribution was added correctly
                 expect(userTokenClaim).to.equal((contributionTokens1 + contributionTokens2).toFixed());

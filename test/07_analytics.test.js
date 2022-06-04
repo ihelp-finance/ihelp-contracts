@@ -102,8 +102,6 @@ describe("Analytics", function () {
             await charityPool1.addCToken(cTokenMock1.address);
             await charityPool2.addCToken(cTokenMock1.address);
 
-            await charityPool1.addCToken(cTokenMock2.address);
-            await charityPool2.addCToken(cTokenMock2.address);
 
             await charityPool2.setVariable("totalInterestEarned", {
                 [cTokenMock1.address]: 25,
