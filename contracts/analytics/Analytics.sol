@@ -8,11 +8,10 @@ import "../ihelp/iHelpToken.sol";
  * @title Analytics
  */
 contract Analytics {
-
     /**
      * Calaculates the generated interest for a given charity
      */
-    function generatedInterest(CharityPool _charityPool) external view  returns(uint256) {
+    function generatedInterest(CharityPool _charityPool) external view returns (uint256) {
         return _charityPool.calculateTotalInterestEarned();
     }
 
@@ -22,12 +21,11 @@ contract Analytics {
     function totalGeneratedInterest(iHelpToken _iHelp) external view returns (uint256) {
         address[] memory charities = _iHelp.getCharities();
         uint256 result;
-        for(uint256 index = 0; index < charities.length; index++) {
-            result +=  CharityPool(payable(charities[index])).calculateTotalInterestEarned();
+        for (uint256 index = 0; index < charities.length; index++) {
+            result += CharityPool(payable(charities[index])).calculateTotalInterestEarned();
         }
         return result;
     }
-
 
     /**
      * Calaculates the total generated interest for a given yiled protocol
@@ -35,7 +33,7 @@ contract Analytics {
     function getYieldProtocolGeneratedInterest(iHelpToken _iHelp, address _cTokenAddress) external view returns (uint256) {
         address[] memory charities = _iHelp.getCharities();
         uint256 result;
-        for(uint256 index = 0; index < charities.length; index++) {
+        for (uint256 index = 0; index < charities.length; index++) {
             CharityPool charity = CharityPool(payable(charities[index]));
             result += charity.totalInterestEarned(_cTokenAddress);
         }
@@ -48,13 +46,13 @@ contract Analytics {
     function getUnderlyingCurrencyGeneratedInterest(iHelpToken _iHelp, address _underlyingCurrency) external view returns (uint256) {
         address[] memory charities = _iHelp.getCharities();
         uint256 result;
-        for(uint256 index = 0; index < charities.length; index++) {
+        for (uint256 index = 0; index < charities.length; index++) {
             CharityPool charity = CharityPool(payable(charities[index]));
-            
+
             address[] memory cTokens = charity.getCTokens();
 
-            for(uint256 index2 = 0; index2 < cTokens.length; index2++) {
-                 if(address(charity.getUnderlying(cTokens[index2])) == _underlyingCurrency){
+            for (uint256 index2 = 0; index2 < cTokens.length; index2++) {
+                if (address(charity.getUnderlying(cTokens[index2])) == _underlyingCurrency) {
                     result += charity.totalInterestEarned(cTokens[index2]);
                 }
             }
@@ -68,24 +66,24 @@ contract Analytics {
     function getUserGeneratedInterest(iHelpToken _iHelp, address _account) external view returns (uint256) {
         address[] memory charities = _iHelp.getCharities();
         uint256 result;
-        for(uint256 index = 0; index < charities.length; index++) {
+        for (uint256 index = 0; index < charities.length; index++) {
             address charity = charities[index];
-            result += _iHelp.contirbutorGeneratedInterest(charity, _account); 
+            result += _iHelp.contirbutorGeneratedInterest(_account, charity);
         }
         return result;
     }
 
-     /**
+    /**
      * Calaculates the total generated interest for a all users
      */
-    function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view returns (uint256){
-    address[] memory charities = _iHelp.getCharities();
+    function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view returns (uint256) {
+        address[] memory charities = _iHelp.getCharities();
         uint256 result;
-        for(uint256 index = 0; index < charities.length; index++) {
+        for (uint256 index = 0; index < charities.length; index++) {
             CharityPool charity = CharityPool(payable(charities[index]));
             address[] memory contibutors = charity.getContributors();
-            for(uint256 index2 = 0; index2 < contibutors.length; index2++) {
-                result += _iHelp.contirbutorGeneratedInterest(address(charity), contibutors[index2]); 
+            for (uint256 index2 = 0; index2 < contibutors.length; index2++) {
+                result += _iHelp.contirbutorGeneratedInterest(contibutors[index2], address(charity));
             }
         }
         return result;
