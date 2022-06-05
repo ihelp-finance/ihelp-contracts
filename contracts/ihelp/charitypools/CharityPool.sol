@@ -44,6 +44,13 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
      */
     event Rewarded(address indexed receiver, uint256 amount);
 
+    /**
+     * Emitted when a draw is rewarded.
+     * @param receiver The address of the reward receiver
+     * @param amount The amount of the win
+     */
+    event DirectDonation(address indexed sender, address indexed receiver, uint256 amount);
+
     uint8 internal holdingDecimals;
 
     string public name;
@@ -303,7 +310,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
                 require(underlyingToken.transferFrom(msg.sender, charityWallet, charityDonation), "Funding/t-fail");
             }
 
-            emit Rewarded(charityWallet, _amount);
+            emit DirectDonation(msg.sender, charityWallet, _amount);
         }
     }
 

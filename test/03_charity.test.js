@@ -1,7 +1,8 @@
 const { expect, use } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers,  } = require("hardhat");
 const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
+const { getDirectDonactionsBySenders } = require("../scripts/eventQuery")
 const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
 use(smock.matchers);
 describe("Charity Pool", function () {
@@ -186,7 +187,7 @@ describe("Charity Pool", function () {
     describe("Withdraw", function () {
         beforeEach(async function () {
             await cTokenMock.setVariable("underlying", wTokenMock.address);
-            await charityPool.depositNative(cTokenMock.address, {value: 100});
+            await charityPool.depositNative(cTokenMock.address, { value: 100 });
         });
 
         it("Should withdraw all balance", async function () {
@@ -245,12 +246,12 @@ describe("Charity Pool", function () {
 
         it("Should do nothing when donating 0", async function () {
             expect(await charityPool.directDonation(cTokenMock.address, 0))
-                .not.to.emit(charityPool, "Rewarded");
+                .not.to.emit(charityPool, "DirectDonation");
         });
 
-        it("Should emit rewarded event", async function () {
+        it("Should emit Direct Donation event", async function () {
             expect(await charityPool.directDonation(cTokenMock.address, 100))
-                .to.emit(charityPool, "Rewarded");
+                .to.emit(charityPool, "DirectDonation").withArgs(owner.address, charityWallet.address, 100);
         });
 
         it("Should send staking fee", async function () {
@@ -282,10 +283,18 @@ describe("Charity Pool", function () {
                 .to.emit(cTokenUnderlyingMock, "Transfer")
                 .withArgs(owner.address, charityWallet.address, expectedAmountAfterTax);
         });
+
+        // TODO:@Matt quick example on how to use event logs run
+        //  hh test --network hardhat test/03_charity.test.js --grep "Should query direct donation events"
+        it("Should query direct donation events", async function () {
+            await charityPool.directDonation(cTokenMock.address, 100);
+            const donations = await getDirectDonactionsBySenders(charityPool.address, ethers.provider, [owner.address]);
+            console.log(donations);
+        });
     });
 
-    describe("CToken Management", function() {
-        it("Should add cTokens ", async function() {
+    describe("CToken Management", function () {
+        it("Should add cTokens ", async function () {
             let cTokenMock1 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
             let cTokenMock2 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
             let cTokenMock3 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
@@ -297,7 +306,7 @@ describe("Charity Pool", function () {
             expect((await charityPool.getCTokens()).length).to.equal(4);
         });
 
-        it("Should remove cTokens ", async function() {
+        it("Should remove cTokens ", async function () {
             const interest = 10000;
             await charityPool.setVariable('redeemableInterest', {
                 [cTokenMock.address]: interest
@@ -315,7 +324,7 @@ describe("Charity Pool", function () {
             });
 
             await charityPool.removeCToken(cTokenMock.address);
-            
+
             expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(0);
             expect(await charityPool.currentInterestEarned(cTokenMock.address)).to.equal(0);
             console.log(await charityPool.getCTokens());
