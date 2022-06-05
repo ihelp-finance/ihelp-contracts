@@ -129,6 +129,13 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         __processingGasLimit = 300_000 * 1e9;
     }
 
+    function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
+        require(_newAddress != charityWallet && _newAddress != address(0), "charity-wallet/invalid-addr");
+        //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
+        // since the next rewards will go to the new wallets.
+        charityWallet = _newAddress;
+    }
+
     function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
         require(gasLimit > 0, "Limit cannot be 0");
         __processingGasLimit = gasLimit;

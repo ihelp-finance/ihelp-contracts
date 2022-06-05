@@ -78,10 +78,6 @@ describe("Charity Pool", function () {
             expect(await charityPool.decimals(cTokenMock.address)).to.equal(18);
         });
 
-        it("Should not set zero address as operator", async function () {
-            await expect(charityPool.transferOperator('0x0000000000000000000000000000000000000000')).to.be.revertedWith("Ownable: new operator is the zero address");
-        });
-
         it("Should set new operator", async function () {
             await expect(charityPool.transferOperator(addr1.address)).not.to.be.reverted;
             expect(await charityPool.operator()).to.equal(addr1.address);
@@ -105,9 +101,18 @@ describe("Charity Pool", function () {
             await expect(charityPool.connect(addr1).setStakingPool(addr2.address)).to.be.revertedWith("is-operator-or-owner");
         });
 
-        // it("Should not set zero address as operator", async function () {
-        //     await expect(charityPool.setStakingPool('0x0000000000000000000000000000000000000000')).to.be.revertedWith("TODO");
-        // });
+        it("Should not set zero address as operator", async function () {
+            await expect(charityPool.setStakingPool('0x0000000000000000000000000000000000000000')).to.be.reverted;
+        });
+
+        it("Should update the charity wallet", async function () {
+            await expect(charityPool.setCharityWallet(addr1.address)).not.to.be.reverted;
+            expect(await charityPool.charityWallet()).to.equal(addr1.address);
+        });
+
+        it("Should not set zero address as charityWallet", async function () {
+            await expect(charityPool.setCharityWallet('0x0000000000000000000000000000000000000000')).to.be.reverted;
+        });
 
         it("Should return the balance of cToken", async function () {
             cTokenMock.balanceOfUnderlying.returns(10000);
