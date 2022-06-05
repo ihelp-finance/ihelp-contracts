@@ -62,8 +62,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     // TODO: @Matt can we use mapping default getters and rename these variables so that they dont have the
     // "__" anymore. eg __tokensPerInterestByPhase ==> tokensPerInterestByPhase
-    mapping(uint256 => uint256) public __tokensPerInterestByPhase;
-    mapping(uint256 => uint256) public __cumulativeInterestByPhase;
+    mapping(uint256 => uint256) public tokensPerInterestByPhase;
+    mapping(uint256 => uint256) public cumulativeInterestByPhase;
 
     mapping(address => uint256) public contributorTokenClaims;
     mapping(address => mapping(address => uint256)) public contirbutorGeneratedInterest;
@@ -94,19 +94,19 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             }
 
             cumulativeInterest += lastInterest;
-            __cumulativeInterestByPhase[phase] = cumulativeInterest;
-            __tokensPerInterestByPhase[phase] = __tokensMintedPerPhase.div(cumulativeInterest - lastCumulative);
+            cumulativeInterestByPhase[phase] = cumulativeInterest;
+            tokensPerInterestByPhase[phase] = __tokensMintedPerPhase.div(cumulativeInterest - lastCumulative);
 
             lastCumulative = cumulativeInterest;
         }
     }
 
     function setCumulativeEmissionRate(uint256 _phase, uint256 _newRate) external onlyOperatorOrOwner {
-        __cumulativeInterestByPhase[_phase] = _newRate;
+        cumulativeInterestByPhase[_phase] = _newRate;
     }
 
     function setTokensPerInterestPhase(uint256 _phase, uint256 _newRate) external onlyOperatorOrOwner {
-        __tokensPerInterestByPhase[_phase] = _newRate;
+        tokensPerInterestByPhase[_phase] = _newRate;
     }
 
     function setProcessiongState(
@@ -203,15 +203,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function currentTokensPerInterest() public view returns (uint256) {
-        return __tokensPerInterestByPhase[__tokenPhase];
-    }
-
-    function tokensPerInterestByPhase(uint256 phase) public view returns (uint256) {
-        return __tokensPerInterestByPhase[phase];
+        return tokensPerInterestByPhase[__tokenPhase];
     }
 
     function interestPerTokenByPhase(uint256 phase) public view returns (uint256) {
-        return __cumulativeInterestByPhase[phase].div(__tokensMintedPerPhase);
+        return cumulativeInterestByPhase[phase].div(__tokensMintedPerPhase);
     }
 
     function setTokenPhase(uint256 phase) public onlyOperatorOrOwner returns (uint256) {
@@ -332,7 +328,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("tokenPhase", __tokenPhase);
 
         // based on the total generated interest in the timestep generate the tokens to drip
-        uint256 tokensPerInterest = tokensPerInterestByPhase(__tokenPhase);
+        uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
         // e.g. $1.66 in Wei
         console.log("tokensPerInterest", tokensPerInterest);
 
@@ -379,7 +375,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 console.log("remainingInterestToCirculate", remainingInterestToCirculate);
 
                 __tokenPhase += 1;
-                uint256 newTokensPerInterest = tokensPerInterestByPhase(__tokenPhase);
+                uint256 newTokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
                 // e.g. 0.86
 
                 // mint another 1,000,000 tokens to the supply
