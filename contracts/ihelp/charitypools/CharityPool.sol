@@ -306,7 +306,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
             if (charityWallet == holdingPool) {
                 console.log("direct to contract", address(this), charityDonation);
-                require(underlyingToken.approve(address(this), charityDonation), "Funding/approve");
+                // require(underlyingToken.approve(address(this), charityDonation), "Funding/approve");
                 require(underlyingToken.transferFrom(msg.sender, address(this), charityDonation), "Funding/t-fail");
             } else {
                 // deposit the charity share directly to the charities wallet address
