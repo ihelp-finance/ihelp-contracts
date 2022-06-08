@@ -8,15 +8,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Swapper is OwnableUpgradeable {
     //address of the swap router (uniswap v2 format)
-    address public SWAP_ROUTER;
+    IUniswapV2Router02 public SWAP_ROUTER;
 
     function initialize(address _swapRouter) public initializer {
-        SWAP_ROUTER = _swapRouter;
+        SWAP_ROUTER = IUniswapV2Router02(_swapRouter);
     }
 
     function setRouter(address newRouter) external onlyOwner {
         require(newRouter != address(0), "Router cannot be null");
-        SWAP_ROUTER = newRouter;
+        SWAP_ROUTER = IUniswapV2Router02(newRouter);
     }
 
     //this swap function is used to trade from one token to another
@@ -34,29 +34,49 @@ contract Swapper is OwnableUpgradeable {
         uint256 _amountOutMin,
         address _to
     ) external {
-        //first we need to transfer the amount in tokens from the msg.sender to this contract
-        //this contract will have the amount of in tokens
-        IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amountIn);
-
-        //next we need to allow the uniswapv2 router to spend the token we just sent to this contract
-        //by calling IERC20 approve you allow the uniswap contract to spend the tokens in this contract
-        IERC20(_tokenIn).approve(SWAP_ROUTER, _amountIn);
-
         address[] memory path;
         path = new address[](2);
         path[0] = _tokenIn;
         path[1] = _tokenOut;
 
+        _swapByPath(path, _amountIn, _amountOutMin, _to);
+    }
+
+    function swapByPath(
+        address[] memory path,
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address _to
+    ) external returns (uint256) {
+        return _swapByPath(path, _amountIn, _amountOutMin, _to);
+    }
+
+    /**
+        Performs a swapdefined by a specific swap path
+     */
+    function _swapByPath(
+        address[] memory path,
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address _to
+    ) internal returns (uint256) {
+        //first we need to transfer the amount in tokens from the msg.sender to this contract
+        //this contract will have the amount of in tokens
+        IERC20(path[0]).transferFrom(msg.sender, address(this), _amountIn);
+
+        //next we need to allow the uniswapv2 router to spend the token we just sent to this contract
+        //by calling IERC20 approve you allow the uniswap contract to spend the tokens in this contract
+        IERC20(path[0]).approve(address(SWAP_ROUTER), _amountIn);
+
         //then we will call swapExactTokensForTokens
         //for the deadline we will pass in block.timestamp
         //the deadline is the latest time the trade is valid for
-        IUniswapV2Router02(SWAP_ROUTER).swapExactTokensForTokens(
-            _amountIn,
-            _amountOutMin,
-            path,
-            _to,
-            block.timestamp + 5 minutes
-        );
+        uint256[] memory result = SWAP_ROUTER.swapExactTokensForTokens(_amountIn, _amountOutMin, path, _to, block.timestamp + 5 minutes);
+        return result[path.length - 1];
+    }
+
+    function nativeToken() external view returns (address) {
+        return SWAP_ROUTER.WETH();
     }
 
     function getAmountOutMin(
@@ -69,8 +89,7 @@ contract Swapper is OwnableUpgradeable {
         path[0] = _tokenIn;
         path[1] = _tokenOut;
 
-        uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER)
-            .getAmountsOut(_amountIn, path);
+        uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER).getAmountsOut(_amountIn, path);
         return amountOutMins[path.length - 1];
     }
 }

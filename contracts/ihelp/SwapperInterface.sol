@@ -5,7 +5,32 @@ pragma solidity ^0.8.9;
 import "../utils/IERC20.sol";
 
 interface SwapperInterface is IERC20 {
-    function swap(address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _amountOutMin, address _to) external;
-    function swapEth(address _tokenOut,uint256 _amountOutMin, address _to) payable external;
-    function getAmountOutMin(address _tokenIn, address _tokenOut, uint256 _amountIn) external view returns (uint256);
+    function nativeToken() external returns (address);
+
+    function swapByPath(
+        address[] memory path,
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address _to
+    ) external returns (uint256);
+
+    function swap(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address _to
+    ) external;
+
+    function swapEth(
+        address _tokenOut,
+        uint256 _amountOutMin,
+        address _to
+    ) external payable;
+
+    function getAmountOutMin(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn
+    ) external view returns (uint256);
 }

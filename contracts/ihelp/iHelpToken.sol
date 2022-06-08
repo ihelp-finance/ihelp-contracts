@@ -631,7 +631,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             }
         }
     }
-
+    
     function resetClaimableCharityInterest(address _addr) public onlyOperatorOrOwner {
         claimableCharityInterest[_addr] = 0;
     }

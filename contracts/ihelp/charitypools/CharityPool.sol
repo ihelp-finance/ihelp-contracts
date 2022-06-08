@@ -46,10 +46,18 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     /**
      * Emitted when a draw is rewarded.
+     * @param sender The donation sender
      * @param receiver The address of the reward receiver
      * @param amount The amount of the win
      */
     event DirectDonation(address indexed sender, address indexed receiver, uint256 amount);
+
+    /**
+     * Emitted when an offchain claim is made.
+     * @param receiver The address of the reward receiver
+     * @param amount The amount of the win
+     */
+    event OffChainClaim(address indexed receiver, uint256 amount);
 
     uint8 internal holdingDecimals;
 
@@ -338,9 +346,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
             address tokenaddress = address(underlyingToken);
+            
+            address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
 
             if (tokenaddress == holdingToken) {
-                require(underlyingToken.transfer(holdingPool, amount), "Funding/transfer");
+                require(underlyingToken.transfer(destinationAddress, amount), "Funding/transfer");
             } else {
                 console.log("\nSWAPPING", swapperPool, amount);
 
@@ -351,7 +361,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
                 console.log("TOKEN::", tokenaddress, holdingToken);
-                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
+                swapper.swap(tokenaddress, holdingToken, amount, minAmount, destinationAddress);
             }
 
             // reset the lastinterestearned incrementer
@@ -360,6 +370,33 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
             emit Rewarded(charityWallet, amount);
         }
+    }
+
+    /**
+        Claims the interest for charities that do not have an onchain wallet
+     */
+    function collectOffChainInterest(address _destAddr, address _depositCurrency) external onlyOperatorOrOwner {
+        uint256 amount = IERC20(holdingToken).balanceOf(address(this));
+        require(amount > 0, "OffChain/nothing-to-claim");
+
+        uint256 claimAmount = amount;
+        if(_depositCurrency == holdingToken) {
+            require(IERC20(_depositCurrency).transfer(_destAddr, amount), "Funding/transfer");
+        } else {
+            address[] memory swapPath = new address[](3);
+            swapPath[0] = holdingToken;
+
+            // Pass trough AVAX to make sure we have liquidity
+            swapPath[1] = swapper.nativeToken();
+            swapPath[2] = _depositCurrency;
+
+            uint256 minAmount = (amount * 50) / 100;
+
+            uint256 amountOut = swapper.swapByPath(swapPath, amount, minAmount, _destAddr);
+            claimAmount = amountOut;
+        }
+        // Emit the offchain claim event
+        emit OffChainClaim(_destAddr, claimAmount);
     }
 
     /**
