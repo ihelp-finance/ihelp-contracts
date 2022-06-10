@@ -610,22 +610,24 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     // must send from holdingPool account for on-chain transfers
-    function claimInterest(address _addr) public {
+    function claimInterest(address charityAddress) public {
         console.log("CLAIMING INTEREST");
-        console.log(msg.sender, holdingPool, _addr);
+        console.log(msg.sender, holdingPool, charityAddress);
         // specific for on-chain transfer. off-chain transfers to charity wallet.
-        if (charityPoolList.contains(_addr) == false && holdingPool != _addr) {
+
+        address charityWalletAddress = CharityPool(payable(charityAddress)).charityWallet();
+        if (holdingPool != charityWalletAddress) {
             if (msg.sender == holdingPool) {
-                uint256 amount = claimableCharityInterest[_addr];
+                uint256 amount = claimableCharityInterest[charityWalletAddress];
 
                 if (amount > 0) {
                     // charityPool account
                     uint256 bal = underlyingToken.balanceOf(msg.sender);
                     console.log("balance of sender:", bal);
 
-                    claimableCharityInterest[_addr] = 0;
+                    claimableCharityInterest[charityWalletAddress] = 0;
 
-                    bool success = underlyingToken.transferFrom(msg.sender, _addr, amount);
+                    bool success = underlyingToken.transferFrom(msg.sender, charityWalletAddress, amount);
                     require(success, "transfer failed");
                 }
             }
