@@ -56,6 +56,7 @@
     "compile": "hardhat compile",
     "coverage": "hardhat --network hardhat coverage",
     "make-badges": "istanbul-badges-readme",
+    "run:eventlistener":  "hardhat run ./test/validation/eventListener.js --network localhost",
     "deploy": "hardhat deploy  --network localhost  --export-all ./build/hardhat_contracts.json",
     "postdeploy": "hardhat run scripts/publish.js",
     "watch": "node scripts/watch.js",
