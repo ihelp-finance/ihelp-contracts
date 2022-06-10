@@ -88,6 +88,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     let pricefeed = null;
     let tokenaddress = null;
 
+    //TODO: Ask Mat, we need to set a native token wrapper reference here
+    let nativeWrapper = null;
+
     let addresses = fs.readFileSync(`./networks/${chainName(chainId)}-lending.json`, 'utf8');
     addresses = JSON.parse(addresses);
 
@@ -110,6 +113,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         ctokenaddress = null;
         pricefeed = null;
       }
+
+      nativeWrapper = hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
 
     }
     else {
@@ -136,12 +141,15 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         pricefeed = null;
       }
 
+
+
     }
 
     return {
       "token": tokenaddress,
       "lendingtoken": ctokenaddress,
-      "pricefeed": pricefeed
+      "pricefeed": pricefeed,
+      "nativeWrapper" : nativeWrapper
     };
 
   };
@@ -169,7 +177,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ihelpAddress: ihelpAddress,
       swapperAddress: swapperAddress,
       stakingPoolAddress: stakingPool,
-      developmentPoolAddress: developmentPool
+      developmentPoolAddress: developmentPool,
+      wrappedNativeAddress: charityAddresses["nativeWrapper"] //TODO: @MAtt , Need to set the native wrapper for the non testing environment
     }, network.name);
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
     deployedCharities.push([contractName, charityResult]);

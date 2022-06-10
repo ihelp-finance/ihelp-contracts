@@ -94,17 +94,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       from: deployer,
     });
 
-    // cyan("\nDeploying WETH...")
-    // wethResult = await deploy("WETH", {
-    //   args: [
-    //     'WETH Test Token',
-    //     'WETH',
-    //     18
-    //   ],
-    //   contract: 'ERC20Mintable',
-    //   from: deployer,
-    //   skipIfAlreadyDeployed: true
-    // })
+    cyan("\nDeploying WETH...")
+    wethResult = await deploy("WETH", {
+      contract: 'WTokenMock',
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
 
     // cyan("\nDeploying cETH...")
     // // should be about 20% APR
@@ -123,7 +118,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     dim("  - cDAI:              ", cDaiResult.address);
     dim("  - USDC:              ", usdcResult.address);
     dim("  - cUSDC:             ", cUsdcResult.address);
-    //dim("  - WETH:              ", wethResult.address)
+    dim("  - WETH:              ", wethResult.address)
     //dim("  - cETH:              ", cEthAddress)
   }
 
