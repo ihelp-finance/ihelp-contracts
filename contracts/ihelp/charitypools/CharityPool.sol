@@ -103,14 +103,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     function postUpgrade() external onlyOperatorOrOwner {}
 
-    AggregatorV3Interface internal priceFeed;
-
     function initialize(CharityPoolUtils.CharityPoolConfiguration memory configuration) public initializer {
         __Ownable_init();
 
         require(configuration.operatorAddress != address(0), "Funding/operator-zero");
 
-        priceFeed = AggregatorV3Interface(configuration.priceFeedAddress);
         ihelpToken = iHelpTokenInterface(configuration.ihelpAddress);
         swapper = SwapperInterface(configuration.swapperAddress);
 
@@ -414,8 +411,12 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenPrice() public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.latestRoundData();
+    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256) {
+         address[] memory path;
+        path = new address[](2);
+        path[0] = _cTokenAdddress;
+        path[1] = swapper.;
+        int256 price = swapper.getAmountsOutByPath();
         return uint256(price);
     }
 
@@ -437,17 +438,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         }
     }
 
-    function convertToUsd(uint256 value, uint8 _decimals) internal view returns (uint256) {
-        uint256 tokenPrice = getUnderlyingTokenPrice();
-        uint256 convertExchangeRateToWei = 100000000;
-        uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
-        uint256 valueUSD = value.mul(tokenPriceWei);
-        // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
-        if (_decimals < holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
-        } else if (_decimals > holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, _decimals - holdingDecimals);
-        }
+    function convertToUsd(address _cTokenAddress, uint256 _value, uint8 _decimals) internal view returns (uint256) {;
+        uint256 valueUSD = getUnderlyingTokenPrice(_cTokenAddress, _value);
         return valueUSD;
     }
 
