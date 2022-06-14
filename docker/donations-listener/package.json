@@ -1,0 +1,8 @@
+{
+  "name": "ihelp-direct-conations-listener",
+  "version": "1.0.0",
+  "license": "GPLV3",
+  "dependencies": {
+    "ethers": "^5.3.0"
+  }
+}
