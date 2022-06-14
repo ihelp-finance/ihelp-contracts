@@ -1,5 +1,4 @@
 const ethers = require('ethers');
-const { contained } = require('sequelize/lib/operators');
 const { abi } = require('../artifacts/contracts/ihelp/charitypools/CharityPool.sol/CharityPool.json')
 
 async function getDirectDonactionsBySenders(contractAddress, provider, senderAddresses, fromBlock = 0) {

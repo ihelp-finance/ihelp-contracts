@@ -485,6 +485,13 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return true;
     }
 
+    /**
+        Check of a certain charity was registered with the system
+     */
+    function hasCharity(address _addr) public view returns(bool) {
+        return charityPoolList.contains(_addr);
+    }
+
     function calculatePerfectRedeemInterest() public view returns (uint256) {
         uint256 perfectRedeemedInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
