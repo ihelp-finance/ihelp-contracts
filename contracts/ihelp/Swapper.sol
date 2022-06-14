@@ -74,12 +74,11 @@ contract Swapper is OwnableUpgradeable {
         uint256[] memory result = SWAP_ROUTER.swapExactTokensForTokens(_amountIn, _amountOutMin, path, _to, block.timestamp + 5 minutes);
         return result[path.length - 1];
     }
-
+    
     function nativeToken() external view returns (address) {
         return SWAP_ROUTER.WETH();
     }
-
-
+    
     function getAmountsOutByPath(address[] memory _path, uint256 _amountIn) public view returns (uint256) {
         uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER).getAmountsOut(_amountIn, _path);
         return amountOutMins[_path.length - 1];

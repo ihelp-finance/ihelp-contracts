@@ -5,6 +5,8 @@ pragma solidity ^0.8.9;
 import "../utils/IERC20.sol";
 
 interface SwapperInterface is IERC20 {
+    function nativeToken() external view returns (address);
+
     function swapByPath(
         address[] memory path,
         uint256 _amountIn,

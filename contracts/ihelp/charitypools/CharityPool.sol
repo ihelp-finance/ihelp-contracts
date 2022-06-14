@@ -46,10 +46,18 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     /**
      * Emitted when a draw is rewarded.
+     * @param sender The donation sender
      * @param receiver The address of the reward receiver
      * @param amount The amount of the win
      */
     event DirectDonation(address indexed sender, address indexed receiver, uint256 amount);
+
+    /**
+     * Emitted when an offchain claim is made.
+     * @param receiver The address of the reward receiver
+     * @param amount The amount of the win
+     */
+    event OffChainClaim(address indexed receiver, uint256 amount);
 
     uint8 internal holdingDecimals;
 
@@ -303,7 +311,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
             if (charityWallet == holdingPool) {
                 console.log("direct to contract", address(this), charityDonation);
-                require(underlyingToken.approve(address(this), charityDonation), "Funding/approve");
+                // require(underlyingToken.approve(address(this), charityDonation), "Funding/approve");
                 require(underlyingToken.transferFrom(msg.sender, address(this), charityDonation), "Funding/t-fail");
             } else {
                 // deposit the charity share directly to the charities wallet address
@@ -335,9 +343,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
             address tokenaddress = address(underlyingToken);
+            
+            address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
 
             if (tokenaddress == holdingToken) {
-                require(underlyingToken.transfer(holdingPool, amount), "Funding/transfer");
+                require(underlyingToken.transfer(destinationAddress, amount), "Funding/transfer");
             } else {
                 console.log("\nSWAPPING", swapperPool, amount);
 
@@ -348,7 +358,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
                 console.log("TOKEN::", tokenaddress, holdingToken);
-                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
+                swapper.swap(tokenaddress, holdingToken, amount, minAmount, destinationAddress);
             }
 
             // reset the lastinterestearned incrementer
@@ -357,6 +367,33 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
             emit Rewarded(charityWallet, amount);
         }
+    }
+
+    /**
+        Claims the interest for charities that do not have an onchain wallet
+     */
+    function collectOffChainInterest(address _destAddr, address _depositCurrency) external onlyOperatorOrOwner {
+        uint256 amount = IERC20(holdingToken).balanceOf(address(this));
+        require(amount > 0, "OffChain/nothing-to-claim");
+
+        uint256 claimAmount = amount;
+        if(_depositCurrency == holdingToken) {
+            require(IERC20(_depositCurrency).transfer(_destAddr, amount), "Funding/transfer");
+        } else {
+            address[] memory swapPath = new address[](3);
+            swapPath[0] = holdingToken;
+
+            // Pass trough AVAX to make sure we have liquidity
+            swapPath[1] = swapper.nativeToken();
+            swapPath[2] = _depositCurrency;
+
+            uint256 minAmount = (amount * 50) / 100;
+
+            uint256 amountOut = swapper.swapByPath(swapPath, amount, minAmount, _destAddr);
+            claimAmount = amountOut;
+        }
+        // Emit the offchain claim event
+        emit OffChainClaim(_destAddr, claimAmount);
     }
 
     /**
@@ -411,13 +448,15 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256) {
-         address[] memory path;
-        path = new address[](2);
+    function getUnderlyingTokenPrice(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
+        address[] memory path = new address[](3);
         path[0] = _cTokenAdddress;
-        path[1] = swapper.;
-        int256 price = swapper.getAmountsOutByPath();
-        return uint256(price);
+        path[1] = swapper.nativeToken();
+
+        //TODO: Ask Matt, we get the amount in holding tokens here
+        path[2] = holdingToken;
+        uint256 valueInHoldingToken = swapper.getAmountsOutByPath(path, _value);
+        return valueInHoldingToken;
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -438,7 +477,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         }
     }
 
-    function convertToUsd(address _cTokenAddress, uint256 _value, uint8 _decimals) internal view returns (uint256) {;
+    function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
+        // We call the swapper to get the value directly in the form of holding tokens,
+        // this means that we dont need to handle decimal scaling anyore, right @Matt?
         uint256 valueUSD = getUnderlyingTokenPrice(_cTokenAddress, _value);
         return valueUSD;
     }
@@ -485,7 +526,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function accountedBalanceUSD() public view returns (uint256) {
         uint256 result;
         for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += convertToUsd(accountedBalances[cTokens.at(i)], decimals(cTokens.at(i)));
+            result += convertToUsd(cTokens.at(i),accountedBalances[cTokens.at(i)]);
         }
         return result;
     }
@@ -524,11 +565,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     }
 
     function cTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
-        return convertToUsd(totalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
+        return convertToUsd(_cTokenAddress, totalInterestEarned[_cTokenAddress]);
     }
 
     function newCTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
-        return convertToUsd(newTotalInterestEarned[_cTokenAddress], decimals(_cTokenAddress));
+        return convertToUsd(_cTokenAddress, newTotalInterestEarned[_cTokenAddress]);
     }
 
     function decimals(address _cTokenAddress) public view returns (uint8) {
@@ -538,7 +579,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function balanceOfUSD(address _addr) public view returns (uint256) {
         uint256 result;
         for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += convertToUsd(balances[_addr][cTokens.at(i)], decimals(cTokens.at(i)));
+            result += convertToUsd(cTokens.at(i), balances[_addr][cTokens.at(i)]);
         }
         return result; 
     }
