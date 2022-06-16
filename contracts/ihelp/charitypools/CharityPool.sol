@@ -448,15 +448,15 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenPrice(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
+    function getUnderlyingTokenValue(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
         address[] memory path = new address[](3);
         path[0] = _cTokenAdddress;
         path[1] = swapper.nativeToken();
 
         //TODO: Ask Matt, we get the amount in holding tokens here
         path[2] = holdingToken;
-        uint256 valueInHoldingToken = swapper.getAmountsOutByPath(path, _value);
-        return valueInHoldingToken;
+        uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);        
+        return valueInHoldingTokens;
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -480,7 +480,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
         // We call the swapper to get the value directly in the form of holding tokens,
         // this means that we dont need to handle decimal scaling anyore, right @Matt?
-        uint256 valueUSD = getUnderlyingTokenPrice(_cTokenAddress, _value);
+        console.log("Value" , _value);
+        uint256 valueUSD = getUnderlyingTokenValue(_cTokenAddress, _value);
         return valueUSD;
     }
 

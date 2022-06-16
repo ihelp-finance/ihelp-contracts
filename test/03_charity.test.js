@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
-const { ethers,  } = require("hardhat");
-const { parseEther } = require("ethers/lib/utils");
+const { ethers  } = require("hardhat");
+const { parseEther, parseUnits } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
 const { getDirectDonactionsBySenders } = require("../scripts/eventQuery")
 const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
@@ -49,8 +49,8 @@ describe("Charity Pool", function () {
         });
 
         await charityPool.addCToken(cTokenMock.address);
-        aggregator.latestRoundData.returns([0, 100000000, 0, 0, 0]);
-        charityPool.getUnderlyingTokenPrice.returns(100000000);
+        swapperMock.nativeToken.returns(wTokenMock.address);
+        swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
     });
 
     describe("Deployment", function () {
@@ -419,6 +419,8 @@ describe("Charity Pool", function () {
 
             await charityPool.depositTokens(cTokenMock.address, deposit);
             await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
+            swapperMock.getAmountsOutByPath.returns(arg => parseUnits('' + arg[1], 9) );
+
             expect(await charityPool.accountedBalanceUSD()).to.equal(expectedBalanceInUsd);
         });
 

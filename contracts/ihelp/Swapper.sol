@@ -35,9 +35,10 @@ contract Swapper is OwnableUpgradeable {
         address _to
     ) external {
         address[] memory path;
-        path = new address[](2);
+        path = new address[](3);
         path[0] = _tokenIn;
-        path[1] = _tokenOut;
+        path[1] = SWAP_ROUTER.WETH();
+        path[2] = _tokenOut;
 
         _swapByPath(path, _amountIn, _amountOutMin, _to);
     }
