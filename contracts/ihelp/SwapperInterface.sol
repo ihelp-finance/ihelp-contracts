@@ -20,7 +20,7 @@ interface SwapperInterface is IERC20 {
         uint256 _amountIn,
         uint256 _amountOutMin,
         address _to
-    ) external;
+    ) external returns (uint256);
 
     function swapEth(
         address _tokenOut,

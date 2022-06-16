@@ -33,14 +33,14 @@ contract Swapper is OwnableUpgradeable {
         uint256 _amountIn,
         uint256 _amountOutMin,
         address _to
-    ) external {
+    ) external returns(uint256) {
         address[] memory path;
         path = new address[](3);
         path[0] = _tokenIn;
         path[1] = SWAP_ROUTER.WETH();
         path[2] = _tokenOut;
 
-        _swapByPath(path, _amountIn, _amountOutMin, _to);
+        return _swapByPath(path, _amountIn, _amountOutMin, _to);
     }
 
     function swapByPath(

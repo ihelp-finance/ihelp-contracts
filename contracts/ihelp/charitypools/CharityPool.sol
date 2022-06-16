@@ -23,6 +23,15 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    struct DirectDonationsCounter { 
+        uint256 totalContribNativeToken; 
+        uint256 totalContribUSD;
+        uint256 contribAfterSwapUSD;
+        uint256 charityDonationUSD;
+        uint256 devContribUSD;
+        uint256 stakeContribUSD;
+    }
+
     /**
      * Emitted when a user deposits into the Pool.
      * @param sender The purchaser of the tickets
@@ -75,6 +84,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => uint256) public accountedBalances;
+    mapping(address => DirectDonationsCounter) public donationsRegistry;
 
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
@@ -276,32 +286,35 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
         // transfer the tokens to the charity contract
         if (_amount > 0) {
+
             // Get The underlying token for this cToken
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
+            require(underlyingToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
+
             address tokenaddress = address(underlyingToken);
+            
+            if (tokenaddress != holdingToken) {
+                console.log("Swapping");
+                uint256 minAmount = (_amount * 95) / 100;
+
+                // TODO: This should enable support for tokens that have fee on transfer
+                uint256 receivedAmount = underlyingToken.balanceOf(address(this));
+
+                require(underlyingToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
+                console.log("Current Token Balance::", receivedAmount);
+                _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
+            }
+
 
             // 2.5% to developer pool as native currency of pool
             uint256 developerFee = (_amount * 25) / 1000;
 
-            console.log("Developper Fee::", developerFee);
-            require(underlyingToken.transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
-
             // 2.5% to staking pool as swapped dai
             uint256 stakingFee = (_amount * 25) / 1000;
 
-            if (tokenaddress == holdingToken) {
-                require(underlyingToken.transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
-            } else {
-                console.log("Swapping");
-                uint256 minAmount = (stakingFee * 50) / 100;
-
-                require(underlyingToken.transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
-
-                require(underlyingToken.approve(swapperPool, stakingFee), "Funding/staking swapper approve");
-                console.log("Current Token Balance::", IERC20(tokenaddress).balanceOf(address(this)));
-                swapper.swap(tokenaddress, holdingToken, stakingFee, minAmount, stakingPool);
-            }
+            require(IERC20(holdingToken).transferFrom(address(this), developmentPool, developerFee), "Funding/developer transfer");
+            require(IERC20(holdingToken).transferFrom(address(this), stakingPool, stakingFee), "Funding/developer transfer");
 
             // 95% to charity as native currency of pool
             uint256 charityDonation = _amount - developerFee - stakingFee;
@@ -310,18 +323,15 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
             console.log(charityWallet, holdingPool);
 
-            if (charityWallet == holdingPool) {
-                console.log("direct to contract", address(this), charityDonation);
-                // require(underlyingToken.approve(address(this), charityDonation), "Funding/approve");
-                require(underlyingToken.transferFrom(msg.sender, address(this), charityDonation), "Funding/t-fail");
-            } else {
-                // deposit the charity share directly to the charities wallet address
-                require(underlyingToken.approve(charityWallet, charityDonation), "Funding/approve");
-
+            if (charityWallet != holdingPool) {
+                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
                 console.log("Underlying Balance:: ", underlyingToken.balanceOf(msg.sender));
-                require(underlyingToken.transferFrom(msg.sender, charityWallet, charityDonation), "Funding/t-fail");
+                require(IERC20(holdingToken).transferFrom(address(this), charityWallet, charityDonation), "Funding/t-fail");
+            } else {
+                console.log("direct to contract", address(this), charityDonation);
             }
+            donationsRegistry[msg.sender].totalContribNativeToken
 
             emit DirectDonation(msg.sender, charityWallet, _amount);
         }
