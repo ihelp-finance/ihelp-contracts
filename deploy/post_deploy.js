@@ -1,10 +1,7 @@
 
 
-const fs = require('fs');
-
-const { run } = require("hardhat");
+const { parseEther } = require('ethers/lib/utils');
 const { dim, yellow, cyan, fromBigNumber, chainName, getSwapAddresses, getTokenAddresses, green } = require('../scripts/deployUtils');
-
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
   path: 'contractAddresses.csv',
@@ -78,6 +75,95 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   const userAccount = stakingPool;
 
   // activate the LP 
+
+  const activateETHLiquidityPool = async (token, value, lender, dex) => {
+
+    const token1Addresses = await getTokenAddresses(token, lender, chainId);
+    const token1Address = token1Addresses['token'];
+    const ethAddress = await swapv2Router.WETH();
+
+    console.log('');
+    dim(token, '->', 'ETH');
+    dim(token1Address, '->', ethAddress);
+
+    let token1contract;
+    if (token == 'HELP') {
+      token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
+    } else {
+      token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
+    }
+
+    const decimals = await token1contract.decimals();
+
+    let getPair1 = await swapv2Factory.getPair(token1Address, ethAddress);
+    dim('   pair', getPair1);
+
+    try {
+      const createPairTx = await swapv2Factory.connect(signer).createPair(token1Address, ethAddress);
+      await createPairTx.wait();
+      dim('   pair created');
+      getPair1 = await swapv2Factory.connect(userSigner).getPair(token1Address, ethAddress);
+      dim('   new pair', getPair1);
+    }
+    catch (e) { }
+
+    const swapv2Pair1 = new ethers.Contract(getPair1, IUniswapV2Pair['abi'], mainnetInfura);
+
+    let pairSupply1 = 0;
+    try {
+      pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
+      pairSupply1 = fromBigNumber(pairSupply1, 18 - decimals > 0 ? 18 - decimals : 18);
+    }
+    catch (e) { }
+    dim('   pairSupply', pairSupply1);
+
+    if (pairSupply1 == 0) {
+
+      const currentBalance1 = await token1contract.balanceOf(userAccount);
+
+      if (fromBigNumber(currentBalance1, decimals) < parseFloat(value) || fromBigNumber(currentBalance1, decimals) == 0) {
+        if (token == 'HELP') {
+          console.log('minting help tokens...');
+          const MintTx1 = await token1contract.mint(userAccount, ethers.utils.parseUnits(value, decimals));
+          await MintTx1.wait();
+        }
+        else {
+          console.log('minting token1...');
+          const MintTx1 = await token1contract.allocateTo(userAccount, ethers.utils.parseUnits(value, decimals));
+          await MintTx1.wait();
+        }
+      }
+
+      // add liquidity to the pair
+      let devTx1Approve = await token1contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(value, decimals));
+      //console.log(devTx1Approve['hash']);
+      await devTx1Approve.wait();
+
+      const timestamp = (await mainnetInfura.getBlock()).timestamp;
+      console.log('Adding liquidity...', timestamp);
+
+      const addLiquid = await swapv2Router.connect(userSigner)
+        .addLiquidityETH(token1Address,
+          ethers.utils.parseUnits(value, decimals),
+          ethers.utils.parseUnits(value, decimals),
+          0,
+          userAccount, timestamp + 3000000, {
+          value: parseEther('1000')
+        });
+
+      await addLiquid.wait();
+
+      let pairSupply1 = 0;
+      try {
+        pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
+        pairSupply1 = fromBigNumber(pairSupply1, token2decimals - decimals > 0 ? token2decimals - decimals : token2decimals);
+      }
+      catch (e) { }
+      dim('   new pairSupply', pairSupply1);
+
+    }
+
+  };
 
   const activateLiquidityPool = async (token1, token2, token1value, token2value, lender, dex) => {
 
@@ -187,6 +273,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     yellow('\nActivating liquidity pools for test environment...');
 
     await activateLiquidityPool('USDC', 'DAI', '50000000', '50000000', 'compound', 'uniswap');
+    await activateETHLiquidityPool('USDC', '50000000', 'compound', 'uniswap');
+    await activateETHLiquidityPool('DAI', '50000000', 'compound', 'uniswap');
+
     // await activateLiquidityPool('WETH', 'DAI', '3500', '50000000', 'compound', 'uniswap');
 
   }
