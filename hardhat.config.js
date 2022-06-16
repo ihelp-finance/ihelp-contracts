@@ -179,7 +179,10 @@ module.exports = {
     currency: 'USD'
   },
 
-  preprocess: preprocessOptions
+  preprocess: preprocessOptions,
+  mocha: {
+    timeout: 100000000
+  }
 
 };
 

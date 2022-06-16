@@ -84,6 +84,11 @@ contract Swapper is OwnableUpgradeable {
         if(_amountIn == 0){
             return 0;
         }
+
+        if(_path[0] == _path[_path.length - 1]) {
+            return _amountIn;
+        }
+
         uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER).getAmountsOut(_amountIn, _path);
         return amountOutMins[_path.length - 1];
     }
