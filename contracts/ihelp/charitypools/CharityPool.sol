@@ -450,9 +450,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     function getUnderlyingTokenValue(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
         address[] memory path = new address[](3);
-        path[0] = _cTokenAdddress;
+        path[0] = address(getUnderlying(_cTokenAdddress));
         path[1] = swapper.nativeToken();
-
         //TODO: Ask Matt, we get the amount in holding tokens here
         path[2] = holdingToken;
         uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);        

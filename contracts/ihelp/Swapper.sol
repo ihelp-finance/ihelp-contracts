@@ -81,6 +81,9 @@ contract Swapper is OwnableUpgradeable {
     }
     
     function getAmountsOutByPath(address[] memory _path, uint256 _amountIn) public view returns (uint256) {
+        if(_amountIn == 0){
+            return 0;
+        }
         uint256[] memory amountOutMins = IUniswapV2Router02(SWAP_ROUTER).getAmountsOut(_amountIn, _path);
         return amountOutMins[_path.length - 1];
     }
