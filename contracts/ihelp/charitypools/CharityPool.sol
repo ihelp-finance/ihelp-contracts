@@ -173,7 +173,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
         wrappedNative.deposit{value: msg.value}();
 
-        contributors.add(msg.sender);
         // Deposit the funds
         _depositFrom(msg.sender, _cTokenAddress, msg.value);
 
@@ -199,7 +198,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         // Transfer the tokens into this contract
         require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
-        contributors.add(msg.sender);
         // Deposit the funds
         _depositFrom(msg.sender, _cTokenAddress, _amount);
 
@@ -249,6 +247,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         // Deposit into Compound
         require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
         require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
+
+        contributors.add(_spender);
     }
 
     /**
@@ -267,6 +267,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
             accountedBalances[_cTokenAddress] -= _amount;
         } else {
             accountedBalances[_cTokenAddress] = 0;
+            contributors.remove(_sender);
         }
     }
 
@@ -520,7 +521,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         }
     }
 
-
     /**
      *  Expensive function should be called by offchain process
      */
@@ -585,5 +585,14 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         return result; 
     }
 
-    receive() payable external {}
+    function numberOfContributors() public view returns(uint256) {
+        return contributors.length();
+    }
+
+    function contributorAt(uint256 index) public view returns(address) {
+        return contributors.at(index);
+    }
+
+    receive() payable external {
+    }
 }
