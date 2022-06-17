@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
 
 import "../ihelp/charitypools/CharityPool.sol";
 import "../ihelp/iHelpToken.sol";
+import "../ihelp/charitypools/CharityPoolUtils.sol";
 
 /**
  * @title Analytics
@@ -40,7 +41,7 @@ contract Analytics {
         return result;
     }
 
-     /**
+    /**
      * Calaculates the total generated interest for a given yiled protocol
      */
     function getYieldProtocolGeneratedInterestByCharity(CharityPool _charity) external view returns (uint256) {
@@ -116,11 +117,10 @@ contract Analytics {
         return _charity.accountedBalanceUSD();
     }
 
-
     /**
      * Get total number of helpers
      */
-    function totalHelpers(iHelpToken _iHelp) external view returns(uint256) {
+    function totalHelpers(iHelpToken _iHelp) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
         uint256 result;
         for (uint256 index = 0; index < charities; index++) {
@@ -130,10 +130,51 @@ contract Analytics {
         return result;
     }
 
-     /**
+    /**
      * Get number of helpers in a given charity
      */
-    function totalHelpersInCharity(CharityPool _charity) external view returns(uint256) {
+    function totalHelpersInCharity(CharityPool _charity) external view returns (uint256) {
         return _charity.numberOfContributors();
+    }
+
+    /**
+     * Get the total value of direct donations from all charities
+     */
+    function getTotalDirectDonations(iHelpToken _iHelp) public view returns (uint256) {
+        uint256 charities = _iHelp.numberOfCharities();
+        uint256 result;
+        for (uint256 index = 0; index < charities; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            result += charity.totalDonationsUSD();
+        }
+        return result;
+    }
+
+    /**
+     * Get the total value of direct donations for a helper
+     */
+    function getUserTotalDirectDonations(iHelpToken _iHelp, address _user) public view returns (uint256) {
+        uint256 charities = _iHelp.numberOfCharities();
+        uint256 result;
+        for (uint256 index = 0; index < charities; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            uint256 contibutors = charity.numberOfContributors();
+            for (uint256 index2 = 0; index2 < contibutors; index2++) {
+                CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
+                result += registry.totalContribUSD;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Get the total value of direct donations for a helper
+     */
+    function getUserDirectDonationsStats(CharityPool _charity, address _user)
+        public
+        view
+        returns (CharityPoolUtils.DirectDonationsCounter memory)
+    {
+        return _charity.donationsRegistry(_user);
     }
 }
