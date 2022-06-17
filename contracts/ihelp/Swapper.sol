@@ -33,7 +33,7 @@ contract Swapper is OwnableUpgradeable {
         uint256 _amountIn,
         uint256 _amountOutMin,
         address _to
-    ) external returns(uint256) {
+    ) external returns (uint256) {
         address[] memory path;
         path = new address[](3);
         path[0] = _tokenIn;
@@ -75,17 +75,17 @@ contract Swapper is OwnableUpgradeable {
         uint256[] memory result = SWAP_ROUTER.swapExactTokensForTokens(_amountIn, _amountOutMin, path, _to, block.timestamp + 5 minutes);
         return result[path.length - 1];
     }
-    
+
     function nativeToken() external view returns (address) {
         return SWAP_ROUTER.WETH();
     }
-    
+
     function getAmountsOutByPath(address[] memory _path, uint256 _amountIn) public view returns (uint256) {
-        if(_amountIn == 0){
+        if (_amountIn == 0) {
             return 0;
         }
 
-        if(_path[0] == _path[_path.length - 1]) {
+        if (_path[0] == _path[_path.length - 1]) {
             return _amountIn;
         }
 
@@ -93,7 +93,7 @@ contract Swapper is OwnableUpgradeable {
         return amountOutMins[_path.length - 1];
     }
 
-     function getAmountOutMin(
+    function getAmountOutMin(
         address _tokenIn,
         address _tokenOut,
         uint256 _amountIn
@@ -103,6 +103,23 @@ contract Swapper is OwnableUpgradeable {
         path[0] = _tokenIn;
         path[1] = _tokenOut;
 
-       return getAmountsOutByPath(path, _amountIn);
+        return getAmountsOutByPath(path, _amountIn);
+    }
+
+    /**
+     * Get the price of a specific but proxyed through native liquidity
+     */
+    function getNativeRoutedTokenPrice(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn
+    ) external view returns (uint256) {
+        address[] memory path;
+        path = new address[](3);
+        path[0] = _tokenIn;
+        path[1] = SWAP_ROUTER.WETH();
+        path[2] = _tokenOut;
+
+        return getAmountsOutByPath(path, _amountIn);
     }
 }

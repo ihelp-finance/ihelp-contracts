@@ -19,18 +19,9 @@ import "../SwapperInterface.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
+contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    struct DirectDonationsCounter { 
-        uint256 totalContribNativeToken; 
-        uint256 totalContribUSD;
-        uint256 contribAfterSwapUSD;
-        uint256 charityDonationUSD;
-        uint256 devContribUSD;
-        uint256 stakeContribUSD;
-    }
 
     /**
      * Emitted when a user deposits into the Pool.
@@ -79,12 +70,16 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     address public developmentPool;
     address public holdingToken;
 
+    uint256 public devFee;
+    uint256 public stakingFee;
+    uint256 public charityFee;
+    uint256 public totalDonationsUSD;
     uint256 public __currentProcessingIndex;
     uint256 public __processingGasLimit;
 
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => uint256) public accountedBalances;
-    mapping(address => DirectDonationsCounter) public donationsRegistry;
+    mapping(address => CharityPoolUtils.DirectDonationsCounter) public _donationsRegistry;
 
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
@@ -94,15 +89,18 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
-    
+
     SwapperInterface internal swapper;
     EnumerableSet.AddressSet private contributors;
     EnumerableSet.AddressSet private cTokens;
 
-
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
+    }
+
+    function donationsRegistry(address _account) public view returns (CharityPoolUtils.DirectDonationsCounter memory) {
+        return _donationsRegistry[_account];
     }
 
     function _transferOperator(address newOperator) internal virtual {
@@ -141,7 +139,21 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
         wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
 
+        devFee = 25;
+        stakingFee = 25;
+        charityFee = 950;
         __processingGasLimit = 300_000 * 1e9;
+    }
+
+    function setFees(
+        uint8 _dev,
+        uint8 _stake,
+        uint8 _charity
+    ) external onlyOperatorOrOwner {
+        require(_dev + _stake + _charity < 100, "fee-config/invalid");
+        devFee = _dev;
+        stakingFee = _stake;
+        charityFee = _charity;
     }
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
@@ -164,14 +176,13 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         _calculateTotalIncrementalInterest(_cTokenAddress);
         _redeemInterest(_cTokenAddress);
         cTokens.remove(_cTokenAddress);
-
     }
 
     function getCTokens() public view returns (address[] memory) {
         return cTokens.values();
     }
 
-    function hasCToken(address _cTokenAddress) external view returns(bool) {
+    function hasCToken(address _cTokenAddress) external view returns (bool) {
         return cTokens.contains(_cTokenAddress);
     }
 
@@ -180,7 +191,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
      */
     function depositNative(address _cTokenAddress) public payable {
         require(msg.value > 0, "Native-Funding/small-amount");
-        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
         wrappedNative.deposit{value: msg.value}();
 
         // Deposit the funds
@@ -194,8 +205,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
      */
     function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
         require(_amount > 0, "Funding/small-amount");
-        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr" );
-       
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
+
         require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
         _withdraw(msg.sender, _cTokenAddress, _amount);
         wrappedNative.withdraw(_amount);
@@ -213,7 +224,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
         emit Deposited(msg.sender, _cTokenAddress, _amount);
     }
-    
+
     /**
      * @notice Withdraw the sender's entire balance back to them.
      */
@@ -228,11 +239,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     function withdrawAmount(address _cTokenAddress, uint256 _amount) public {
         _withdraw(msg.sender, _cTokenAddress, _amount);
-        
+
         // Withdraw from Compound and transfer
         require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
         require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
-        
+
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
 
@@ -281,19 +292,23 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         }
     }
 
+    // TODO: Ask Matt, do direct donations necessary need to be in the form of a cToken?
+    // I don't think that the donated tokens ever end up in a lending protocol, right? If this is the case, I think
+    // we can update this function to accept any type of donations and we swap them to the holding token, right?
     function directDonation(address _cTokenAddress, uint256 _amount) public {
         console.log("directDonationAmount", _amount);
 
         // transfer the tokens to the charity contract
         if (_amount > 0) {
-
             // Get The underlying token for this cToken
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
             require(underlyingToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
-
             address tokenaddress = address(underlyingToken);
-            
+
+            // Add up the donation amount before the swap
+            _donationsRegistry[msg.sender].totalContribUSD += swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
+
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
                 uint256 minAmount = (_amount * 95) / 100;
@@ -306,31 +321,37 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
                 _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
             }
 
-
             // 2.5% to developer pool as native currency of pool
-            uint256 developerFee = (_amount * 25) / 1000;
+            uint256 developerFeeAmount = (_amount * devFee) / 1000;
 
             // 2.5% to staking pool as swapped dai
-            uint256 stakingFee = (_amount * 25) / 1000;
+            uint256 stakingFeeAmount = (_amount * stakingFee) / 1000;
 
-            require(IERC20(holdingToken).transferFrom(address(this), developmentPool, developerFee), "Funding/developer transfer");
-            require(IERC20(holdingToken).transferFrom(address(this), stakingPool, stakingFee), "Funding/developer transfer");
+            require(IERC20(holdingToken).transferFrom(address(this), developmentPool, developerFeeAmount), "Funding/developer transfer");
+            require(IERC20(holdingToken).transferFrom(address(this), stakingPool, stakingFeeAmount), "Funding/developer transfer");
 
             // 95% to charity as native currency of pool
-            uint256 charityDonation = _amount - developerFee - stakingFee;
+            uint256 charityDonation = _amount - developerFeeAmount - stakingFeeAmount;
 
             // if charityWallet uses holdingPool (for off-chain transfers) then deposit the direction donation amount to this contract
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
             console.log(charityWallet, holdingPool);
 
             if (charityWallet != holdingPool) {
-                 // deposit the charity share directly to the charities wallet address
+                // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
                 console.log("Underlying Balance:: ", underlyingToken.balanceOf(msg.sender));
                 require(IERC20(holdingToken).transferFrom(address(this), charityWallet, charityDonation), "Funding/t-fail");
             } else {
                 console.log("direct to contract", address(this), charityDonation);
             }
+
+            // Update the donations statistcis for the contributor
+            _donationsRegistry[msg.sender].contribAfterSwapUSD += _amount;
+            _donationsRegistry[msg.sender].devContribUSD += developerFeeAmount;
+            _donationsRegistry[msg.sender].stakeContribUSD += stakingFeeAmount;
+            _donationsRegistry[msg.sender].charityDonationUSD += charityDonation;
+            totalDonationsUSD += _amount;
 
             emit DirectDonation(msg.sender, charityWallet, _amount);
         }
@@ -340,7 +361,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         _redeemInterest(_cTokenAddress);
     }
 
-     function _redeemInterest(address _cTokenAddress) internal {
+    function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         ICErc20 cToken = ICErc20(_cTokenAddress);
         console.log("redeemAmount", amount);
@@ -353,7 +374,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
             address tokenaddress = address(underlyingToken);
-            
+
             address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
 
             if (tokenaddress == holdingToken) {
@@ -387,7 +408,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         require(amount > 0, "OffChain/nothing-to-claim");
 
         uint256 claimAmount = amount;
-        if(_depositCurrency == holdingToken) {
+        if (_depositCurrency == holdingToken) {
             require(IERC20(_depositCurrency).transfer(_destAddr, amount), "Funding/transfer");
         } else {
             address[] memory swapPath = new address[](3);
@@ -465,7 +486,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         // path[1] = swapper.nativeToken();
         path[1] = holdingToken;
         //TODO: Ask Matt, we get the amount in holding tokens here
-        uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);        
+        uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);
         return valueInHoldingTokens;
     }
 
@@ -490,7 +511,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
         // We call the swapper to get the value directly in the form of holding tokens,
         // this means that we dont need to handle decimal scaling anyore, right @Matt?
-        console.log("Value" , _value);
+        console.log("Value", _value);
         uint256 valueUSD = getUnderlyingTokenValue(_cTokenAddress, _value);
         return valueUSD;
     }
@@ -502,10 +523,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
 
     // increment and return the total interest generated
     function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
-      _calculateTotalIncrementalInterest(_cTokenAddress);
+        _calculateTotalIncrementalInterest(_cTokenAddress);
     }
 
-     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
+    function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
         // get the overall new balance
         console.log("");
 
@@ -536,7 +557,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
     function accountedBalanceUSD() public view returns (uint256) {
         uint256 result;
         for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += convertToUsd(cTokens.at(i),accountedBalances[cTokens.at(i)]);
+            result += convertToUsd(cTokens.at(i), accountedBalances[cTokens.at(i)]);
         }
         return result;
     }
@@ -591,17 +612,16 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable  {
         for (uint256 i = 0; i < cTokens.length(); i++) {
             result += convertToUsd(cTokens.at(i), balances[_addr][cTokens.at(i)]);
         }
-        return result; 
+        return result;
     }
 
-    function numberOfContributors() public view returns(uint256) {
+    function numberOfContributors() public view returns (uint256) {
         return contributors.length();
     }
 
-    function contributorAt(uint256 index) public view returns(address) {
+    function contributorAt(uint256 index) public view returns (address) {
         return contributors.at(index);
     }
 
-    receive() payable external {
-    }
+    receive() external payable {}
 }

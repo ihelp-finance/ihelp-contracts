@@ -34,5 +34,11 @@ interface SwapperInterface is IERC20 {
         uint256 _amountIn
     ) external view returns (uint256);
 
+    function getNativeRoutedTokenPrice(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn
+    ) external view returns (uint256);
+
     function getAmountsOutByPath(address[] memory _path, uint256 _amountIn) external view returns (uint256);
 }

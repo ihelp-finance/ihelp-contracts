@@ -16,4 +16,14 @@ library CharityPoolUtils {
         address developmentPoolAddress;
         address wrappedNativeAddress;
     }
+
+    struct DirectDonationsCounter {
+        uint256 totalContribNativeToken; // TODO: Ask Ask mat how should we keep track of each native token?
+        uint256 totalContribUSD;
+        uint256 contribAfterSwapUSD;
+        uint256 charityDonationUSD;
+        uint256 devContribUSD;
+        uint256 stakeContribUSD;
+    }
+
 }
