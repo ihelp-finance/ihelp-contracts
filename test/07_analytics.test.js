@@ -12,7 +12,6 @@ describe("Analytics", function () {
     let addr3;
     let addrs;
     let stakingPool, developmentPool, holdingPool;
-    let yeildProtocol1, yeildProtocol2;
     let wTokenMock;
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
@@ -59,8 +58,8 @@ describe("Analytics", function () {
 
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
-        charityPool1.getUnderlyingTokenPrice.returns(100000000);
-        charityPool2.getUnderlyingTokenPrice.returns(100000000);
+        charityPool1.getUnderlyingTokenValue.returns(([, arg]) => arg * 100000000);
+        charityPool2.getUnderlyingTokenValue.returns(([, arg]) => arg * 100000000);
 
         charityPool1.calculateTotalInterestEarned.returns(20);
         charityPool2.calculateTotalInterestEarned.returns(30);
@@ -102,6 +101,8 @@ describe("Analytics", function () {
             await charityPool1.addCToken(cTokenMock1.address);
             await charityPool2.addCToken(cTokenMock1.address);
 
+            await charityPool1.addCToken(cTokenMock2.address);
+            await charityPool2.addCToken(cTokenMock2.address);
 
             await charityPool2.setVariable("totalInterestEarned", {
                 [cTokenMock1.address]: 25,
@@ -142,8 +143,16 @@ describe("Analytics", function () {
         it("should return the total user generated interest", async () => {
             await iHelp.registerCharityPool(charityPool1.address);
             await iHelp.registerCharityPool(charityPool2.address);
-            charityPool1.getContributors.returns([addr1.address, addr2.address]);
-            charityPool2.getContributors.returns([addr1.address, addr2.address]);
+
+            charityPool1.numberOfContributors.returns(2);
+            charityPool2.numberOfContributors.returns(2);
+
+            const contributors = [
+                addr1.address,
+                addr2.address
+            ]
+            charityPool2.contributorAt.returns(idx => contributors[idx]);
+            charityPool1.contributorAt.returns(idx => contributors[idx]);
 
             await iHelp.setVariable("contirbutorGeneratedInterest", {
                 [addr1.address]: {
@@ -158,7 +167,41 @@ describe("Analytics", function () {
 
             expect(await analytics.getTotalUserGeneratedInterest(iHelp.address)).to.equal(40);
         });
+
+        it("should return the total locked value", async () => {
+            await iHelp.registerCharityPool(charityPool1.address);
+            await iHelp.registerCharityPool(charityPool2.address);
+
+            charityPool1.accountedBalanceUSD.returns(200);
+            charityPool2.accountedBalanceUSD.returns(200);
+
+            expect(await analytics.totalLockedValue(iHelp.address)).to.equal(400);
+        });
+
+        it("should return the total locked value of a charity", async () => {
+            await iHelp.registerCharityPool(charityPool1.address);
+
+            charityPool1.accountedBalanceUSD.returns(200);
+
+            expect(await analytics.totalLockedValue(iHelp.address)).to.equal(200);
+        });
+
+        it("should return the total number of helpers", async () => {
+            await iHelp.registerCharityPool(charityPool1.address);
+            await iHelp.registerCharityPool(charityPool2.address);
+
+            charityPool1.numberOfContributors.returns(200);
+            charityPool2.numberOfContributors.returns(200);
+
+            expect(await analytics.totalHelpers(iHelp.address)).to.equal(400);
+        });
+
+        it("should return the total number of helpers for a given charity", async () => {
+            await iHelp.registerCharityPool(charityPool1.address);
+
+            charityPool1.numberOfContributors.returns(200);
+
+            expect(await analytics.totalHelpersInCharity(charityPool1.address)).to.equal(200);
+        });
     });
-
-
 });
