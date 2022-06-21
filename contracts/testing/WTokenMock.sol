@@ -50,10 +50,10 @@ contract WTokenMock {
         public
         returns (bool)
     {
-        require(balanceOf[src] >= wad);
+        require(balanceOf[src] >= wad, "Insufficient balance");
 
         if (src != msg.sender) {
-            require(allowance[src][msg.sender] >= wad);
+            require(allowance[src][msg.sender] >= wad, "Insufficient allowance");
             allowance[src][msg.sender] -= wad;
         }
 

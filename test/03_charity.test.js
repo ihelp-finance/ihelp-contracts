@@ -1,5 +1,5 @@
 const { expect, use } = require("chai");
-const { ethers  } = require("hardhat");
+const { ethers } = require("hardhat");
 const { parseEther, parseUnits } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
 const { getDirectDonactionsBySenders } = require("../scripts/eventQuery")
@@ -14,6 +14,7 @@ describe("Charity Pool", function () {
     let stakingPool, cTokenUnderlyingMock, developmentPool, holdingPool, cTokenMock, iHelpMock, holdingMock;
     let wTokenMock;
     let CTokenMock;
+    let swapperMock;
 
     beforeEach(async function () {
         const CharityPool = await smock.mock("CharityPool");
@@ -247,15 +248,22 @@ describe("Charity Pool", function () {
         beforeEach(async function () {
             await cTokenUnderlyingMock.mint(owner.address, parseEther("100"));
             await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("100"));
+            await holdingMock.increaseAllowance(charityPool.address, parseEther("100"));
+            await holdingMock.mint(owner.address, parseEther("100"));
+
+            // Mock swap values 
+            swapperMock.swap.returns(args => {
+                return args[2];
+            });
         });
 
         it("Should do nothing when donating 0", async function () {
-            expect(await charityPool.directDonation(cTokenMock.address, 0))
+            expect(await charityPool.directDonation(cTokenUnderlyingMock.address, 0))
                 .not.to.emit(charityPool, "DirectDonation");
         });
 
         it("Should emit Direct Donation event", async function () {
-            expect(await charityPool.directDonation(cTokenMock.address, 100))
+            expect(await charityPool.directDonation(holdingMock.address, 100))
                 .to.emit(charityPool, "DirectDonation").withArgs(owner.address, charityWallet.address, 100);
         });
 
@@ -263,36 +271,85 @@ describe("Charity Pool", function () {
             await charityPool.setVariable('holdingToken', cTokenUnderlyingMock.address);
             const amount = parseEther("10");
             const expectedAmountAfterTax = amount.mul(25).div(1000); // 2.5%
-            await charityPool.directDonation(cTokenMock.address, amount);
+
+            await charityPool.directDonation(cTokenUnderlyingMock.address, amount);
             expect(await cTokenUnderlyingMock.balanceOf(stakingPool.address)).to.equal(expectedAmountAfterTax);
         });
 
         it("Should swap and send staking fee", async function () {
             const amount = parseEther("10");
-            await charityPool.directDonation(cTokenMock.address, amount);
+            // Mint the holding tokens to the charity in order to simulate the swaps
+            await holdingMock.mint(charityPool.address, amount);
+            await charityPool.directDonation(cTokenUnderlyingMock.address, amount);
             expect(swapperMock.swap).to.be.calledOnce;
         });
 
         it("Should send development fee", async function () {
             const amount = parseEther("10");
             const expectedAmountAfterTax = amount.mul(25).div(1000); // 2.5%
-            await expect(charityPool.directDonation(cTokenMock.address, amount))
-                .to.emit(cTokenUnderlyingMock, "Transfer")
-                .withArgs(owner.address, developmentPool.address, expectedAmountAfterTax);
+
+            // Mint the holding tokens to the charity in order to simulate the swaps
+            await holdingMock.mint(charityPool.address, amount);
+
+            await expect(charityPool.directDonation(cTokenUnderlyingMock.address, amount))
+                .to.emit(holdingMock, "Transfer")
+                .withArgs(charityPool.address, developmentPool.address, expectedAmountAfterTax);
         });
 
         it("Should send to charity wallet with fee", async function () {
             const amount = parseEther("10");
             const expectedAmountAfterTax = amount.mul(95).div(100); //95%
-            await expect(charityPool.directDonation(cTokenMock.address, amount))
-                .to.emit(cTokenUnderlyingMock, "Transfer")
-                .withArgs(owner.address, charityWallet.address, expectedAmountAfterTax);
+            // Mint the holding tokens to the charity in order to simulate the swaps
+            await holdingMock.mint(charityPool.address, amount);
+
+            await expect(charityPool.directDonation(cTokenUnderlyingMock.address, amount))
+                .to.emit(holdingMock, "Transfer")
+                .withArgs(charityPool.address, charityWallet.address, expectedAmountAfterTax);
         });
+
+        it("Should update the direct donations registry", async function () {
+            const amount = parseEther("10");
+            // Simulated conversion parity 1/2..
+            const convertedAmount = amount.div(2);
+            swapperMock.getNativeRoutedTokenPrice.returns(() => convertedAmount)
+            const charityAmount = convertedAmount.mul(95).div(100); //95%
+            const devAmount = convertedAmount.mul(25).div(1000); //2.5%
+            const stakeAmount = convertedAmount.mul(25).div(1000); //2.5%
+
+            // Mock swap values 
+            swapperMock.swap.returns(args => convertedAmount);
+
+            await holdingMock.mint(charityPool.address, convertedAmount);
+            await charityPool.directDonation(cTokenUnderlyingMock.address, amount);
+
+            const donationRegistry = await charityPool.donationsRegistry(owner.address);
+
+            // TODO: How do we keep track of all the tokens types?
+            expect(donationRegistry.totalContribNativeToken).to.equal(0);
+            expect(donationRegistry.totalContribUSD).to.equal(convertedAmount);
+            expect(donationRegistry.contribAfterSwapUSD).to.equal(convertedAmount);
+            expect(donationRegistry.charityDonationUSD).to.equal(charityAmount);
+            expect(donationRegistry.devContribUSD).to.equal(devAmount);
+            expect(donationRegistry.stakeContribUSD).to.equal(stakeAmount);
+        });
+
+        it("Should accept native tokens as direct donations", async function () {
+            const amount = parseEther("10");
+
+            // Mint the holding tokens to the charity in order to simulate the swaps
+            await holdingMock.mint(charityPool.address, amount);
+            await expect(owner.sendTransaction({
+                to: charityPool.address,
+                value: amount,
+                gasPrice: parseUnits('4', 'gwei'),
+                gasLimit: '500000',
+            })).to.emit(charityPool, "DirectDonation").withArgs(owner.address, charityWallet.address, amount);
+        })
 
         // TODO:@Matt quick example on how to use event logs run
         //  hh test --network hardhat test/03_charity.test.js --grep "Should query direct donation events"
         it("Should query direct donation events", async function () {
-            await charityPool.directDonation(cTokenMock.address, 100);
+            await charityPool.directDonation(holdingMock.address, 100);
             const donations = await getDirectDonactionsBySenders(charityPool.address, ethers.provider, [owner.address]);
             console.log(donations);
         });
@@ -419,7 +476,7 @@ describe("Charity Pool", function () {
 
             await charityPool.depositTokens(cTokenMock.address, deposit);
             await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            swapperMock.getAmountsOutByPath.returns(arg => parseUnits('' + arg[1], 9) );
+            swapperMock.getAmountsOutByPath.returns(arg => parseUnits('' + arg[1], 9));
 
             expect(await charityPool.accountedBalanceUSD()).to.equal(expectedBalanceInUsd);
         });

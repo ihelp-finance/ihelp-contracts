@@ -79,7 +79,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => uint256) public accountedBalances;
-    mapping(address => CharityPoolUtils.DirectDonationsCounter) public _donationsRegistry;
+    mapping(address => CharityPoolUtils.DirectDonationsCounter) private _donationsRegistry;
 
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
@@ -295,30 +295,38 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // TODO: Ask Matt, do direct donations necessary need to be in the form of a cToken?
     // I don't think that the donated tokens ever end up in a lending protocol, right? If this is the case, I think
     // we can update this function to accept any type of donations and we swap them to the holding token, right?
-    function directDonation(address _cTokenAddress, uint256 _amount) public {
-        console.log("directDonationAmount", _amount);
-
-        // transfer the tokens to the charity contract
+    function directDonation(IERC20 _donationToken, uint256 _amount) public {
         if (_amount > 0) {
             // Get The underlying token for this cToken
-            IERC20 underlyingToken = getUnderlying(_cTokenAddress);
+            require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
+        }
+        _directDonation(_donationToken, msg.sender, _amount);
+    }
 
-            require(underlyingToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
-            address tokenaddress = address(underlyingToken);
+    function _directDonation(
+        IERC20 _donationToken,
+        address _account,
+        uint256 _amount
+    ) internal {
+        console.log("directDonationAmount", _amount);
+        // transfer the tokens to the charity contract
+        if (_amount > 0) {
+            address tokenaddress = address(_donationToken);
 
             // Add up the donation amount before the swap
-            _donationsRegistry[msg.sender].totalContribUSD += swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
+            _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
 
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
                 uint256 minAmount = (_amount * 95) / 100;
 
                 // TODO: This should enable support for tokens that have fee on transfer
-                uint256 receivedAmount = underlyingToken.balanceOf(address(this));
+                uint256 receivedAmount = _donationToken.balanceOf(address(this));
 
-                require(underlyingToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
+                require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
                 console.log("Current Token Balance::", receivedAmount);
                 _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
+                console.log("AMOUNT AFTER SWAP::", _amount);
             }
 
             // 2.5% to developer pool as native currency of pool
@@ -327,8 +335,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             // 2.5% to staking pool as swapped dai
             uint256 stakingFeeAmount = (_amount * stakingFee) / 1000;
 
-            require(IERC20(holdingToken).transferFrom(address(this), developmentPool, developerFeeAmount), "Funding/developer transfer");
-            require(IERC20(holdingToken).transferFrom(address(this), stakingPool, stakingFeeAmount), "Funding/developer transfer");
+            require(IERC20(holdingToken).transfer(developmentPool, developerFeeAmount), "Funding/developer transfer");
+            require(IERC20(holdingToken).transfer(stakingPool, stakingFeeAmount), "Funding/developer transfer");
 
             // 95% to charity as native currency of pool
             uint256 charityDonation = _amount - developerFeeAmount - stakingFeeAmount;
@@ -340,20 +348,20 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             if (charityWallet != holdingPool) {
                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
-                console.log("Underlying Balance:: ", underlyingToken.balanceOf(msg.sender));
-                require(IERC20(holdingToken).transferFrom(address(this), charityWallet, charityDonation), "Funding/t-fail");
+                console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
+                require(IERC20(holdingToken).transfer(charityWallet, charityDonation), "Funding/t-fail");
             } else {
                 console.log("direct to contract", address(this), charityDonation);
             }
 
             // Update the donations statistcis for the contributor
-            _donationsRegistry[msg.sender].contribAfterSwapUSD += _amount;
-            _donationsRegistry[msg.sender].devContribUSD += developerFeeAmount;
-            _donationsRegistry[msg.sender].stakeContribUSD += stakingFeeAmount;
-            _donationsRegistry[msg.sender].charityDonationUSD += charityDonation;
+            _donationsRegistry[_account].contribAfterSwapUSD += _amount;
+            _donationsRegistry[_account].devContribUSD += developerFeeAmount;
+            _donationsRegistry[_account].stakeContribUSD += stakingFeeAmount;
+            _donationsRegistry[_account].charityDonationUSD += charityDonation;
             totalDonationsUSD += _amount;
 
-            emit DirectDonation(msg.sender, charityWallet, _amount);
+            emit DirectDonation(_account, charityWallet, _amount);
         }
     }
 
@@ -623,5 +631,12 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return contributors.at(index);
     }
 
-    receive() external payable {}
+    // Treat any natively received token as a direct donation.
+    // We convert the native token into it's wrapped version and call the direct donation function
+    receive() external payable {
+        uint256 amount = msg.value;
+        wrappedNative.deposit{value: amount}();
+        wrappedNative.approve(address(this), amount);
+        _directDonation(wrappedNative, msg.sender, amount);
+    }
 }
