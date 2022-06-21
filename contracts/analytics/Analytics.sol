@@ -19,10 +19,24 @@ contract Analytics {
     /**
      * Calaculates the total generated interest for all charities
      */
-    function totalGeneratedInterest(iHelpToken _iHelp) external view returns (uint256) {
+    function totalGeneratedInterest(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             result += CharityPool(payable(_iHelp.charityAt(index))).calculateTotalInterestEarned();
         }
         return result;
@@ -31,10 +45,25 @@ contract Analytics {
     /**
      * Calaculates the total generated interest for a given yiled protocol
      */
-    function getYieldProtocolGeneratedInterest(iHelpToken _iHelp, address _cTokenAddress) external view returns (uint256) {
+    function getYieldProtocolGeneratedInterest(
+        iHelpToken _iHelp,
+        address _cTokenAddress,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             result += charity.totalInterestEarned(_cTokenAddress);
         }
@@ -51,10 +80,25 @@ contract Analytics {
     /**
      * Calaculates the total generated interest for a given underlying currency
      */
-    function getUnderlyingCurrencyGeneratedInterest(iHelpToken _iHelp, address _underlyingCurrency) external view returns (uint256) {
+    function getUnderlyingCurrencyGeneratedInterest(
+        iHelpToken _iHelp,
+        address _underlyingCurrency,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
 
             address[] memory cTokens = charity.getCTokens();
@@ -71,10 +115,26 @@ contract Analytics {
     /**
      * Calaculates generated interest for a given user
      */
-    function getUserGeneratedInterest(iHelpToken _iHelp, address _account) external view returns (uint256) {
+    function getUserGeneratedInterest(
+        iHelpToken _iHelp,
+        address _account,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             address charity = _iHelp.charityAt(index);
             result += _iHelp.contirbutorGeneratedInterest(_account, charity);
         }
@@ -85,6 +145,7 @@ contract Analytics {
      * Calaculates the total generated interest for a all users
      */
     function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view returns (uint256) {
+        //TODO: How do we paginate this, by contributors or by charity pools?
         uint256 charities = _iHelp.numberOfCharities();
         uint256 result;
         for (uint256 index = 0; index < charities; index++) {
@@ -100,10 +161,25 @@ contract Analytics {
     /**
      * Calaculates the total locked value over all charities
      */
-    function totalLockedValue(iHelpToken _iHelp) external view returns (uint256) {
+    function totalLockedValue(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             result += charity.accountedBalanceUSD();
         }
@@ -113,17 +189,31 @@ contract Analytics {
     /**
      * Calaculates the total locked value of a charity
      */
-    function totalChairyLockedValue(CharityPool _charity) external view returns (uint256) {
+    function totalCharityLockedValue(CharityPool _charity) external view returns (uint256) {
         return _charity.accountedBalanceUSD();
     }
 
     /**
      * Get total number of helpers
      */
-    function totalHelpers(iHelpToken _iHelp) external view returns (uint256) {
+    function totalHelpers(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             result += charity.numberOfContributors();
         }
@@ -140,10 +230,24 @@ contract Analytics {
     /**
      * Get the total value of direct donations from all charities
      */
-    function getTotalDirectDonations(iHelpToken _iHelp) public view returns (uint256) {
+    function getTotalDirectDonations(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             result += charity.totalDonationsUSD();
         }
@@ -153,16 +257,28 @@ contract Analytics {
     /**
      * Get the total value of direct donations for a helper
      */
-    function getUserTotalDirectDonations(iHelpToken _iHelp, address _user) public view returns (uint256) {
+    function getUserTotalDirectDonations(
+        iHelpToken _iHelp,
+        address _user,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
         uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
+        for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
-            uint256 contibutors = charity.numberOfContributors();
-            for (uint256 index2 = 0; index2 < contibutors; index2++) {
-                CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
-                result += registry.totalContribUSD;
-            }
+            CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
+            result += registry.totalContribUSD;
         }
         return result;
     }
