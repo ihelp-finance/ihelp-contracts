@@ -354,7 +354,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 console.log("direct to contract", address(this), charityDonation);
             }
 
+            
             // Update the donations statistcis for the contributor
+            _donationsRegistry[_account].totalDonations++;
             _donationsRegistry[_account].contribAfterSwapUSD += _amount;
             _donationsRegistry[_account].devContribUSD += developerFeeAmount;
             _donationsRegistry[_account].stakeContribUSD += stakingFeeAmount;

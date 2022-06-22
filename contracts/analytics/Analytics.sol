@@ -4,15 +4,17 @@ pragma solidity 0.8.9;
 import "../ihelp/charitypools/CharityPool.sol";
 import "../ihelp/iHelpToken.sol";
 import "../ihelp/charitypools/CharityPoolUtils.sol";
+import "./AnalyticsUtils.sol";
+import "./IAnalytics.sol";
 
 /**
  * @title Analytics
  */
-contract Analytics {
+contract Analytics is IAnalytics {
     /**
      * Calaculates the generated interest for a given charity
      */
-    function generatedInterest(CharityPool _charityPool) external view returns (uint256) {
+    function generatedInterest(CharityPool _charityPool) external view override returns (uint256) {
         return _charityPool.calculateTotalInterestEarned();
     }
 
@@ -23,17 +25,8 @@ contract Analytics {
         iHelpToken _iHelp,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -43,24 +36,15 @@ contract Analytics {
     }
 
     /**
-     * Calaculates the total generated interest for a given yiled protocol
+     * Calaculates the total generated interest for a given yield protocol
      */
     function getYieldProtocolGeneratedInterest(
         iHelpToken _iHelp,
         address _cTokenAddress,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -71,9 +55,9 @@ contract Analytics {
     }
 
     /**
-     * Calaculates the total generated interest for a given yiled protocol
+     * Calaculates the total generated yield for a given charity
      */
-    function getYieldProtocolGeneratedInterestByCharity(CharityPool _charity) external view returns (uint256) {
+    function getYieldProtocolGeneratedInterestByCharity(CharityPool _charity) external view override returns (uint256) {
         return _charity.totalInterestEarnedUSD();
     }
 
@@ -85,17 +69,8 @@ contract Analytics {
         address _underlyingCurrency,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -120,7 +95,7 @@ contract Analytics {
         address _account,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
 
         require(_offset < charities, "Offset to large");
@@ -144,7 +119,7 @@ contract Analytics {
     /**
      * Calaculates the total generated interest for a all users
      */
-    function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view returns (uint256) {
+    function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view override returns (uint256) {
         //TODO: How do we paginate this, by contributors or by charity pools?
         uint256 charities = _iHelp.numberOfCharities();
         uint256 result;
@@ -165,7 +140,7 @@ contract Analytics {
         iHelpToken _iHelp,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         uint256 charities = _iHelp.numberOfCharities();
 
         require(_offset < charities, "Offset to large");
@@ -189,7 +164,7 @@ contract Analytics {
     /**
      * Calaculates the total locked value of a charity
      */
-    function totalCharityLockedValue(CharityPool _charity) external view returns (uint256) {
+    function totalCharityLockedValue(CharityPool _charity) external view override returns (uint256) {
         return _charity.accountedBalanceUSD();
     }
 
@@ -200,17 +175,8 @@ contract Analytics {
         iHelpToken _iHelp,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -223,7 +189,7 @@ contract Analytics {
     /**
      * Get number of helpers in a given charity
      */
-    function totalHelpersInCharity(CharityPool _charity) external view returns (uint256) {
+    function totalHelpersInCharity(CharityPool _charity) external view override returns (uint256) {
         return _charity.numberOfContributors();
     }
 
@@ -234,17 +200,8 @@ contract Analytics {
         iHelpToken _iHelp,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -255,24 +212,15 @@ contract Analytics {
     }
 
     /**
-     * Get the total value of direct donations for a helper
+     * Get the total USD value of direct donations for a helper
      */
     function getUserTotalDirectDonations(
         iHelpToken _iHelp,
         address _user,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
-
-        if (_limit == 0) {
-            _limit = charities;
-        }
-
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
-        }
+    ) external view override returns (uint256) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -289,8 +237,86 @@ contract Analytics {
     function getUserDirectDonationsStats(CharityPool _charity, address _user)
         public
         view
+        override
         returns (CharityPoolUtils.DirectDonationsCounter memory)
     {
         return _charity.donationsRegistry(_user);
+    }
+
+    /**
+     * Return general statistics
+     */
+    function generalStats(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) public view override returns (AnalyticsUtils.GeneralStats memory) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        AnalyticsUtils.GeneralStats memory result;
+        result.totalCharities = _limit;
+        for (uint256 index = _offset; index < _limit; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            result.totalValueLocked += charity.accountedBalanceUSD();
+            result.totalInterestGenerated += charity.calculateTotalInterestEarned();
+            result.totalHelpers += charity.numberOfContributors();
+        }
+        return result;
+    }
+
+    /**
+     * Return general statistics for a given charity
+     */
+    function charityStats(CharityPool _charity) public view override returns (AnalyticsUtils.CharityStats memory) {
+        AnalyticsUtils.CharityStats memory result = AnalyticsUtils.CharityStats({
+            totalValueLocked: _charity.accountedBalanceUSD(),
+            totalYieldGenerated: _charity.totalInterestEarnedUSD(),
+            numerOfContributors: _charity.numberOfContributors(),
+            totalDirectDonations: _charity.totalDonationsUSD()
+        });
+
+        return result;
+    }
+
+    /**
+     * Return general statistics for a given user
+     */
+    function userStats(
+        iHelpToken _iHelp,
+        address _user,
+        uint256 _offset,
+        uint256 _limit
+    ) public view override returns (AnalyticsUtils.UserStats memory) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+
+        AnalyticsUtils.UserStats memory result;
+
+        for (uint256 index = _offset; index < _limit; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
+            result.totalDirectDonations += registry.totalDonations;
+            result.totalContributions += registry.totalContribUSD;
+            result.totalInterestGenerated += _iHelp.contirbutorGeneratedInterest(_user, address(charity));
+        }
+
+        return result;
+    }
+
+    function paginationChecks(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) internal view returns (uint256, uint256) {
+        uint256 charities = _iHelp.numberOfCharities();
+        require(_offset < charities, "Offset to large");
+
+        if (_limit == 0) {
+            _limit = charities;
+        }
+
+        if (_offset + _limit >= charities) {
+            _limit = charities - _offset;
+        }
+
+        return (_offset, _limit);
     }
 }

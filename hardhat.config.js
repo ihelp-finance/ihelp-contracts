@@ -11,6 +11,7 @@ require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require("solidity-coverage");
 require("hardhat-gas-reporter");
+require('hardhat-contract-sizer');
 
 require("hardhat-deploy");
 
