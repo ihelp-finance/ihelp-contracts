@@ -268,9 +268,9 @@ contract Analytics is IAnalytics {
      */
     function charityStats(CharityPool _charity) public view override returns (AnalyticsUtils.CharityStats memory) {
         AnalyticsUtils.CharityStats memory result = AnalyticsUtils.CharityStats({
-            totalValueLocked: _charity.accountedBalanceUSD(),
-            totalYieldGenerated: _charity.totalInterestEarnedUSD(),
-            numerOfContributors: _charity.numberOfContributors(),
+            totalValueLocked:     _charity.accountedBalanceUSD(),
+            totalYieldGenerated:  _charity.totalInterestEarnedUSD(),
+            numerOfContributors:  _charity.numberOfContributors(),
             totalDirectDonations: _charity.totalDonationsUSD()
         });
 

@@ -6,8 +6,6 @@ import "../ihelp/iHelpToken.sol";
 import "../ihelp/charitypools/CharityPoolUtils.sol";
 import "./AnalyticsUtils.sol";
 
-//pre
-
 interface IAnalytics {
     /**
      * Calaculates the generated interest for a given charity
