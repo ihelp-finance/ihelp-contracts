@@ -264,7 +264,7 @@ const validate = async () => {
       }
     }
     if (!result) {
-      console.log(chalk.red(`Test failed for ${test}, got ${chalk.green(value)} expected ${chalk.red(actual)}, error maring ${error * 100}%`));
+      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(actual)} expected ${chalk.red(value)}, error margin ${error * 100}%`));
       throw new Error('Test failed');
     }
     return result;
@@ -356,9 +356,6 @@ const validate = async () => {
 
     // const xhelpratioTx = await xhelp.exchangeRateCurrent();
     // const xhelpratio = fromBigNumber(xhelpratioTx);
-
-    yellow("WALLET VALUES::")
-    console.log(c1wallet, c2wallet, c3wallet);
     const charitypool = c1wallet + c2wallet + c3wallet;
 
     const totalinterest = c1interest + c2interest + c3interest;
