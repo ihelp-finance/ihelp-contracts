@@ -60,8 +60,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public stakingShareOfInterest;
     uint256 public charityShareOfInterest;
 
-    // TODO: @Matt can we use mapping default getters and rename these variables so that they dont have the
-    // "__" anymore. eg __tokensPerInterestByPhase ==> tokensPerInterestByPhase
     mapping(uint256 => uint256) public tokensPerInterestByPhase;
     mapping(uint256 => uint256) public cumulativeInterestByPhase;
 
@@ -490,7 +488,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     /**
-        Check of a certain charity was registered with the system
+     * Check of a certain charity was registered with the system
      */
     function hasCharity(address _addr) public view returns(bool) {
         return charityPoolList.contains(_addr);
@@ -560,17 +558,15 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     uint256 correctedInterestShare = realRedeemedInterest;
                     console.log("correctedInterestShare", correctedInterestShare);
 
-                    // divide this amongst holding, dev and staking pools (and charities)
-
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
+                    uint256 charityInterest = correctedInterestShare.mul(charityShareOfInterest);
                     if (charityWalletAddress == holdingPool) {
-                        claimableCharityInterest[charity] += correctedInterestShare.mul(charityShareOfInterest);
+                        claimableCharityInterest[charity] += charityInterest;
                     } else {
                         console.log("Sending tokens to the charity wallet", charityWalletAddress);
-                        claimableCharityInterest[charityWalletAddress] += correctedInterestShare.mul(
-                            charityShareOfInterest
-                        );
+                        claimableCharityInterest[charityWalletAddress] += charityInterest;
                     }
+
                     claimableCharityInterest[developmentPool] += correctedInterestShare.mul(developmentShareOfInterest);
                     claimableCharityInterest[stakingPool] += correctedInterestShare.mul(stakingShareOfInterest);
 

@@ -50,6 +50,8 @@ module.exports.deployCharityPoolToNetwork = async ({
 
     console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network, " with cToken: ", charityTokenName);
     console.log(`       holdingToken ${holdingTokenAddress}`);
+    console.log(`       holdingPool ${holdingPoolAddress}`);
+    console.log(`       charityWalletAddress ${charityWalletAddress}`);
 
     writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
 

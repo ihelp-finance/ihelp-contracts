@@ -292,9 +292,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    // TODO: Ask Matt, do direct donations necessary need to be in the form of a cToken?
-    // I don't think that the donated tokens ever end up in a lending protocol, right? If this is the case, I think
-    // we can update this function to accept any type of donations and we swap them to the holding token, right?
     function directDonation(IERC20 _donationToken, uint256 _amount) public {
         if (_amount > 0) {
             // Get The underlying token for this cToken
@@ -385,10 +382,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             address tokenaddress = address(underlyingToken);
 
-            address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
+            // address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
 
             if (tokenaddress == holdingToken) {
-                require(underlyingToken.transfer(destinationAddress, amount), "Funding/transfer");
+                require(underlyingToken.transfer(holdingPool, amount), "Funding/transfer");
             } else {
                 console.log("\nSWAPPING", swapperPool, amount);
 
@@ -399,7 +396,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
                 console.log("TOKEN::", tokenaddress, holdingToken);
-                swapper.swap(tokenaddress, holdingToken, amount, minAmount, destinationAddress);
+                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
             }
 
             // reset the lastinterestearned incrementer
@@ -490,12 +487,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function getUnderlyingTokenValue(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = address(getUnderlying(_cTokenAdddress));
-        // TODO: Ask Matt, discuss multi hop tax implications and e2e faling
-        // path[1] = swapper.nativeToken();
-        path[1] = holdingToken;
-        //TODO: Ask Matt, we get the amount in holding tokens here
+        path[1] = swapper.nativeToken();
+        path[2] = holdingToken;
         uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);
         return valueInHoldingTokens;
     }

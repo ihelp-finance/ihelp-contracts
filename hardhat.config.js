@@ -19,6 +19,7 @@ require("@eth-optimism/hardhat-ovm");
 
 require('hardhat-preprocessor');
 const { removeConsoleLog } = require('hardhat-preprocessor');
+const { parseEther } = require('ethers/lib/utils');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -89,6 +90,9 @@ module.exports = {
     hardhat: {
       gasPrice: 225000000000,
       forking: forkingData,
+      accounts: {
+        accountBalance: parseEther("1000000")
+      }
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',

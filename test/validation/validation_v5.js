@@ -243,9 +243,9 @@ const validate = async () => {
 
   const check = await csv().fromString(checkBody);
 
-  const ERROR_THRESHOLD = 0.01;
+  const ERROR_THRESHOLD = 0.08;
   const withinError = (value, actual, test) => {
-    let result;
+    let result, error;
     if (actual == 0) {
       if (value == 0) {
         result = true;
@@ -255,7 +255,7 @@ const validate = async () => {
       }
     }
     else {
-      const error = Math.abs((value - actual) / actual);
+      error = Math.abs((value - actual) / actual);
       if (error <= ERROR_THRESHOLD) {
         result = true;
       }
@@ -264,7 +264,7 @@ const validate = async () => {
       }
     }
     if (!result) {
-      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(value)} got ${chalk.red(actual)}`));
+      console.log(chalk.red(`Test failed for ${test}, got ${chalk.green(value)} expected ${chalk.red(actual)}, error maring ${error * 100}%`));
       throw new Error('Test failed');
     }
     return result;
@@ -357,6 +357,8 @@ const validate = async () => {
     // const xhelpratioTx = await xhelp.exchangeRateCurrent();
     // const xhelpratio = fromBigNumber(xhelpratioTx);
 
+    yellow("WALLET VALUES::")
+    console.log(c1wallet, c2wallet, c3wallet);
     const charitypool = c1wallet + c2wallet + c3wallet;
 
     const totalinterest = c1interest + c2interest + c3interest;

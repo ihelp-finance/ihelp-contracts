@@ -148,7 +148,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
           ethers.utils.parseUnits(value, decimals),
           0,
           userAccount, timestamp + 3000000, {
-          value: parseEther('1000')
+          value: parseEther('2500')
         });
 
       await addLiquid.wait();
@@ -279,6 +279,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     // await activateLiquidityPool('WETH', 'DAI', '3500', '50000000', 'compound', 'uniswap');
 
   }
+
   async function getAddress(contractName) {
     const deployment = await deployments.get(contractName);
     return deployment.address;
@@ -293,9 +294,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   const ihelpAddress = await getAddress('iHelp');
   const xhelpAddress = await getAddress('xHelp');
   const swapperAddress = await getAddress('swapper');
-  // const charity1Address = await getAddress('charityPool1');
-  // const charity2Address = await getAddress('charityPool2');
-  // const charity3Address = await getAddress('charityPool3');
+  const charity1Address = await getAddress('charityPool1');
+  const charity2Address = await getAddress('charityPool2');
+  const charity3Address = await getAddress('charityPool3');
   // const charity4Address = await getAddress('');
 
   console.log('');
@@ -309,9 +310,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
-  // green('CharityPool 1 Address:', charity1Address);
-  // green('CharityPool 2 Address:', charity2Address);
-  // green('CharityPool 3 Address:', charity3Address);
+  green('CharityPool 1 Address:', charity1Address);
+  green('CharityPool 2 Address:', charity2Address);
+  green('CharityPool 3 Address:', charity3Address);
   // green('CharityPool 4 Address:', charity4Address);
   green('Development Pool Address:', developmentPool);
   green('Staking Pool Address:', stakingPool);
