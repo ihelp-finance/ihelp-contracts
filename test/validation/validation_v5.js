@@ -243,7 +243,7 @@ const validate = async () => {
 
   const check = await csv().fromString(checkBody);
 
-  const ERROR_THRESHOLD = 0.01;
+  const ERROR_THRESHOLD = 0.02;
   const withinError = (value, actual, test) => {
     let result;
     if (actual == 0) {
@@ -264,7 +264,7 @@ const validate = async () => {
       }
     }
     if (!result) {
-      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(value)} got ${chalk.red(actual)}`));
+      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(actual)} got ${chalk.red(value)}`));
       throw new Error('Test failed');
     }
     return result;

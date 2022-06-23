@@ -14,6 +14,13 @@ iHelp is a non-custodial donation protocol where anyone (“Helpers”) can part
 
 ## Local Deployment
 
+Install nvm and use node v16 for the current state of these contracts:
+```
+# curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+nvm install v16
+nvm use v16
+```
+
 You can test the iHelp contracts with hardhat local development environment using the commands below:
 
 ```
@@ -27,7 +34,12 @@ yarn deploy
 You can run through the extensive battery of tests (almost full coverage) using the command below:
 
 ```
+# run the deploy command first on local chain so the e2e tests run properly
 yarn test
+
+# run a specific test with the command below
+yarn test test/00_e2e-validation.test.js
+
 ```
 
 ## Deployed Contracts
