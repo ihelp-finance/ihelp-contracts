@@ -12,7 +12,7 @@ const web3 = new Web3('http://127.0.0.1:7545');
 
 
 module.exports.deployCharityPoolToNetwork = async ({
-    charityName, operatorAddress, holdingPoolAddress, charityWalletAddress, charityTokenName, holdingTokenAddress, priceFeedAddress, ihelpAddress, swapperAddress, stakingPoolAddress, developmentPoolAddress, wrappedNativeAddress
+    charityName, operatorAddress, holdingPoolAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, stakingPoolAddress, developmentPoolAddress,wrappedNativeAddress
 }, network) => {
     const FILE_PATH = path.join('deployed-charities', `${network}.json`);
 
@@ -32,7 +32,6 @@ module.exports.deployCharityPoolToNetwork = async ({
         holdingPoolAddress,
         charityWalletAddress,
         holdingTokenAddress,
-        priceFeedAddress,
         ihelpAddress,
         swapperAddress,
         stakingPoolAddress,
@@ -48,7 +47,7 @@ module.exports.deployCharityPoolToNetwork = async ({
         address: charityResult.address
     });
 
-    console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network, " with cToken: ", charityTokenName);
+    console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network);
     console.log(`       holdingToken ${holdingTokenAddress}`);
     console.log(`       holdingPool ${holdingPoolAddress}`);
     console.log(`       charityWalletAddress ${charityWalletAddress}`);

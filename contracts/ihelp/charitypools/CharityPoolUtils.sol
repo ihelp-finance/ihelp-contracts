@@ -9,7 +9,6 @@ library CharityPoolUtils {
         address holdingPoolAddress;
         address charityWalletAddress;
         address holdingTokenAddress;
-        address priceFeedAddress;
         address ihelpAddress;
         address swapperAddress;
         address stakingPoolAddress;
