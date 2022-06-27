@@ -264,7 +264,7 @@ const validate = async () => {
       }
     }
     if (!result) {
-      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(actual)} expected ${chalk.red(value)}, error margin ${error * 100}%`));
+      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(actual)} got ${chalk.yellow(value)}, error margin ${chalk.yellow((error * 100).toFixed(4))}%`));
       throw new Error('Test failed');
     }
     return result;

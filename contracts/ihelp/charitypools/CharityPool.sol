@@ -139,9 +139,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
         wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
 
-        devFee = 25;
-        stakingFee = 25;
-        charityFee = 950;
+        // TODO: Are the fees correct?
+        devFee = 100;
+        stakingFee = 100;
+        charityFee = 800;
         __processingGasLimit = 300_000 * 1e9;
     }
 
@@ -351,7 +352,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 console.log("direct to contract", address(this), charityDonation);
             }
 
-            
             // Update the donations statistcis for the contributor
             _donationsRegistry[_account].totalDonations++;
             _donationsRegistry[_account].contribAfterSwapUSD += _amount;
@@ -368,6 +368,19 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _redeemInterest(_cTokenAddress);
     }
 
+    /**
+     * Sends interest form the charity contract to their wallet
+     */
+    function claimInterest() external onlyHelpToken  {
+        uint256 amount = IERC20(holdingToken).balanceOf(address(this));
+        console.log("CHARITY_POOL::CLAIM:::", amount);
+        if(amount == 0){
+            return;
+        }
+        bool success = IERC20(holdingToken).transfer(charityWallet, amount);
+        require(success, "transfer failed");
+    }
+
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         ICErc20 cToken = ICErc20(_cTokenAddress);
@@ -382,10 +395,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             address tokenaddress = address(underlyingToken);
 
-            // address destinationAddress = charityWallet == holdingPool ? address(this) : holdingPool;
-
             if (tokenaddress == holdingToken) {
-                require(underlyingToken.transfer(holdingPool, amount), "Funding/transfer");
+                uint256 charityShare = (amount * charityFee) / 1000;
+                require(underlyingToken.transfer(holdingPool, amount - charityShare), "Funding/transfer");
             } else {
                 console.log("\nSWAPPING", swapperPool, amount);
 
@@ -396,7 +408,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
                 console.log("TOKEN::", tokenaddress, holdingToken);
-                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
+                uint256 swapResult = swapper.swap(tokenaddress, holdingToken, amount, minAmount, address(this));
+                if (swapResult > 0) {
+                    uint256 charityShare = (swapResult * charityFee) / 1000;
+                    require(IERC20(holdingToken).transfer(holdingPool, swapResult - charityShare), "Funding/transfer");
+                }
             }
 
             // reset the lastinterestearned incrementer
