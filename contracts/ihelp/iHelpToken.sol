@@ -59,6 +59,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public developmentShareOfInterest;
     uint256 public stakingShareOfInterest;
 
+    uint256 public totalContributorGeneratedInterest;
+
     // TODO: As Matt, i don't think we need this here anymore
     // uint256 public charityShareOfInterest;
 
@@ -169,7 +171,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         developmentShareOfInterest = 500;
         stakingShareOfInterest = 500;
         // TODO: removed the charityShareOfInterest since it's directly reflected by ye charity contract's holding token balance
-        // charityShareOfInterest = 0.95 * 1e18; 
+        // charityShareOfInterest = 0.95 * 1e18;
 
         __totalSupply = __tokensMintedPerPhase * 1e18;
         __totalCirculating = 0;
@@ -481,6 +483,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
                     contributorTokenClaims[contributorList[ii]] += contribTokens;
                     contirbutorGeneratedInterest[contributorList[ii]][charity] += contribTokens;
+                    totalContributorGeneratedInterest += contribTokens;
                 }
                 processingState.ii = 0;
             }
@@ -561,6 +564,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("correctedInterestShare", correctedInterestShare);
 
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
+                    // TODO: Is Underlying same as holdingTOken for the iHelp contract?
                     uint256 charityInterest = underlyingToken.balanceOf(charity);
                     if (charityWalletAddress == holdingPool) {
                         claimableCharityInterest[charity] = charityInterest;
@@ -569,8 +573,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                         claimableCharityInterest[charityWalletAddress] = charityInterest;
                     }
 
-                    claimableCharityInterest[developmentPool] += correctedInterestShare.mul(developmentShareOfInterest).div(1000);
-                    claimableCharityInterest[stakingPool] += correctedInterestShare.mul(stakingShareOfInterest).div(1000);
+                    // claimableCharityInterest[developmentPool] += correctedInterestShare.mul(developmentShareOfInterest).div(1000);
+                    // TODO: ^^Oder of operations breaks tests
+                    claimableCharityInterest[developmentPool] += (correctedInterestShare * developmentShareOfInterest) / 1000;
+
+                    claimableCharityInterest[stakingPool] += (correctedInterestShare * stakingShareOfInterest) / (1000);
 
                     // reset the charity interest share
                     charityInterestShare[charity] = 0;
