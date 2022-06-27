@@ -643,10 +643,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function contributorAt(uint256 index) public view returns (address) {
         return contributors.at(index);
     }
+ 
+    receive() external payable {}
 
-    // Treat any natively received token as a direct donation.
-    // We convert the native token into it's wrapped version and call the direct donation function
-    receive() external payable {
+    function donateNative() public payable {
         uint256 amount = msg.value;
         wrappedNative.deposit{value: amount}();
         wrappedNative.approve(address(this), amount);
