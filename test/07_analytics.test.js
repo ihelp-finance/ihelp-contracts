@@ -140,29 +140,7 @@ describe("Analytics", function () {
             });
 
             it("should return the total user generated interest", async () => {
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                charityPool1.numberOfContributors.returns(2);
-                charityPool2.numberOfContributors.returns(2);
-
-                const contributors = [
-                    addr1.address,
-                    addr2.address
-                ]
-                charityPool2.contributorAt.returns(idx => contributors[idx]);
-                charityPool1.contributorAt.returns(idx => contributors[idx]);
-
-                await iHelp.setVariable("contirbutorGeneratedInterest", {
-                    [addr1.address]: {
-                        [charityPool1.address]: 10,
-                        [charityPool2.address]: 20
-                    },
-                    [addr2.address]: {
-                        [charityPool1.address]: 5,
-                        [charityPool2.address]: 5
-                    }
-                });
+                await iHelp.setVariable("totalContributorGeneratedInterest", 40);
 
                 expect(await analytics.getTotalUserGeneratedInterest(iHelp.address)).to.equal(40);
             });

@@ -120,17 +120,7 @@ contract Analytics is IAnalytics {
      * Calaculates the total generated interest for a all users
      */
     function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view override returns (uint256) {
-        //TODO: How do we paginate this, by contributors or by charity pools?
-        uint256 charities = _iHelp.numberOfCharities();
-        uint256 result;
-        for (uint256 index = 0; index < charities; index++) {
-            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
-            uint256 contibutors = charity.numberOfContributors();
-            for (uint256 index2 = 0; index2 < contibutors; index2++) {
-                result += _iHelp.contirbutorGeneratedInterest(charity.contributorAt(index2), address(charity));
-            }
-        }
-        return result;
+       return _iHelp.totalContributorGeneratedInterest();
     }
 
     /**
