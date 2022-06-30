@@ -11,9 +11,9 @@ contract PriceFeedProvider is OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct DonationCurrency {
+        string provider;
         address underlyingToken;
         address lendingAddress;
-        string provider;
         address priceFeed;
     }
 
@@ -23,21 +23,40 @@ contract PriceFeedProvider is OwnableUpgradeable {
     /**
      * Initialzie the contract with a set of donation currencies
      */
-    function initialze(DonationCurrency[] memory _initialDonationCurrencies) public initializer {
-        for (uint i = 0; i < _initialDonationCurrencies.length; i++) {
-            addDonationCurrency(_initialDonationCurrencies[i]);
+    function initialize(DonationCurrency[] memory _initialDonationCurrencies) public initializer {
+        __Ownable_init();
+        for (uint256 i = 0; i < _initialDonationCurrencies.length; i++) {
+            _donationCurrencyMapping.add(_initialDonationCurrencies[i].lendingAddress);
+            _donationCurrencies[_initialDonationCurrencies[i].lendingAddress] = _initialDonationCurrencies[i];
         }
     }
 
-    function getUnderlyingTokenPrice(address _lendingAddress) public view  returns(uint256) {
+    /**
+     * Returns the underlying token price in WEI
+     */
+    function getUnderlyingTokenPrice(address _lendingAddress) public view returns (uint256) {
         DonationCurrency memory currency = getDonationCurrency(_lendingAddress);
         AggregatorV3Interface priceFeed = AggregatorV3Interface(currency.priceFeed);
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        return uint256(price);
+        uint8 decimals = 18 - priceFeed.decimals();
+        // We padding this with the remaning decimals so that we reach WEI scaling
+        return uint256(price) * (10**decimals);
     }
-    
+
     function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
+        require(_donationCurrency.lendingAddress != address(0), "price-feed/invalid-lending");
+        require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
+        require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
+        require(!hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/already-exists");
         _donationCurrencyMapping.add(_donationCurrency.lendingAddress);
+        _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
+    }
+
+    function updateDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
+        require(_donationCurrency.lendingAddress != address(0), "price-feed/invalid-lending");
+        require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
+        require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
+        require(hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/not-found");
         _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
     }
 
@@ -46,11 +65,11 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     function getDonationCurrency(address _lendingAddress) public view returns (DonationCurrency memory) {
-        require(_donationCurrencyMapping.contains(_lendingAddress) , "price-feed/currency-not-found");
+        require(_donationCurrencyMapping.contains(_lendingAddress), "price-feed/currency-not-found");
         return _donationCurrencies[_lendingAddress];
     }
 
-    function hasDonationCurrency(address _lendingAddress) public view returns(bool) {
+    function hasDonationCurrency(address _lendingAddress) public view returns (bool) {
         return _donationCurrencyMapping.contains(_lendingAddress);
     }
 
