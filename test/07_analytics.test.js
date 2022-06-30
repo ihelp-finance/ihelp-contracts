@@ -56,8 +56,8 @@ describe("Analytics", function () {
 
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
-        charityPool1.getUnderlyingTokenValue.returns(([, arg]) => arg * 100000000);
-        charityPool2.getUnderlyingTokenValue.returns(([, arg]) => arg * 100000000);
+        charityPool1.getUnderlyingTokenPrice.returns(100000000);
+        charityPool2.getUnderlyingTokenPrice.returns(100000000);
 
         charityPool1.calculateTotalInterestEarned.returns(20);
         charityPool2.calculateTotalInterestEarned.returns(30);
