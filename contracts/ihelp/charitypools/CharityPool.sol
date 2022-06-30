@@ -16,6 +16,7 @@ import "../../utils/IWrappedNative.sol";
 
 import "../iHelpTokenInterface.sol";
 import "../SwapperInterface.sol";
+import "../PriceFeedProvider.sol";
 
 import "hardhat/console.sol";
 
@@ -89,6 +90,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
+    PriceFeedProvider public priceFeedProvider;
 
     SwapperInterface internal swapper;
     EnumerableSet.AddressSet private contributors;
@@ -138,6 +140,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
         wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
+        priceFeedProvider = PriceFeedProvider(configuration.priceFeedProvider);
 
         // TODO: Are the fees correct?
         devFee = 100;
@@ -502,13 +505,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenValue(address _cTokenAdddress, uint256 _value) public view returns (uint256) {
-        address[] memory path = new address[](3);
-        path[0] = address(getUnderlying(_cTokenAdddress));
-        path[1] = swapper.nativeToken();
-        path[2] = holdingToken;
-        uint256 valueInHoldingTokens = swapper.getAmountsOutByPath(path, _value);
-        return valueInHoldingTokens;
+    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256) {
+        return priceFeedProvider.getUnderlyingTokenPrice(_cTokenAdddress);
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -530,10 +528,16 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
-        // We call the swapper to get the value directly in the form of holding tokens,
-        // this means that we dont need to handle decimal scaling anyore, right @Matt?
-        console.log("Value", _value);
-        uint256 valueUSD = getUnderlyingTokenValue(_cTokenAddress, _value);
+        uint256 tokenPrice = getUnderlyingTokenPrice(_cTokenAddress);
+        uint256 convertExchangeRateToWei = 100000000;
+        uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
+        uint256 valueUSD = _value.mul(tokenPriceWei);
+        // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
+        if (decimals(_cTokenAddress) < holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, holdingDecimals - decimals(_cTokenAddress));
+        } else if (decimals(_cTokenAddress) > holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, decimals(_cTokenAddress) - holdingDecimals);
+        }
         return valueUSD;
     }
 

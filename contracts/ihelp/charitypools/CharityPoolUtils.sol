@@ -14,6 +14,7 @@ library CharityPoolUtils {
         address stakingPoolAddress;
         address developmentPoolAddress;
         address wrappedNativeAddress;
+        address priceFeedProvider;
     }
 
     struct DirectDonationsCounter {
