@@ -38,9 +38,8 @@ contract PriceFeedProvider is OwnableUpgradeable {
         DonationCurrency memory currency = getDonationCurrency(_lendingAddress);
         AggregatorV3Interface priceFeed = AggregatorV3Interface(currency.priceFeed);
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint8 decimals = 18 - priceFeed.decimals();
         // We padding this with the remaning decimals so that we reach WEI scaling
-        return uint256(price) * (10**decimals);
+        return uint256(price);
     }
 
     function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {

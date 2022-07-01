@@ -173,6 +173,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function addCToken(address _cTokenAddress) external onlyOperatorOrOwner {
+        // TODO: Ask Mat, do we sitll keep the array of cTokens in the charity pool contracts now that we have the centralized price provider?
+        require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Funding/invalid-currency");
         cTokens.add(_cTokenAddress);
     }
 
@@ -262,6 +264,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _amount
     ) internal {
         require(_amount != 0, "Funding/deposit-zero");
+
         require(cTokens.contains(_cTokenAddress), "Invalid configuration");
         // Update the user's balance
         balances[_spender][_cTokenAddress] += _amount;
@@ -374,10 +377,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * Sends interest form the charity contract to their wallet
      */
-    function claimInterest() external onlyHelpToken  {
+    function claimInterest() external onlyHelpToken {
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
         console.log("CHARITY_POOL::CLAIM:::", amount);
-        if(amount == 0){
+        if (amount == 0) {
             return;
         }
         bool success = IERC20(holdingToken).transfer(charityWallet, amount);
@@ -506,6 +509,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256) {
+        console.log("Getting token price", _cTokenAdddress);
         return priceFeedProvider.getUnderlyingTokenPrice(_cTokenAdddress);
     }
 
@@ -528,10 +532,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
-        uint256 tokenPrice = getUnderlyingTokenPrice(_cTokenAddress);
-        uint256 convertExchangeRateToWei = 100000000;
-        uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
-        uint256 valueUSD = _value.mul(tokenPriceWei);
+        uint256 tokenPriceWei = getUnderlyingTokenPrice(_cTokenAddress);
+        uint256 valueUSD = _value * tokenPriceWei;
         // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
         if (decimals(_cTokenAddress) < holdingDecimals) {
             valueUSD = valueUSD * safepow(10, holdingDecimals - decimals(_cTokenAddress));
@@ -647,7 +649,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function contributorAt(uint256 index) public view returns (address) {
         return contributors.at(index);
     }
- 
+
     receive() external payable {}
 
     function donateNative() public payable {

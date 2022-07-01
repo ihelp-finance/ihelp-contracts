@@ -15,7 +15,7 @@ describe("Charity Pool", function () {
     let wTokenMock;
     let CTokenMock;
     let swapperMock;
-
+    let priceFeedProviderMock
     beforeEach(async function () {
         const CharityPool = await smock.mock("CharityPool");
 
@@ -24,11 +24,17 @@ describe("Charity Pool", function () {
         const Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
         CTokenMock = await smock.mock("CTokenMock");
+        
         const aggregator = await smock.fake(abi);
+        aggregator.latestRoundData.returns([0,1e9,0,0,0]);
+
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
-
-
+     
+        const PriceFeedProvider = await smock.mock("PriceFeedProvider");
+        priceFeedProviderMock = await PriceFeedProvider.deploy();
+       
         cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
+
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
         cTokenMock = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
         wTokenMock = await WMock.deploy();
@@ -41,14 +47,21 @@ describe("Charity Pool", function () {
             holdingPoolAddress: holdingPool.address,
             charityWalletAddress: charityWallet.address,// address _charityWallet,
             holdingTokenAddress: holdingMock.address, //_holdingToken,
-            priceFeedAddress: aggregator.address,// address _priceFeed,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
             stakingPoolAddress: stakingPool.address,
             developmentPoolAddress: developmentPool.address,
-            wrappedNativeAddress: wTokenMock.address
+            wrappedNativeAddress: wTokenMock.address,
+            priceFeedProvider: priceFeedProviderMock.address
         });
 
+        await priceFeedProviderMock.initialize([{
+            provider: "TestProvider",
+            lendingAddress: cTokenMock.address,
+            underlyingToken: cTokenUnderlyingMock.address,
+            priceFeed: aggregator.address
+        }]);
+        
         await charityPool.addCToken(cTokenMock.address);
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
@@ -58,6 +71,11 @@ describe("Charity Pool", function () {
         it("Should set the right staking pool", async function () {
             expect(await charityPool.stakingPool()).to.equal(stakingPool.address);
         });
+
+        it("Should set the right price feed provider", async function () {
+            expect(await charityPool.priceFeedProvider()).to.equal(priceFeedProviderMock.address);
+        });
+
 
         it("Should set the right holding pool", async function () {
             expect(await charityPool.holdingPool()).to.equal(holdingPool.address);
@@ -159,8 +177,7 @@ describe("Charity Pool", function () {
 
         it("Should calculate usd balance", async function () {
             const deposit = 100;
-            const expectedBalanceInUsd = deposit * 1e9; // 18-9 decimalls
-
+            const expectedBalanceInUsd = parseEther('' + deposit);
             await charityPool.depositTokens(cTokenMock.address, deposit);
             expect(await charityPool.balanceOfUSD(owner.address)).to.equal(expectedBalanceInUsd);
         });
@@ -172,7 +189,7 @@ describe("Charity Pool", function () {
             });
 
             it("Should allow native deposits", async function () {
-                const expectedBalanceInUsd = deposit * 1e9; // 18-9 decimalls
+                const expectedBalanceInUsd = parseEther('' + deposit);
                 await charityPool.depositNative(cTokenMock.address, { value: deposit });
                 expect(await charityPool.balanceOfUSD(owner.address)).to.equal(expectedBalanceInUsd);
             })
@@ -336,9 +353,9 @@ describe("Charity Pool", function () {
             const stakeFee = await charityPool.devFee();
             const devFee = await charityPool.stakingFee();
 
-            const charityAmount = convertedAmount.mul(charityFee).div(1000); 
-            const devAmount = convertedAmount.mul(devFee).div(1000); 
-            const stakeAmount = convertedAmount.mul(stakeFee).div(1000); 
+            const charityAmount = convertedAmount.mul(charityFee).div(1000);
+            const devAmount = convertedAmount.mul(devFee).div(1000);
+            const stakeAmount = convertedAmount.mul(stakeFee).div(1000);
 
             // Mock swap values 
             swapperMock.swap.returns(args => convertedAmount);
@@ -380,6 +397,7 @@ describe("Charity Pool", function () {
 
     describe("CToken Management", function () {
         it("Should add cTokens ", async function () {
+            await priceFeedProviderMock.hasDonationCurrency.returns(true);
             let cTokenMock1 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
             let cTokenMock2 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
             let cTokenMock3 = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
@@ -392,6 +410,8 @@ describe("Charity Pool", function () {
         });
 
         it("Should remove cTokens ", async function () {
+            await priceFeedProviderMock.hasDonationCurrency.returns(true);
+
             const interest = 10000;
 
             await charityPool.setVariable('redeemableInterest', {
@@ -419,8 +439,9 @@ describe("Charity Pool", function () {
 
     describe("Interest", function () {
         beforeEach(async function () {
-            await cTokenUnderlyingMock.mint(owner.address, parseEther("200"));
-            await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("200"));
+            await cTokenUnderlyingMock.setVariable('_decimals', 9);
+            await cTokenUnderlyingMock.mint(owner.address, parseEther("20000"));
+            await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("20000"));
         });
 
         it("Should return interest of cToken", async function () {
