@@ -22,7 +22,7 @@ const csvWriter = createCsvWriter({
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolToNetwork, dim, yellow, chainName, fromBigNumber, green } = require("../scripts/deployUtils");
+const { deployCharityPoolToNetwork, dim, yellow, chainName, fromBigNumber, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
@@ -73,6 +73,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   xhelp = await ethers.getContractAt('xHelpToken', xhelpAddress, signer);
 
   const swapperAddress = (await deployments.get('swapper')).address;
+  const priceFeedProviderAddresss = (await deployments.get('priceFeedProvider')).address;
+
   //swapper = await ethers.getContractAt('swapper', swapperAddress, signer);
 
   console.log('');
@@ -80,101 +82,36 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
+  green('PriceFeedProvider Address:', priceFeedProviderAddresss);
+
   console.log('');
 
-  const getTokenAddresses = async (currency, lender) => {
-
-    let ctokenaddress = null;
-    let pricefeed = null;
-    let tokenaddress = null;
-
-    //TODO: Ask Mat, we need to set a native token wrapper reference here
-    let nativeWrapper = null;
-
-    let addresses = fs.readFileSync(`./networks/${chainName(chainId)}-lending.json`, 'utf8');
-    addresses = JSON.parse(addresses);
-
-    if (isTestEnvironment && deployMockTokens) {
-
-      const hardhatContracts = require('../build/hardhat_contracts');
-
-      if (currency == 'DAI') {
-        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['DAI']['address'];
-        ctokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['cDAI']['address'];
-        pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-      }
-      else if (currency == 'USDC') {
-        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['USDC']['address'];
-        ctokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['cUSDC']['address'];
-        pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-      }
-      else if (currency == 'HELP') {
-        tokenaddress = hardhatContracts[chainId.toString()][0]['contracts']['iHelp']['address'];
-        ctokenaddress = null;
-        pricefeed = null;
-      }
-
-      nativeWrapper = hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
-
-    }
-    else {
-
-      if (currency == 'DAI') {
-        tokenaddress = addresses[lender]['Tokens']['DAI'];
-        ctokenaddress = addresses[lender]['lendingTokens']['DAI'];
-        pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-      }
-      else if (currency == 'USDC') {
-        tokenaddress = addresses[lender]['Tokens']['USDC'];
-        ctokenaddress = addresses[lender]['lendingTokens']['USDC'];
-        pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-      }
-      else if (currency == 'USDT') {
-        tokenaddress = addresses[lender]['Tokens']['USDT'];
-        ctokenaddress = addresses[lender]['lendingTokens']['USDT'];
-        pricefeed = addresses[lender]['PriceOracleProxy']['USDT'];
-      }
-      else if (currency == 'HELP') {
-        const hardhatContracts = require('../../react-app/src/contracts/hardhat_contracts');
-        tokenaddress = hardhatContracts[chainId.toString()][chainName(chainId).toLowerCase()]['contracts']['iHelp']['address'];
-        ctokenaddress = null;
-        pricefeed = null;
-      }
-
-    }
-
-    return {
-      "token": tokenaddress,
-      "lendingtoken": ctokenaddress,
-      "pricefeed": pricefeed,
-      "nativeWrapper" : nativeWrapper
-    };
-
-  };
 
   // deploy charity - make this a function
-  const ihelpAddresses = await getTokenAddresses('DAI', 'compound');
+  const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
   const holdingtokenAddress = ihelpAddresses['token'];
 
-  console.log("Holding Token", "DAI", chainId ,holdingtokenAddress);
+
+
+  console.log("Holding Token", "DAI", chainId, holdingtokenAddress);
 
   const deployedCharities = [];
 
-  const deployCharityPool = async (contractName, charityName, charityWalletAddress, charityToken, lendingProtocol) => {
+  const deployCharityPool = async (contractName, charityName, charityWalletAddress) => {
 
-    const charityAddresses = await getTokenAddresses(charityToken, lendingProtocol);
+    const nativeWrapper = getNativeWrapper(chainId);
     const charityResult = await deployCharityPoolToNetwork({
       charityName: charityName,
       operatorAddress: signer._address,
       holdingPoolAddress: holdingPool,
       charityWalletAddress: charityWalletAddress,
-      lendingTokenAddress: charityAddresses['lendingtoken'],
       holdingTokenAddress: holdingtokenAddress,
       ihelpAddress: ihelpAddress,
       swapperAddress: swapperAddress,
+      priceFeedProvider: priceFeedProviderAddresss,
       stakingPoolAddress: stakingPool,
       developmentPoolAddress: developmentPool,
-      wrappedNativeAddress: charityAddresses["nativeWrapper"] //TODO: @MAtt , Need to set the native wrapper for the non testing environment
+      wrappedNativeAddress: nativeWrapper //TODO: @MAtt , Need to set the native wrapper for the non testing environment
     }, network.name);
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
     deployedCharities.push([contractName, charityResult]);

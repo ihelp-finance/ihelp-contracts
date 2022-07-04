@@ -12,7 +12,7 @@ const web3 = new Web3('http://127.0.0.1:7545');
 
 
 module.exports.deployCharityPoolToNetwork = async ({
-    charityName, operatorAddress, holdingPoolAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, stakingPoolAddress, developmentPoolAddress,wrappedNativeAddress
+    charityName, operatorAddress, holdingPoolAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, stakingPoolAddress, developmentPoolAddress, wrappedNativeAddress, priceFeedProvider
 }, network) => {
     const FILE_PATH = path.join('deployed-charities', `${network}.json`);
 
@@ -36,7 +36,8 @@ module.exports.deployCharityPoolToNetwork = async ({
         swapperAddress,
         stakingPoolAddress,
         developmentPoolAddress,
-        wrappedNativeAddress
+        wrappedNativeAddress,
+        priceFeedProvider
     });
 
     const { events } = await tx.wait();
@@ -57,9 +58,7 @@ module.exports.deployCharityPoolToNetwork = async ({
     return charityResult;
 };
 
-
 module.exports.getTokenAddresses = async (currency, lender, chainId) => {
-
     let ctokenaddress = null;
     let pricefeed = null;
     let tokenaddress = null;
@@ -119,6 +118,7 @@ module.exports.getTokenAddresses = async (currency, lender, chainId) => {
     }
 
     return {
+        lender,
         "token": tokenaddress,
         "lendingtoken": ctokenaddress,
         "pricefeed": pricefeed
@@ -206,10 +206,14 @@ module.exports.chainName = (chainId) => {
     }
 };
 
-
-
 module.exports.getSwapAddresses = async (dex, chainId) => {
     let addresses = fs.readFileSync(`./networks/${this.chainName(chainId)}-dex.json`);
     addresses = JSON.parse(addresses);
     return addresses[dex];
 };
+
+module.exports.getNativeWrapper = async (chainId) => {
+    const hardhatContracts = require('../build/hardhat_contracts');
+    return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
+}
+

@@ -554,8 +554,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
-        // get the overall new balance
-        console.log("");
 
         // in charityPool currency
         uint256 newEarned = interestEarned(_cTokenAddress);
