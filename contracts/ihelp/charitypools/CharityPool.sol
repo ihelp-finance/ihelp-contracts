@@ -508,8 +508,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256) {
-        console.log("Getting token price", _cTokenAdddress);
+    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256, uint256) {
         return priceFeedProvider.getUnderlyingTokenPrice(_cTokenAdddress);
     }
 
@@ -532,13 +531,16 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
-        uint256 tokenPriceWei = getUnderlyingTokenPrice(_cTokenAddress);
-        uint256 valueUSD = _value * tokenPriceWei;
-        // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
-        if (decimals(_cTokenAddress) < holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, holdingDecimals - decimals(_cTokenAddress));
-        } else if (decimals(_cTokenAddress) > holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, decimals(_cTokenAddress) - holdingDecimals);
+        (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
+      
+        uint256 valueUSD = _value.mul(tokenPrice);
+        valueUSD = valueUSD.div(safepow(10, priceDecimals));
+
+        uint256 _decimals = decimals(_cTokenAddress);
+        if (_decimals < holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
+        } else if (_decimals > holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, _decimals - holdingDecimals);
         }
         return valueUSD;
     }
@@ -554,7 +556,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
-
         // in charityPool currency
         uint256 newEarned = interestEarned(_cTokenAddress);
 

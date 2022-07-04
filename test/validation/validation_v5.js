@@ -243,7 +243,7 @@ const validate = async () => {
 
   const check = await csv().fromString(checkBody);
 
-  const ERROR_THRESHOLD = 0.08;
+  const ERROR_THRESHOLD = 0.05;
   const withinError = (value, actual, test) => {
     let result, error;
     if (actual == 0) {

@@ -19,24 +19,26 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   let lendingTokenDetails
   if (isTestEnvironment) {
     lendingTokenDetails = [await getTokenAddresses('DAI', 'compound', chainId), await getTokenAddresses('USDC', 'compound',chainId)]
-
   } else {
     //TODO: Add define the intial lending tokens that will be used in production
   }
 
   lendingTokenDetails = lendingTokenDetails.map(item => ({
     provider: item.lender,
-    underlyingToken: item.lendingtoken,
-    lendingAddress: item.token,
+    underlyingToken: item.token,
+    lendingAddress: item.lendingtoken,
     priceFeed: item.pricefeed
   }));
 
   console.log(lendingTokenDetails)
 
+  // We deploy a mocked version of the price provider which will always return 1 as the price of any call
+  const contract = isTestEnvironment ? 'PriceFeedProviderMock' : 'PriceFeedProvider';
+
   // deploy the iHelp token
   await catchUnknownSigner(
     deploy("priceFeedProvider", {
-      contract: 'PriceFeedProvider',
+      contract,
       proxy: {
         proxyContract: "OpenZeppelinTransparentProxy",
         owner: proxyAdmin,

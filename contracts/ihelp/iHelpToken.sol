@@ -61,9 +61,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     uint256 public totalContributorGeneratedInterest;
 
-    // TODO: As Matt, i don't think we need this here anymore
-    // uint256 public charityShareOfInterest;
-
     mapping(uint256 => uint256) public tokensPerInterestByPhase;
     mapping(uint256 => uint256) public cumulativeInterestByPhase;
 
@@ -170,6 +167,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         // scale these later in the contract based on the charity pool decicals
         developmentShareOfInterest = 500;
         stakingShareOfInterest = 500;
+        
         // TODO: removed the charityShareOfInterest since it's directly reflected by ye charity contract's holding token balance
         // charityShareOfInterest = 0.95 * 1e18;
 
@@ -564,7 +562,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("correctedInterestShare", correctedInterestShare);
 
                     // if the charity wallet address is equal to the holding pool address, this is an off-chain transfer to assign it to the charity contract itself
-                    // TODO: Is Underlying same as holdingTOken for the iHelp contract?
+                    // TODO: Is Underlying same as holdingToken for the iHelp contract?
                     uint256 charityInterest = underlyingToken.balanceOf(charity);
                     if (charityWalletAddress == holdingPool) {
                         claimableCharityInterest[charity] = charityInterest;

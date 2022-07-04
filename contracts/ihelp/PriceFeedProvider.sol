@@ -32,14 +32,14 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     /**
-     * Returns the underlying token price in WEI
+     * Returns the underlying token price and the decimal number of the price value
      */
-    function getUnderlyingTokenPrice(address _lendingAddress) public view returns (uint256) {
+    function getUnderlyingTokenPrice(address _lendingAddress) public view virtual returns (uint256, uint256) {
         DonationCurrency memory currency = getDonationCurrency(_lendingAddress);
         AggregatorV3Interface priceFeed = AggregatorV3Interface(currency.priceFeed);
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        // We padding this with the remaning decimals so that we reach WEI scaling
-        return uint256(price);
+        uint256 decimals = uint256(priceFeed.decimals());
+        return (uint256(price), decimals);
     }
 
     function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {

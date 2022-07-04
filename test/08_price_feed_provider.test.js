@@ -204,7 +204,12 @@ describe("PriceFeedProvider", function () {
     describe("Price Data", async () => {
         it("should return price data from price feed", async ()=> {
             chainLinkAggretator.latestRoundData.returns([0,100,0,0,0]);
-            expect(await priceFeedProvider.getUnderlyingTokenPrice(cTokenMock2.address)).to.equal(100);
+            chainLinkAggretator.decimals.returns(8);
+
+            const [price, decimals] = await priceFeedProvider.getUnderlyingTokenPrice(cTokenMock2.address);
+            expect(price).to.equal(100);
+            expect(decimals).to.equal(8);
+
         })
     })
 });
