@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
+
 import "../ihelp/charitypools/CharityPool.sol";
 import "../ihelp/iHelpToken.sol";
 import "../ihelp/charitypools/CharityPoolUtils.sol";
@@ -139,4 +140,29 @@ interface IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view returns (AnalyticsUtils.UserStats memory);
+
+    /**
+     * Returns an array with all the charity pools and their contributions
+     */
+    function getCharityPoolsWithContributions(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (AnalyticsUtils.IndividualCharityContributionInfo[] memory);
+
+    /**
+     * Returns an array that contains the charity contribution info for a given user
+     */
+    function getUserContributionsPerCharity(
+        iHelpToken _iHelp,
+        address _user,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (AnalyticsUtils.UserCharityContributions[] memory); 
+
+     /**
+     * Get the state of the staking pool
+     */
+    function stakingPoolState(iHelpToken _iHelp, address xHelpAddress) external view returns (AnalyticsUtils.StakingPoolStats memory); 
+
 }

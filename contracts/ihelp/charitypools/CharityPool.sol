@@ -271,7 +271,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // Update the total balance of cTokens of this contract
         accountedBalances[_cTokenAddress] += _amount;
-
+        
         // Deposit into Compound
         require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
         require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");

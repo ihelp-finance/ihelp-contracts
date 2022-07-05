@@ -13,6 +13,7 @@ describe("Analytics", function () {
     let stakingPool, developmentPool, holdingPool;
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
+    let proceFeedProviderMock;
 
     beforeEach(async function () {
         const IHelp = await smock.mock("iHelpToken");
@@ -22,6 +23,12 @@ describe("Analytics", function () {
 
         [owner, addr1, addr2, operator, stakingPool, developmentPool, holdingPool, swapperPool, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
+       
+        const PriceFeedProvider = await smock.mock("PriceFeedProvider");
+        proceFeedProviderMock = await PriceFeedProvider.deploy();
+        
+        proceFeedProviderMock.hasDonationCurrency.returns(true);
+
         const WMock = await ethers.getContractFactory("WTokenMock");
         const Analytics = await ethers.getContractFactory("Analytics");
 
@@ -97,6 +104,9 @@ describe("Analytics", function () {
             });
 
             it("should return the total generated interest by a underlying currency", async () => {
+                await charityPool1.setVariable("priceFeedProvider", proceFeedProviderMock.address)
+                await charityPool2.setVariable("priceFeedProvider", proceFeedProviderMock.address)
+
                 await charityPool1.addCToken(cTokenMock1.address);
                 await charityPool2.addCToken(cTokenMock1.address);
 
@@ -331,8 +341,115 @@ describe("Analytics", function () {
                 expect(result.totalDirectDonations).to.equal(10);
                 expect(result.totalContributions).to.equal(60);
                 expect(result.totalInterestGenerated).to.equal(50);
-
             });
+
+            it("shoud get total contributions of charity pools", async () => {
+                charityPool1.name.returns("Charity1");
+                charityPool2.name.returns("Charity2");
+
+                charityPool1.accountedBalanceUSD.returns(200);
+                charityPool2.accountedBalanceUSD.returns(300);
+
+                charityPool1.totalDonationsUSD.returns(5);
+                charityPool2.totalDonationsUSD.returns(15);
+
+                await iHelp.registerCharityPool(charityPool1.address);
+                await iHelp.registerCharityPool(charityPool2.address);
+
+                const [result1, result2] = await analytics.getCharityPoolsWithContributions(iHelp.address, 0, 0)
+                expect(result1.charityName).to.equal("Charity1");
+                expect(result1.charityAddress).to.equal(charityPool1.address);
+                expect(result1.totalContributions).to.equal(200);
+                expect(result1.totalDonations).to.equal(5);
+
+                expect(result2.charityName).to.equal("Charity2");
+                expect(result2.charityAddress).to.equal(charityPool2.address);
+                expect(result2.totalContributions).to.equal(300);
+                expect(result2.totalDonations).to.equal(15);
+            })
+
+            it("shoud get the total contributions of a user in a given charity", async () => {
+                charityPool1.name.returns("Charity1");
+                charityPool2.name.returns("Charity2");
+
+                await charityPool1.setVariable("_donationsRegistry", {
+                    [owner.address]: {
+                        totalContribNativeToken: 0,
+                        totalContribUSD: 20,// -> We are intrested in this
+                        contribAfterSwapUSD: 0,
+                        charityDonationUSD: 0,
+                        devContribUSD: 0,
+                        stakeContribUSD: 0,
+                        totalDonations: 3
+                    }
+                });
+
+                await charityPool2.setVariable("_donationsRegistry", {
+                    [owner.address]: {
+                        totalContribNativeToken: 0,
+                        totalContribUSD: 40, // -> We are intrested in this
+                        contribAfterSwapUSD: 0,
+                        charityDonationUSD: 0,
+                        devContribUSD: 0,
+                        stakeContribUSD: 0,
+                        totalDonations: 7
+                    }
+                });
+
+                charityPool1.balanceOfUSD.returns(200);
+                charityPool2.balanceOfUSD.returns(300);
+
+    
+                await iHelp.registerCharityPool(charityPool1.address);
+                await iHelp.registerCharityPool(charityPool2.address);
+
+                const [result1, result2] = await analytics.getUserContributionsPerCharity(iHelp.address, owner.address, 0, 0)
+                expect(result1.charityName).to.equal("Charity1");
+                expect(result1.charityAddress).to.equal(charityPool1.address);
+                expect(result1.totalContributions).to.equal(220);
+
+                expect(result2.charityName).to.equal("Charity2");
+                expect(result2.charityAddress).to.equal(charityPool2.address);
+                expect(result2.totalContributions).to.equal(340);
+            })
+
+            it("shoud get the charities with their holding token balances", async () => {
+                charityPool1.name.returns("Charity1");
+                charityPool2.name.returns("Charity2");
+
+                await mockContract.setVariable('_balances', {
+                    [charityPool1.address]: 10,
+                    [charityPool2.address]: 20,
+
+                })
+                charityPool1.balanceOfUSD.returns(200);
+                charityPool2.balanceOfUSD.returns(300);
+
+    
+                await iHelp.registerCharityPool(charityPool1.address);
+                await iHelp.registerCharityPool(charityPool2.address);
+
+                const [result1, result2] = await analytics.getCharityPoolsAddressesAndBalances(iHelp.address, 0, 0)
+                expect(result1.charityName).to.equal("Charity1");
+                expect(result1.charityAddress).to.equal(charityPool1.address);
+                expect(result1.balance).to.equal(10);
+
+                expect(result2.charityName).to.equal("Charity2");
+                expect(result2.charityAddress).to.equal(charityPool2.address);
+                expect(result2.balance).to.equal(20);
+            })
+
+            it("shoud get the staking pool state", async () => {
+                charityPool1.name.returns("Charity1");
+                charityPool2.name.returns("Charity2");
+
+                iHelp.totalSupply.returns(200);
+                iHelp.balanceOf.returns(100)
+             
+                const result = await analytics.stakingPoolState(iHelp.address, owner.address)
+                expect(result.iHelpTokensInCirculation).to.equal(100);
+                expect(result.iHelpStaked).to.equal(100);
+            })
         })
     });
 });

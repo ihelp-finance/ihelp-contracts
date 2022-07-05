@@ -6,6 +6,8 @@ import "../ihelp/iHelpToken.sol";
 import "../ihelp/charitypools/CharityPoolUtils.sol";
 import "./AnalyticsUtils.sol";
 import "./IAnalytics.sol";
+import "../utils/IERC20.sol";
+
 
 /**
  * @title Analytics
@@ -258,9 +260,9 @@ contract Analytics is IAnalytics {
      */
     function charityStats(CharityPool _charity) public view override returns (AnalyticsUtils.CharityStats memory) {
         AnalyticsUtils.CharityStats memory result = AnalyticsUtils.CharityStats({
-            totalValueLocked:     _charity.accountedBalanceUSD(),
-            totalYieldGenerated:  _charity.totalInterestEarnedUSD(),
-            numerOfContributors:  _charity.numberOfContributors(),
+            totalValueLocked: _charity.accountedBalanceUSD(),
+            totalYieldGenerated: _charity.totalInterestEarnedUSD(),
+            numerOfContributors: _charity.numberOfContributors(),
             totalDirectDonations: _charity.totalDonationsUSD()
         });
 
@@ -289,6 +291,93 @@ contract Analytics is IAnalytics {
         }
 
         return result;
+    }
+
+     /**
+     * Returns an array with all the charity pools and their contributions
+     */
+    function getCharityPoolsWithContributions(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (AnalyticsUtils.IndividualCharityContributionInfo[] memory) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+
+        AnalyticsUtils.IndividualCharityContributionInfo[] memory result = new AnalyticsUtils.IndividualCharityContributionInfo[](_limit);
+
+        for (uint256 index = _offset; index < _limit; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            result[index] = AnalyticsUtils.IndividualCharityContributionInfo({
+                charityAddress: address(charity),
+                charityName: charity.name(),
+                totalContributions: charity.accountedBalanceUSD(),
+                totalDonations: charity.totalDonationsUSD()
+            });
+        }
+        return result;
+    }
+
+    /**
+     * Returns an array that contains the charity contribution info for a given user
+     */
+    function getUserContributionsPerCharity(
+        iHelpToken _iHelp,
+        address _user,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (AnalyticsUtils.UserCharityContributions[] memory) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+
+        AnalyticsUtils.UserCharityContributions[] memory result = new AnalyticsUtils.UserCharityContributions[](_limit);
+
+        for (uint256 index = _offset; index < _limit; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+            uint256 userDonations = charity.donationsRegistry(_user).totalContribUSD;
+            uint256 normalContributions = charity.balanceOfUSD(_user);
+            result[index] = AnalyticsUtils.UserCharityContributions({
+                charityAddress: address(charity),
+                charityName: charity.name(),
+                totalContributions: userDonations + normalContributions
+            });
+        }
+        return result;
+    }
+
+    /**
+     * Get charity pools balances and addresses
+     */
+    function getCharityPoolsAddressesAndBalances(
+        iHelpToken _iHelp,
+        uint256 _offset,
+        uint256 _limit
+    ) external view returns (AnalyticsUtils.CharityBalanceInfo[] memory) {
+        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+
+        AnalyticsUtils.CharityBalanceInfo[] memory result = new AnalyticsUtils.CharityBalanceInfo[](_limit);
+
+        for (uint256 index = _offset; index < _limit; index++) {
+            CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
+    
+            result[index] = AnalyticsUtils.CharityBalanceInfo({
+                charityAddress: address(charity),
+                charityName: charity.name(),
+                balance: IERC20(_iHelp.underlyingToken()).balanceOf(address(charity))
+            });
+        }
+
+        return result;
+    }
+
+    /**
+     * Get the state of the staking pool
+     */
+    function stakingPoolState(iHelpToken _iHelp, address xHelpAddress) external view returns (AnalyticsUtils.StakingPoolStats memory) {
+        // TODO: Ask matt is this sufficient for getting the iHelp circulation supply or should we consider any oher locked up funds
+        uint256 circulationSupply = _iHelp.totalSupply() - _iHelp.balanceOf(xHelpAddress);
+        return AnalyticsUtils.StakingPoolStats({
+            iHelpTokensInCirculation: circulationSupply,
+            iHelpStaked: _iHelp.balanceOf(xHelpAddress)
+        });
     }
 
     function paginationChecks(
