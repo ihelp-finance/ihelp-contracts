@@ -3,11 +3,11 @@ pragma solidity 0.8.9;
 
 import "../ihelp/charitypools/CharityPool.sol";
 import "../ihelp/iHelpToken.sol";
+import "../ihelp/PriceFeedProvider.sol";
 import "../ihelp/charitypools/CharityPoolUtils.sol";
 import "./AnalyticsUtils.sol";
 import "./IAnalytics.sol";
 import "../utils/IERC20.sol";
-
 
 /**
  * @title Analytics
@@ -78,11 +78,10 @@ contract Analytics is IAnalytics {
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
 
-            address[] memory cTokens = charity.getCTokens();
-
+            PriceFeedProvider.DonationCurrency[] memory cTokens = _iHelp.priceFeedProvider().getAllDonationCurrencies();
             for (uint256 index2 = 0; index2 < cTokens.length; index2++) {
-                if (address(charity.getUnderlying(cTokens[index2])) == _underlyingCurrency) {
-                    result += charity.totalInterestEarned(cTokens[index2]);
+                if (cTokens[index2].underlyingToken == _underlyingCurrency) {
+                    result += charity.totalInterestEarned(cTokens[index2].lendingAddress);
                 }
             }
         }
@@ -122,7 +121,7 @@ contract Analytics is IAnalytics {
      * Calaculates the total generated interest for a all users
      */
     function getTotalUserGeneratedInterest(iHelpToken _iHelp) external view override returns (uint256) {
-       return _iHelp.totalContributorGeneratedInterest();
+        return _iHelp.totalContributorGeneratedInterest();
     }
 
     /**
@@ -293,7 +292,7 @@ contract Analytics is IAnalytics {
         return result;
     }
 
-     /**
+    /**
      * Returns an array with all the charity pools and their contributions
      */
     function getCharityPoolsWithContributions(
@@ -303,7 +302,8 @@ contract Analytics is IAnalytics {
     ) external view returns (AnalyticsUtils.IndividualCharityContributionInfo[] memory) {
         (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
 
-        AnalyticsUtils.IndividualCharityContributionInfo[] memory result = new AnalyticsUtils.IndividualCharityContributionInfo[](_limit);
+        AnalyticsUtils.IndividualCharityContributionInfo[]
+            memory result = new AnalyticsUtils.IndividualCharityContributionInfo[](_limit);
 
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
@@ -357,7 +357,7 @@ contract Analytics is IAnalytics {
 
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
-    
+
             result[index] = AnalyticsUtils.CharityBalanceInfo({
                 charityAddress: address(charity),
                 charityName: charity.name(),
@@ -371,13 +371,18 @@ contract Analytics is IAnalytics {
     /**
      * Get the state of the staking pool
      */
-    function stakingPoolState(iHelpToken _iHelp, address xHelpAddress) external view returns (AnalyticsUtils.StakingPoolStats memory) {
+    function stakingPoolState(iHelpToken _iHelp, address xHelpAddress)
+        external
+        view
+        returns (AnalyticsUtils.StakingPoolStats memory)
+    {
         // TODO: Ask matt is this sufficient for getting the iHelp circulation supply or should we consider any oher locked up funds
         uint256 circulationSupply = _iHelp.totalSupply() - _iHelp.balanceOf(xHelpAddress);
-        return AnalyticsUtils.StakingPoolStats({
-            iHelpTokensInCirculation: circulationSupply,
-            iHelpStaked: _iHelp.balanceOf(xHelpAddress)
-        });
+        return
+            AnalyticsUtils.StakingPoolStats({
+                iHelpTokensInCirculation: circulationSupply,
+                iHelpStaked: _iHelp.balanceOf(xHelpAddress)
+            });
     }
 
     function paginationChecks(

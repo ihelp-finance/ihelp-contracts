@@ -178,10 +178,6 @@ const validate = async () => {
   charityPool2 = await hardhat.ethers.getContractAt('CharityPool', charity2Address, signer);
   charityPool3 = await hardhat.ethers.getContractAt('CharityPool', charity3Address, signer);
 
-  await charityPool1.addCToken(cdai.address);
-  await charityPool2.addCToken(cusdc.address);
-  await charityPool3.addCToken(cdai.address);
-
   const daiDecimals = await dai.decimals();
   const usdcDecimals = await usdc.decimals();
 

@@ -23,11 +23,6 @@ const setup = async () => {
     const charity1Address = (await hardhat.deployments.get('charityPool1')).address;
     charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address);
 
-    const cDaiAddress = (await hardhat.deployments.get('cDAI')).address;
-    let cdai = await hardhat.ethers.getContractAt('CTokenMock', cDaiAddress);
-
-    await charityPool1.addCToken(cdai.address);
-
     const daiDeployment = await hardhat.deployments.get('DAI');
     const DAI = await hardhat.ethers.getContractAt('ERC20MintableMock', daiDeployment.address);
     await DAI.mint(deployer.address, 100);

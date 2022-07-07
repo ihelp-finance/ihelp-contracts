@@ -7,7 +7,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   yellow("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
 
-  const { deploy, catchUnknownSigner } = deployments;
+  const { deploy, catchUnknownSigner, get } = deployments;
   const {
     deployer,
     stakingPool,
@@ -24,6 +24,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   // deploy the iHelp token
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
   const holdingtokenAddress = ihelpAddresses['token'];
+  const PriceFeedProvider = await deployments.get("priceFeedProvider");
 
   await catchUnknownSigner(
     deploy("iHelp", {
@@ -41,6 +42,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
               developmentPool, // 5% of interest
               holdingPool, // 20% of interest
               holdingtokenAddress, // underlying dai token for ihelp transfer
+              PriceFeedProvider.address // the price feed provider address
             ]
           },
           onUpgrade: {
@@ -64,4 +66,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 };
 
 module.exports.tags = ['iHelp'];
-module.exports.dependecies = ['Mocks'];
+module.exports.dependecies = ['Mocks', 'PriceFeedProvider'];

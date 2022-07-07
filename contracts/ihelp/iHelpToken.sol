@@ -10,8 +10,8 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../utils/IERC20.sol";
-
 import "./charitypools/CharityPool.sol";
+import "../ihelp/PriceFeedProvider.sol";
 
 import "hardhat/console.sol";
 
@@ -76,6 +76,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     EnumerableSet.AddressSet private charityPoolList;
     ProcessingState public processingState;
     IERC20 public underlyingToken;
+    PriceFeedProvider public priceFeedProvider;
 
     function setTokenPhases() internal {
         uint256 numberPhases = 20;
@@ -148,7 +149,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         address _stakingPool,
         address _developmentPool,
         address _holdingPool,
-        address _underlyingToken
+        address _underlyingToken,
+        address _priceFeedProviderAddress
     ) public initializer {
         __ERC20_init(_name, _symbol);
         __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
@@ -161,6 +163,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         developmentPool = _developmentPool;
         holdingPool = _holdingPool;
         underlyingToken = IERC20(_underlyingToken);
+        priceFeedProvider = PriceFeedProvider(_priceFeedProviderAddress);
 
         __tokensMintedPerPhase = 1000000;
 
@@ -249,9 +252,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalInterest = 0;
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
-            address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
+            PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
             for (uint256 ii = 0; ii < cTokens.length; ii++) {
-                totalInterest += __charityPoolRegistry[charity].totalInterestEarned(cTokens[ii]);
+                totalInterest += __charityPoolRegistry[charity].totalInterestEarned(cTokens[ii].lendingAddress);
             }
         }
         return totalInterest;
@@ -279,7 +282,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             console.log(charity);
 
-            address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
+            PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
             for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                 consumedGas = initialGas - gasleft();
                 console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
@@ -289,7 +292,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     return;
                 }
                 // get the total from each charity - this represents an accumulated value not just the current capital or interest
-                __charityPoolRegistry[charity].calculateTotalIncrementalInterest(cTokens[ii]);
+                __charityPoolRegistry[charity].calculateTotalIncrementalInterest(cTokens[ii].lendingAddress);
             }
 
             uint256 totalInterestUSDofCharity = __charityPoolRegistry[charity].newTotalInterestEarnedUSD();
@@ -531,7 +534,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 address charity = charityPoolList.at(i);
                 console.log(charity);
 
-                address[] memory cTokens = CharityPool(payable(charity)).getCTokens();
+                PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
                 for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                     consumedGas = initialGas - gasleft();
 
@@ -540,7 +543,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                         processingState.ii = ii;
                         return;
                     }
-                    __charityPoolRegistry[charity].redeemInterest(cTokens[ii]);
+                    __charityPoolRegistry[charity].redeemInterest(cTokens[ii].lendingAddress);
                 }
 
                 console.log("REDEEM END\n");

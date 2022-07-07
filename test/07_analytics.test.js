@@ -26,7 +26,7 @@ describe("Analytics", function () {
        
         const PriceFeedProvider = await smock.mock("PriceFeedProvider");
         proceFeedProviderMock = await PriceFeedProvider.deploy();
-        
+
         proceFeedProviderMock.hasDonationCurrency.returns(true);
 
         const WMock = await ethers.getContractFactory("WTokenMock");
@@ -40,6 +40,20 @@ describe("Analytics", function () {
         cTokenMock1 = await CTokenMock.deploy(uMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(uMock2.address, 1000);
 
+        donationCurrencies = [{
+            provider: "Provider1",
+            underlyingToken: uMock1.address,
+            lendingAddress: cTokenMock1.address,
+            priceFeed: addrs[5].address
+        }, {
+            provider: "Provider2",
+            underlyingToken: uMock2.address,
+            lendingAddress: cTokenMock2.address,
+            priceFeed: addrs[5].address
+        }];
+
+        await proceFeedProviderMock.initialize(donationCurrencies)
+
         iHelp = await IHelp.deploy();
 
         await iHelp.initialize(
@@ -49,7 +63,8 @@ describe("Analytics", function () {
             stakingPool.address,
             developmentPool.address,
             holdingPool.address,
-            mockContract.address
+            mockContract.address,
+            proceFeedProviderMock.address
         );
 
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
@@ -107,11 +122,7 @@ describe("Analytics", function () {
                 await charityPool1.setVariable("priceFeedProvider", proceFeedProviderMock.address)
                 await charityPool2.setVariable("priceFeedProvider", proceFeedProviderMock.address)
 
-                await charityPool1.addCToken(cTokenMock1.address);
-                await charityPool2.addCToken(cTokenMock1.address);
 
-                await charityPool1.addCToken(cTokenMock2.address);
-                await charityPool2.addCToken(cTokenMock2.address);
 
                 await charityPool2.setVariable("totalInterestEarned", {
                     [cTokenMock1.address]: 25,

@@ -32,6 +32,20 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     /**
+     * Get the total number of donation currencies
+     */
+    function numberOfDonationCurrencies() public view returns (uint256) {
+        return _donationCurrencyMapping.length();
+    }
+
+    /**
+     * Get the donation currency at a speciffic index
+     */
+    function getDonationCurrencyAt(uint256 index) public view returns (DonationCurrency memory) {
+        return getDonationCurrency(_donationCurrencyMapping.at(index));
+    }
+
+    /**
      * Returns the underlying token price and the decimal number of the price value
      */
     function getUnderlyingTokenPrice(address _lendingAddress) public view virtual returns (uint256, uint256) {
@@ -60,6 +74,8 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     function removeDonationCurrency(address _lendingAddress) public onlyOwner {
+        //TODO: !IMPORTANT. Make sure to redeem the intereset corresponding to this donation currency in 
+        // all the charity pools before the token is removed
         _donationCurrencyMapping.remove(_lendingAddress);
     }
 

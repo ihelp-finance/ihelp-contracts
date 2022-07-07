@@ -75,8 +75,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public stakingFee;
     uint256 public charityFee;
     uint256 public totalDonationsUSD;
-    uint256 public __currentProcessingIndex;
-    uint256 public __processingGasLimit;
 
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => uint256) public accountedBalances;
@@ -94,7 +92,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     SwapperInterface internal swapper;
     EnumerableSet.AddressSet private contributors;
-    EnumerableSet.AddressSet private cTokens;
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
@@ -146,7 +143,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         devFee = 100;
         stakingFee = 100;
         charityFee = 800;
-        __processingGasLimit = 300_000 * 1e9;
     }
 
     function setFees(
@@ -165,31 +161,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
         // since the next rewards will go to the new wallets.
         charityWallet = _newAddress;
-    }
-
-    function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
-        require(gasLimit > 0, "Limit cannot be 0");
-        __processingGasLimit = gasLimit;
-    }
-
-    function addCToken(address _cTokenAddress) external onlyOperatorOrOwner {
-        // TODO: Ask Mat, do we sitll keep the array of cTokens in the charity pool contracts now that we have the centralized price provider?
-        require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Funding/invalid-currency");
-        cTokens.add(_cTokenAddress);
-    }
-
-    function removeCToken(address _cTokenAddress) external onlyOperatorOrOwner {
-        _calculateTotalIncrementalInterest(_cTokenAddress);
-        _redeemInterest(_cTokenAddress);
-        cTokens.remove(_cTokenAddress);
-    }
-
-    function getCTokens() public view returns (address[] memory) {
-        return cTokens.values();
-    }
-
-    function hasCToken(address _cTokenAddress) external view returns (bool) {
-        return cTokens.contains(_cTokenAddress);
     }
 
     /**
@@ -264,14 +235,13 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _amount
     ) internal {
         require(_amount != 0, "Funding/deposit-zero");
-
-        require(cTokens.contains(_cTokenAddress), "Invalid configuration");
+        require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Native-Funding/invalid-ctoken");
         // Update the user's balance
         balances[_spender][_cTokenAddress] += _amount;
 
         // Update the total balance of cTokens of this contract
         accountedBalances[_cTokenAddress] += _amount;
-        
+
         // Deposit into Compound
         require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
         require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
@@ -318,7 +288,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             address tokenaddress = address(_donationToken);
 
             // Add up the donation amount before the swap
-            _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
+            _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(
+                tokenaddress,
+                holdingToken,
+                _amount
+            );
 
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
@@ -532,9 +506,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
         (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
-      
-        uint256 valueUSD = _value.mul(tokenPrice);
-        valueUSD = valueUSD.div(safepow(10, priceDecimals));
+        uint256 valueUSD = _value * tokenPrice ;
+        valueUSD = valueUSD / safepow(10, priceDecimals);
 
         uint256 _decimals = decimals(_cTokenAddress);
         if (_decimals < holdingDecimals) {
@@ -581,9 +554,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function accountedBalanceUSD() public view returns (uint256) {
+        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += convertToUsd(cTokens.at(i), accountedBalances[cTokens.at(i)]);
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, accountedBalances[cTokenAddress]);
         }
         return result;
     }
@@ -592,9 +567,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function newTotalInterestEarnedUSD() public view returns (uint256) {
+        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += newCTokenTotalUSDInterest(cTokens.at(i));
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += newCTokenTotalUSDInterest(cTokenAddress);
         }
         return result;
     }
@@ -603,9 +580,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function totalInterestEarnedUSD() public view returns (uint256) {
+        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += cTokenTotalUSDInterest(cTokens.at(i));
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += cTokenTotalUSDInterest(cTokenAddress);
         }
         return result;
     }
@@ -615,8 +594,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function calculateTotalInterestEarned() public view returns (uint256) {
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += totalInterestEarned[cTokens.at(i)];
+        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += totalInterestEarned[cTokenAddress];
         }
         return result;
     }
@@ -635,8 +616,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length(); i++) {
-            result += convertToUsd(cTokens.at(i), balances[_addr][cTokens.at(i)]);
+        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
         }
         return result;
     }
