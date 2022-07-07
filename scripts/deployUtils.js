@@ -119,6 +119,7 @@ module.exports.getTokenAddresses = async (currency, lender, chainId) => {
 
     return {
         lender,
+        currency,
         "token": tokenaddress,
         "lendingtoken": ctokenaddress,
         "pricefeed": pricefeed

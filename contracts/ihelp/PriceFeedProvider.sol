@@ -12,6 +12,7 @@ contract PriceFeedProvider is OwnableUpgradeable {
 
     struct DonationCurrency {
         string provider;
+        string currency;
         address underlyingToken;
         address lendingAddress;
         address priceFeed;

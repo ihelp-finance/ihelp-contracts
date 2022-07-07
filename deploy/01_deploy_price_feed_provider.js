@@ -25,6 +25,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   lendingTokenDetails = lendingTokenDetails.map(item => ({
     provider: item.lender,
+    currency: item.currency,
     underlyingToken: item.token,
     lendingAddress: item.lendingtoken,
     priceFeed: item.pricefeed
