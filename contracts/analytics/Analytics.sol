@@ -385,6 +385,13 @@ contract Analytics is IAnalytics {
             });
     }
 
+    /**
+     * Get all the configured donation currencies
+     */
+    function getSupportedCurrencies(iHelpToken _iHelp) public view returns (PriceFeedProvider.DonationCurrency[] memory) {
+        return _iHelp.priceFeedProvider().getAllDonationCurrencies();
+    }
+
     function paginationChecks(
         iHelpToken _iHelp,
         uint256 _offset,
@@ -403,4 +410,6 @@ contract Analytics is IAnalytics {
 
         return (_offset, _limit);
     }
+
+
 }
