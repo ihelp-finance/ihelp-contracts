@@ -24,7 +24,7 @@ describe("Analytics", function () {
         [owner, addr1, addr2, operator, stakingPool, developmentPool, holdingPool, swapperPool, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
 
-        const PriceFeedProvider = await smock.mock("PriceFeedProvider");
+        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         proceFeedProviderMock = await PriceFeedProvider.deploy();
 
         proceFeedProviderMock.hasDonationCurrency.returns(true);
@@ -77,6 +77,8 @@ describe("Analytics", function () {
 
         await charityPool1.setVariable("operator", owner.address);
         await charityPool2.setVariable("operator", owner.address);
+        await charityPool1.setVariable("priceFeedProvider", proceFeedProviderMock.address);
+        await charityPool2.setVariable("priceFeedProvider", proceFeedProviderMock.address);
 
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
@@ -487,6 +489,34 @@ describe("Analytics", function () {
                 expect(result.length).to.equal(2);
                 expect(result[0].balance).to.equal(15);
                 expect(result[1].balance).to.equal(30);
+            })
+
+            it("should return the suppored donation currencies user contributions per charity", async () => {
+                uMock1.balanceOf.returns(15);
+                uMock2.balanceOf.returns(30);
+
+                const result = await analytics.getUserWalletBalances(iHelp.address, owner.address);
+                expect(result.length).to.equal(2);
+                expect(result[0].balance).to.equal(15);
+                expect(result[1].balance).to.equal(30);
+            })
+
+            it("should return user contributions token contributions per charity", async () => {
+                await charityPool1.setVariable("balances", {
+                    [owner.address]: {
+                        [cTokenMock1.address]: 20,
+                        [cTokenMock2.address]: 50
+                    }
+                })
+
+                const result = await analytics.getUserTokenContributionsPerCharity(charityPool1.address, owner.address);
+                expect(result.length).to.equal(2);
+                expect(result[0].totalContributions).to.equal(20);
+                expect(result[0].tokenAddress).to.equal(cTokenMock1.address);
+
+                expect(result[1].totalContributions).to.equal(50)
+                expect(result[1].tokenAddress).to.equal(cTokenMock2.address);
+
             })
         })
     });

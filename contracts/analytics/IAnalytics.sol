@@ -161,6 +161,14 @@ interface IAnalytics {
     ) external view returns (AnalyticsUtils.UserCharityContributions[] memory); 
 
     /**
+     * Returns an array that contains the charity contribution info for a given user
+     */
+    function getUserTokenContributionsPerCharity(CharityPool _charity, address _user)
+        external
+        view
+        returns (AnalyticsUtils.UserCharityTokenContributions[] memory);
+  
+    /**
      * Returns the user wallet balances of all supported donation currencies
      */
     function getUserWalletBalances(iHelpToken _iHelp, address _user) external view returns (AnalyticsUtils.WalletBalance[] memory);

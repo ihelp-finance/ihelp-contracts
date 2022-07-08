@@ -344,16 +344,50 @@ contract Analytics is IAnalytics {
     }
 
     /**
+     * Returns an array that contains the charity contribution info for a given user
+     */
+    function getUserTokenContributionsPerCharity(CharityPool _charity, address _user)
+        external
+        view
+        returns (AnalyticsUtils.UserCharityTokenContributions[] memory)
+    {
+        PriceFeedProvider.DonationCurrency[] memory currencies = _charity
+            .priceFeedProvider()
+            .getAllDonationCurrencies();
+
+        AnalyticsUtils.UserCharityTokenContributions[]
+            memory result = new AnalyticsUtils.UserCharityTokenContributions[](currencies.length);
+
+        for (uint256 index = 0; index < currencies.length; index++) {
+            address cTokenAddress = currencies[index].lendingAddress;
+            (uint256 price, uint256 decimals) = _charity.getUnderlyingTokenPrice(cTokenAddress);
+            uint256 contribution = _charity.balances(_user, cTokenAddress);
+            uint256 contributionUSD = (contribution * price) / 10 ** decimals;
+
+            result[index] = AnalyticsUtils.UserCharityTokenContributions({
+                tokenAddress: currencies[index].lendingAddress,
+                currency: currencies[index].currency,
+                totalContributions: contributionUSD
+            });
+        }
+        return result;
+    }
+
+    /**
      * Returns the user wallet balances of all supported donation currencies
      */
-    function getUserWalletBalances(iHelpToken _iHelp, address _user) external view returns (AnalyticsUtils.WalletBalance[] memory) {
+    function getUserWalletBalances(iHelpToken _iHelp, address _user)
+        external
+        view
+        returns (AnalyticsUtils.WalletBalance[] memory)
+    {
         PriceFeedProvider.DonationCurrency[] memory currencies = getSupportedCurrencies(_iHelp);
 
-        AnalyticsUtils.WalletBalance[] memory result = new  AnalyticsUtils.WalletBalance[](currencies.length);
+        AnalyticsUtils.WalletBalance[] memory result = new AnalyticsUtils.WalletBalance[](currencies.length);
         for (uint256 index = 0; index < currencies.length; index++) {
             result[index] = AnalyticsUtils.WalletBalance({
                 tokenAddress: currencies[index].underlyingToken,
-                currency:  currencies[index].currency,
+                currency: currencies[index].currency,
                 balance: IERC20(currencies[index].underlyingToken).balanceOf(address(_user))
             });
         }
@@ -406,7 +440,11 @@ contract Analytics is IAnalytics {
     /**
      * Get all the configured donation currencies
      */
-    function getSupportedCurrencies(iHelpToken _iHelp) public view returns (PriceFeedProvider.DonationCurrency[] memory) {
+    function getSupportedCurrencies(iHelpToken _iHelp)
+        public
+        view
+        returns (PriceFeedProvider.DonationCurrency[] memory)
+    {
         return _iHelp.priceFeedProvider().getAllDonationCurrencies();
     }
 
@@ -428,6 +466,4 @@ contract Analytics is IAnalytics {
 
         return (_offset, _limit);
     }
-
-
 }
