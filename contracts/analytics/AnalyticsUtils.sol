@@ -46,4 +46,10 @@ library AnalyticsUtils {
         string charityName;
         uint256 balance;
     }
+
+    struct WalletBalance {
+        address tokenAddress;
+        string currency;
+        uint256 balance;
+    }
 }

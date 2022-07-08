@@ -39,11 +39,13 @@ describe("PriceFeedProvider", function () {
             provider: "Provider1",
             underlyingToken: underlyingMock1.address,
             lendingAddress: cTokenMock1.address,
+            currency: "currency1",
             priceFeed: chainLinkAggretator.address
         }, {
             provider: "Provider2",
             underlyingToken: underlyingMock2.address,
             lendingAddress: cTokenMock2.address,
+            currency: "currency2",
             priceFeed: chainLinkAggretator.address
         }];
 

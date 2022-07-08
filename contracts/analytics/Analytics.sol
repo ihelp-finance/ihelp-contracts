@@ -344,6 +344,24 @@ contract Analytics is IAnalytics {
     }
 
     /**
+     * Returns the user wallet balances of all supported donation currencies
+     */
+    function getUserWalletBalances(iHelpToken _iHelp, address _user) external view returns (AnalyticsUtils.WalletBalance[] memory) {
+        PriceFeedProvider.DonationCurrency[] memory currencies = getSupportedCurrencies(_iHelp);
+
+        AnalyticsUtils.WalletBalance[] memory result = new  AnalyticsUtils.WalletBalance[](currencies.length);
+        for (uint256 index = 0; index < currencies.length; index++) {
+            result[index] = AnalyticsUtils.WalletBalance({
+                tokenAddress: currencies[index].underlyingToken,
+                currency:  currencies[index].currency,
+                balance: IERC20(currencies[index].underlyingToken).balanceOf(address(_user))
+            });
+        }
+
+        return result;
+    }
+
+    /**
      * Get charity pools balances and addresses
      */
     function getCharityPoolsAddressesAndBalances(
@@ -385,6 +403,13 @@ contract Analytics is IAnalytics {
             });
     }
 
+    /**
+     * Get all the configured donation currencies
+     */
+    function getSupportedCurrencies(iHelpToken _iHelp) public view returns (PriceFeedProvider.DonationCurrency[] memory) {
+        return _iHelp.priceFeedProvider().getAllDonationCurrencies();
+    }
+
     function paginationChecks(
         iHelpToken _iHelp,
         uint256 _offset,
@@ -403,4 +428,6 @@ contract Analytics is IAnalytics {
 
         return (_offset, _limit);
     }
+
+
 }

@@ -23,7 +23,7 @@ describe("Analytics", function () {
 
         [owner, addr1, addr2, operator, stakingPool, developmentPool, holdingPool, swapperPool, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
-       
+
         const PriceFeedProvider = await smock.mock("PriceFeedProvider");
         proceFeedProviderMock = await PriceFeedProvider.deploy();
 
@@ -42,11 +42,13 @@ describe("Analytics", function () {
 
         donationCurrencies = [{
             provider: "Provider1",
+            currency: "currency1",
             underlyingToken: uMock1.address,
             lendingAddress: cTokenMock1.address,
             priceFeed: addrs[5].address
         }, {
             provider: "Provider2",
+            currency: "currency2",
             underlyingToken: uMock2.address,
             lendingAddress: cTokenMock2.address,
             priceFeed: addrs[5].address
@@ -281,6 +283,21 @@ describe("Analytics", function () {
                 expect(result.devContribUSD).to.equal(0);
                 expect(result.stakeContribUSD).to.equal(0);
             });
+
+            it("should return the supported donation currencies", async () => {
+                const currencies = await analytics.getSupportedCurrencies(iHelp.address);
+                console.log(currencies);
+                expect(currencies.length).to.equal(2);
+                expect(currencies[0].provider).to.equal("Provider1");
+                expect(currencies[0].underlyingToken).to.equal(uMock1.underlyingToken);
+                expect(currencies[0].lendingAddress).to.equal(cTokenMock1.lendingAddress);
+                expect(currencies[0].priceFeed).to.equal(addrs[5].address);
+
+                expect(currencies[1].provider).to.equal("Provider2");
+                expect(currencies[1].underlyingToken).to.equal(uMock2.underlyingToken);
+                expect(currencies[1].lendingAddress).to.equal(cTokenMock2.lendingAddress);
+                expect(currencies[1].priceFeed).to.equal(addrs[5].address);
+            });
         })
 
         describe("Consolidated calls", () => {
@@ -309,7 +326,7 @@ describe("Analytics", function () {
                 charityPool1.totalInterestEarnedUSD.returns(22);
                 charityPool1.numberOfContributors.returns(4);
                 charityPool1.totalDonationsUSD.returns(5);
-                
+
                 const result = await analytics.charityStats(charityPool1.address);
 
                 expect(result.totalValueLocked).to.equal(12);
@@ -410,7 +427,7 @@ describe("Analytics", function () {
                 charityPool1.balanceOfUSD.returns(200);
                 charityPool2.balanceOfUSD.returns(300);
 
-    
+
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
@@ -436,7 +453,7 @@ describe("Analytics", function () {
                 charityPool1.balanceOfUSD.returns(200);
                 charityPool2.balanceOfUSD.returns(300);
 
-    
+
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
@@ -456,10 +473,20 @@ describe("Analytics", function () {
 
                 iHelp.totalSupply.returns(200);
                 iHelp.balanceOf.returns(100)
-             
+
                 const result = await analytics.stakingPoolState(iHelp.address, owner.address)
                 expect(result.iHelpTokensInCirculation).to.equal(100);
                 expect(result.iHelpStaked).to.equal(100);
+            })
+
+            it("should return the suppored donation currencies user balance", async () => {
+                uMock1.balanceOf.returns(15);
+                uMock2.balanceOf.returns(30);
+
+                const result = await analytics.getUserWalletBalances(iHelp.address, owner.address);
+                expect(result.length).to.equal(2);
+                expect(result[0].balance).to.equal(15);
+                expect(result[1].balance).to.equal(30);
             })
         })
     });
