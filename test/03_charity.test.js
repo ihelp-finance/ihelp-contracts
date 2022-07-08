@@ -24,15 +24,15 @@ describe("Charity Pool", function () {
         const Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
         CTokenMock = await smock.mock("CTokenMock");
-        
+
         const aggregator = await smock.fake(abi);
-        aggregator.latestRoundData.returns([0,1e9,0,0,0]);
+        aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
 
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
-     
+
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
-       
+
         cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
 
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
@@ -58,10 +58,11 @@ describe("Charity Pool", function () {
         await priceFeedProviderMock.initialize([{
             provider: "TestProvider",
             lendingAddress: cTokenMock.address,
+            currency: "CTokenMock",
             underlyingToken: cTokenUnderlyingMock.address,
             priceFeed: aggregator.address
         }]);
-        
+
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
     });
@@ -284,6 +285,12 @@ describe("Charity Pool", function () {
                 .to.emit(charityPool, "DirectDonation").withArgs(owner.address, charityWallet.address, 100);
         });
 
+        it("Should update the direct doantions balance", async function () {
+            await charityPool.directDonation(holdingMock.address, 100);
+            expect(await charityPool.donationBalances(owner.address, holdingMock.address)).to.equal(100);
+        });
+
+
         it("Should send staking fee", async function () {
             await charityPool.setVariable('holdingToken', cTokenUnderlyingMock.address);
             const amount = parseEther("10");
@@ -447,7 +454,7 @@ describe("Charity Pool", function () {
 
         it("Should calculate usd interest", async function () {
             const interest = 10000;
-            const expectedInterestInUsd = interest; 
+            const expectedInterestInUsd = interest;
             cTokenMock.balanceOfUnderlying.returns(interest);
 
             await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);

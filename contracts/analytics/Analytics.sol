@@ -374,6 +374,36 @@ contract Analytics is IAnalytics {
     }
 
     /**
+     * Returns an array that contains the charity donations info for a given user
+     */
+    function getUserTokenDonationsPerCharity(CharityPool _charity, address _user)
+        external
+        view
+        returns (AnalyticsUtils.UserCharityTokenContributions[] memory)
+    {
+        PriceFeedProvider.DonationCurrency[] memory currencies = _charity
+            .priceFeedProvider()
+            .getAllDonationCurrencies();
+
+        AnalyticsUtils.UserCharityTokenContributions[]
+            memory result = new AnalyticsUtils.UserCharityTokenContributions[](currencies.length);
+
+        for (uint256 index = 0; index < currencies.length; index++) {
+            address cTokenAddress = currencies[index].lendingAddress;
+            (uint256 price, uint256 decimals) = _charity.getUnderlyingTokenPrice(cTokenAddress);
+            uint256 contribution = _charity.donationBalances(_user, cTokenAddress);
+            uint256 contributionUSD = (contribution * price) / 10 ** decimals;
+
+            result[index] = AnalyticsUtils.UserCharityTokenContributions({
+                tokenAddress: currencies[index].lendingAddress,
+                currency: currencies[index].currency,
+                totalContributions: contributionUSD
+            });
+        }
+        return result;
+    }
+
+    /**
      * Returns the user wallet balances of all supported donation currencies
      */
     function getUserWalletBalances(iHelpToken _iHelp, address _user)

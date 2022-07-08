@@ -77,6 +77,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public totalDonationsUSD;
 
     mapping(address => mapping(address => uint256)) public balances;
+    mapping(address => mapping(address => uint256)) public donationBalances;
+
     mapping(address => uint256) public accountedBalances;
     mapping(address => CharityPoolUtils.DirectDonationsCounter) private _donationsRegistry;
 
@@ -294,6 +296,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 _amount
             );
 
+            // keep track of donation balances
+            donationBalances[_account][address(_donationToken)] += _amount;
+            
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
                 uint256 minAmount = (_amount * 95) / 100;

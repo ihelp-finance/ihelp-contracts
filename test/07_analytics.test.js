@@ -501,7 +501,7 @@ describe("Analytics", function () {
                 expect(result[1].balance).to.equal(30);
             })
 
-            it("should return user contributions token contributions per charity", async () => {
+            it("should return user token contributions per charity", async () => {
                 await charityPool1.setVariable("balances", {
                     [owner.address]: {
                         [cTokenMock1.address]: 20,
@@ -515,6 +515,24 @@ describe("Analytics", function () {
                 expect(result[0].tokenAddress).to.equal(cTokenMock1.address);
 
                 expect(result[1].totalContributions).to.equal(50)
+                expect(result[1].tokenAddress).to.equal(cTokenMock2.address);
+
+            })
+
+            it("should return user  token donations per charity", async () => {
+                await charityPool1.setVariable("donationBalances", {
+                    [owner.address]: {
+                        [cTokenMock1.address]: 25,
+                        [cTokenMock2.address]: 75
+                    }
+                })
+
+                const result = await analytics.getUserTokenDonationsPerCharity(charityPool1.address, owner.address);
+                expect(result.length).to.equal(2);
+                expect(result[0].totalContributions).to.equal(25);
+                expect(result[0].tokenAddress).to.equal(cTokenMock1.address);
+
+                expect(result[1].totalContributions).to.equal(75)
                 expect(result[1].tokenAddress).to.equal(cTokenMock2.address);
 
             })
