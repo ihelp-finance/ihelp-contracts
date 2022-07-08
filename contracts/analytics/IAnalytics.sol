@@ -160,6 +160,16 @@ interface IAnalytics {
         uint256 _limit
     ) external view returns (AnalyticsUtils.UserCharityContributions[] memory); 
 
+    /**
+     * Returns the user wallet balances of all supported donation currencies
+     */
+    function getUserWalletBalances(iHelpToken _iHelp, address _user) external view returns (AnalyticsUtils.WalletBalance[] memory);
+    
+    /**
+     * Get charity pools balances and addresses
+     */
+    function getCharityPoolsAddressesAndBalances(iHelpToken _iHelp, uint256 _offset, uint256 _limit) external view returns (AnalyticsUtils.CharityBalanceInfo[] memory);
+   
      /**
      * Get the state of the staking pool
      */
