@@ -96,21 +96,26 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
     cyan("\nDeploying WETH...")
     wethResult = await deploy("WETH", {
-      contract: 'WTokenMock',
+      args: [
+        'WETH Test Token',
+        'WETH',
+        18
+      ],
+      contract: 'ERC20MintableMock',
+      from: deployer,
+    });
+
+    cyan("\nDeploying cWETH...")
+    // should be about 20% APR
+    cWethResult = await deploy("cWETH", {
+      args: [
+        wethResult.address,
+        supplyRate
+      ],
+      contract: 'CTokenMock',
       from: deployer,
       skipIfAlreadyDeployed: true
     })
-
-    // cyan("\nDeploying cETH...")
-    // // should be about 20% APR
-    // cEthResult = await deploy("cETH", {
-    //   args: [
-    //     supplyRate
-    //   ],
-    //   contract: 'CEtherMock',
-    //   from: deployer,
-    //   skipIfAlreadyDeployed: true
-    // })
 
     // Display Contract Addresses
     dim("\nLocal Contract Deployments;\n");
@@ -119,7 +124,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     dim("  - USDC:              ", usdcResult.address);
     dim("  - cUSDC:             ", cUsdcResult.address);
     dim("  - WETH:              ", wethResult.address)
-    //dim("  - cETH:              ", cEthAddress)
+    dim("  - cWETH:              ", cWethResult.address)
   }
 
   // publish the contracts

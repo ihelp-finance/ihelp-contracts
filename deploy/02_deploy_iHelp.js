@@ -23,7 +23,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
   // deploy the iHelp token
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
-  const holdingtokenAddress = ihelpAddresses['token'];
+  const holdingtokenAddress = ihelpAddresses['underlyingToken'];
   const PriceFeedProvider = await deployments.get("priceFeedProvider");
 
   await catchUnknownSigner(

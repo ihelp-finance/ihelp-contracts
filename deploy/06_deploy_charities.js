@@ -89,7 +89,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   // deploy charity - make this a function
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
-  const holdingtokenAddress = ihelpAddresses['token'];
+  const holdingtokenAddress = ihelpAddresses['underlyingToken'];
 
 
 

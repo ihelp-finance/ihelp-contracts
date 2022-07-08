@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
   let lendingTokenDetails
   if (isTestEnvironment) {
-    lendingTokenDetails = [await getTokenAddresses('DAI', 'compound', chainId), await getTokenAddresses('USDC', 'compound',chainId)]
+    lendingTokenDetails = [await getTokenAddresses('DAI', 'compound', chainId), await getTokenAddresses('USDC', 'compound',chainId), await getTokenAddresses('WETH', 'compound',chainId)]
   } else {
     //TODO: Add define the intial lending tokens that will be used in production
   }
@@ -26,9 +26,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   lendingTokenDetails = lendingTokenDetails.map(item => ({
     provider: item.lender,
     currency: item.currency,
-    underlyingToken: item.token,
-    lendingAddress: item.lendingtoken,
-    priceFeed: item.pricefeed
+    underlyingToken: item.underlyingToken,
+    lendingAddress: item.lendingAddress,
+    priceFeed: item.priceFeed
   }));
 
   console.log(lendingTokenDetails)

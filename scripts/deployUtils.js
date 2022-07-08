@@ -59,6 +59,7 @@ module.exports.deployCharityPoolToNetwork = async ({
 };
 
 module.exports.getTokenAddresses = async (currency, lender, chainId) => {
+    
     let ctokenaddress = null;
     let pricefeed = null;
     let tokenaddress = null;
@@ -70,59 +71,39 @@ module.exports.getTokenAddresses = async (currency, lender, chainId) => {
 
     if (isTestEnvironment) {
 
-        if (currency == 'DAI') {
-            tokenaddress = (await deployments.getOrNull("DAI")).address;
-            ctokenaddress = (await deployments.getOrNull("cDAI")).address;
-            pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-        }
-        else if (currency == 'USDC') {
-            tokenaddress = (await deployments.getOrNull("USDC")).address;
-            ctokenaddress = (await deployments.getOrNull("cUSDC")).address;
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-        }
-        else if (currency == 'WETH') {
-            tokenaddress = (await deployments.getOrNull("WETH")).address;
-            ctokenaddress = null;
-            pricefeed = addresses[lender]['PriceOracleProxy']['WETH'];
-        }
-        else if (currency == 'HELP') {
+        if (currency == 'HELP') {
             tokenaddress = (await deployments.getOrNull("iHelp")).address;
             ctokenaddress = null;
             pricefeed = null;
+        } 
+        else {
+            tokenaddress = (await deployments.getOrNull(currency)).address;
+            ctokenaddress = (await deployments.getOrNull('c'+currency)).address;
+            pricefeed = addresses[lender][currency]['priceFeed']
         }
 
     }
     else {
 
-        if (currency == 'DAI') {
-            tokenaddress = addresses[lender]['Tokens']['DAI'];
-            ctokenaddress = addresses[lender]['lendingTokens']['DAI'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-        }
-        else if (currency == 'USDC') {
-            tokenaddress = addresses[lender]['Tokens']['USDC'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDC'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-        }
-        else if (currency == 'USDT') {
-            tokenaddress = addresses[lender]['Tokens']['USDT'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDT'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDT'];
-        }
-        else if (currency == 'HELP') {
+        if (currency == 'HELP') {
             tokenaddress = (await deployments.getOrNull("iHelp")).address;
             ctokenaddress = null;
             pricefeed = null;
+        }
+        else {
+            tokenaddress = addresses[lender][currency]['underlyingToken']
+            ctokenaddress = addresses[lender][currency]['lendingAddress']
+            pricefeed = addresses[lender][currency]['priceFeed']
         }
 
     }
 
     return {
-        lender,
-        currency,
-        "token": tokenaddress,
-        "lendingtoken": ctokenaddress,
-        "pricefeed": pricefeed
+        "currency": currency,
+        "lender": isTestEnvironment ? 'mock' : lender,
+        "underlyingToken": tokenaddress,
+        "lendingAddress": ctokenaddress,
+        "priceFeed": pricefeed
     };
 
 };

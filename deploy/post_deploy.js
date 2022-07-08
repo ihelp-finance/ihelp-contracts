@@ -79,7 +79,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   const activateETHLiquidityPool = async (token, value, lender, dex) => {
 
     const token1Addresses = await getTokenAddresses(token, lender, chainId);
-    const token1Address = token1Addresses['token'];
+    const token1Address = token1Addresses['underlyingToken'];
     const ethAddress = await swapv2Router.WETH();
 
     console.log('');
@@ -170,8 +170,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     const token1Addresses = await getTokenAddresses(token1, lender, chainId);
     const token2Addresses = await getTokenAddresses(token2, lender, chainId);
 
-    const token1Address = token1Addresses['token'];
-    const token2Address = token2Addresses['token'];
+    const token1Address = token1Addresses['underlyingToken'];
+    const token2Address = token2Addresses['underlyingToken'];
 
     console.log('');
     dim(token1, '->', token2);
