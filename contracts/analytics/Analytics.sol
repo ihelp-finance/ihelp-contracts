@@ -411,7 +411,7 @@ contract Analytics is IAnalytics {
         view
         returns (AnalyticsUtils.WalletBalance[] memory)
     {
-        PriceFeedProvider.DonationCurrency[] memory currencies = getSupportedCurrencies(_iHelp);
+        PriceFeedProvider.DonationCurrency[] memory currencies = _iHelp.priceFeedProvider().getAllDonationCurrencies();
 
         AnalyticsUtils.WalletBalance[] memory result = new AnalyticsUtils.WalletBalance[](currencies.length);
         for (uint256 index = 0; index < currencies.length; index++) {
@@ -495,9 +495,26 @@ contract Analytics is IAnalytics {
     function getSupportedCurrencies(iHelpToken _iHelp)
         public
         view
-        returns (PriceFeedProvider.DonationCurrency[] memory)
+        returns (AnalyticsUtils.DonationCurrencyDetails[] memory)
     {
-        return _iHelp.priceFeedProvider().getAllDonationCurrencies();
+        PriceFeedProvider.DonationCurrency[] memory currencies = _iHelp.priceFeedProvider().getAllDonationCurrencies();
+        AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](currencies.length);
+      
+        for (uint i = 0; i < currencies.length; i++) {
+            uint256 decimals = IERC20(currencies[i].lendingAddress).decimals();
+            (uint256 price, uint256 priceDecimals) = _iHelp.priceFeedProvider().getUnderlyingTokenPrice(currencies[i].lendingAddress);
+          
+            result[i].decimals = decimals;
+            result[i].provider = currencies[i].provider;
+            result[i].currency = currencies[i].currency;
+            result[i].underlyingToken = currencies[i].underlyingToken;
+            result[i].lendingAddress = currencies[i].lendingAddress;
+            result[i].priceFeed = currencies[i].priceFeed;
+            result[i].price = price;
+            result[i].priceDecimals = priceDecimals;
+        }
+
+        return result;
     }
 
     function paginationChecks(

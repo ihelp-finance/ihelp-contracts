@@ -64,4 +64,15 @@ library AnalyticsUtils {
         string currency;
         uint256 allowance;
     }
+
+    struct DonationCurrencyDetails  {
+        string provider;
+        string currency;
+        address underlyingToken;
+        address lendingAddress;
+        address priceFeed;
+        uint256 price;
+        uint256 priceDecimals;
+        uint256 decimals;
+    }
 }

@@ -288,16 +288,15 @@ describe("Analytics", function () {
 
             it("should return the supported donation currencies", async () => {
                 const currencies = await analytics.getSupportedCurrencies(iHelp.address);
-                console.log(currencies);
                 expect(currencies.length).to.equal(2);
                 expect(currencies[0].provider).to.equal("Provider1");
-                expect(currencies[0].underlyingToken).to.equal(uMock1.underlyingToken);
-                expect(currencies[0].lendingAddress).to.equal(cTokenMock1.lendingAddress);
+                expect(currencies[0].underlyingToken).to.equal(uMock1.address);
+                expect(currencies[0].lendingAddress).to.equal(cTokenMock1.address);
                 expect(currencies[0].priceFeed).to.equal(addrs[5].address);
 
                 expect(currencies[1].provider).to.equal("Provider2");
-                expect(currencies[1].underlyingToken).to.equal(uMock2.underlyingToken);
-                expect(currencies[1].lendingAddress).to.equal(cTokenMock2.lendingAddress);
+                expect(currencies[1].underlyingToken).to.equal(uMock2.address);
+                expect(currencies[1].lendingAddress).to.equal(cTokenMock2.address);
                 expect(currencies[1].priceFeed).to.equal(addrs[5].address);
             });
         })
