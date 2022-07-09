@@ -9,4 +9,5 @@ interface iHelpTokenInterface is IERC20 {
     function getUnderlyingToken() external view returns (IERC20);
     function getStakingPool() external view returns (address);
     function getHoldingPool() external view returns (address);
+    function getFees() external view returns(uint256, uint256, uint256);
 }

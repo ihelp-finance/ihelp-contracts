@@ -37,7 +37,7 @@ contract Swapper is OwnableUpgradeable {
         address[] memory path;
         path = new address[](3);
         path[0] = _tokenIn;
-        path[1] = SWAP_ROUTER.WETH();
+        path[1] = nativeToken();
         path[2] = _tokenOut;
 
         return _swapByPath(path, _amountIn, _amountOutMin, _to);
@@ -76,7 +76,7 @@ contract Swapper is OwnableUpgradeable {
         return result[path.length - 1];
     }
 
-    function nativeToken() external view returns (address) {
+    function nativeToken() public view returns (address) {
         return SWAP_ROUTER.WETH();
     }
 

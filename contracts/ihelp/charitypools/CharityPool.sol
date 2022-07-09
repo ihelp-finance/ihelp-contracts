@@ -71,9 +71,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public developmentPool;
     address public holdingToken;
 
-    uint256 public devFee;
-    uint256 public stakingFee;
-    uint256 public charityFee;
     uint256 public totalDonationsUSD;
 
     mapping(address => mapping(address => uint256)) public balances;
@@ -140,22 +137,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
         wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
         priceFeedProvider = PriceFeedProvider(configuration.priceFeedProvider);
-
-        // TODO: Are the fees correct?
-        devFee = 100;
-        stakingFee = 100;
-        charityFee = 800;
-    }
-
-    function setFees(
-        uint8 _dev,
-        uint8 _stake,
-        uint8 _charity
-    ) external onlyOperatorOrOwner {
-        require(_dev + _stake + _charity < 100, "fee-config/invalid");
-        devFee = _dev;
-        stakingFee = _stake;
-        charityFee = _charity;
     }
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
@@ -208,8 +189,8 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Withdraw the sender's entire balance back to them.
      */
     function withdrawTokens(address _cTokenAddress, uint256 _amount) public {
-        if(_amount == 0) {
-            _amount =  balances[msg.sender][_cTokenAddress];
+        if (_amount == 0) {
+            _amount = balances[msg.sender][_cTokenAddress];
         }
         _withdraw(msg.sender, _cTokenAddress, _amount);
         // Withdraw from Compound and transfer
@@ -290,7 +271,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             // keep track of donation balances
             donationBalances[_account][address(_donationToken)] += _amount;
-            
+
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
                 uint256 minAmount = (_amount * 95) / 100;
@@ -304,6 +285,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 console.log("AMOUNT AFTER SWAP::", _amount);
             }
 
+            (uint256 devFee, uint256 stakingFee, ) = ihelpToken.getFees();
             // 2.5% to developer pool as native currency of pool
             uint256 developerFeeAmount = (_amount * devFee) / 1000;
 
@@ -348,7 +330,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * Sends interest form the charity contract to their wallet
      */
-    function claimInterest() external onlyHelpToken {
+    function claimInterest() external {
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
         console.log("CHARITY_POOL::CLAIM:::", amount);
         if (amount == 0) {
@@ -356,6 +338,13 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
         bool success = IERC20(holdingToken).transfer(charityWallet, amount);
         require(success, "transfer failed");
+    }
+
+    /**
+     * Returns the claimbale intrest in holding tokens for this charity pool
+     */
+    function claimableInterest() public view returns (uint256) {
+        return IERC20(holdingToken).balanceOf(address(this));
     }
 
     function _redeemInterest(address _cTokenAddress) internal {
@@ -371,30 +360,33 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
             address tokenaddress = address(underlyingToken);
-
-            if (tokenaddress == holdingToken) {
-                uint256 charityShare = (amount * charityFee) / 1000;
-                require(underlyingToken.transfer(holdingPool, amount - charityShare), "Funding/transfer");
-            } else {
+            if (tokenaddress != holdingToken) {
                 console.log("\nSWAPPING", swapperPool, amount);
 
                 // ensure minimum of 50% redeemed
                 uint256 minAmount = (amount * 50) / 100;
-                // console.log( holdingToken, amount, minAmount, holdingPool);
 
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
                 console.log("TOKEN::", tokenaddress, holdingToken);
-                uint256 swapResult = swapper.swap(tokenaddress, holdingToken, amount, minAmount, address(this));
-                if (swapResult > 0) {
-                    uint256 charityShare = (swapResult * charityFee) / 1000;
-                    require(IERC20(holdingToken).transfer(holdingPool, swapResult - charityShare), "Funding/transfer");
-                }
+                amount = swapper.swap(tokenaddress, holdingToken, amount, minAmount, address(this));
             }
+            (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
+            uint256 devFeeShare = (amount * devFee) / 1000;
+            uint256 stakeFeeShare = (amount * stakeFee) / 1000;
+
+            console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
+            console.log("Dev and stake fees::", devFee, stakeFee);
+
+            require(IERC20(holdingToken).transfer(developmentPool, devFeeShare), "Funding/transfer");
+            require(IERC20(holdingToken).transfer(stakingPool, stakeFeeShare), "Funding/transfer");
 
             // reset the lastinterestearned incrementer
             currentInterestEarned[_cTokenAddress] = 0;
             redeemableInterest[_cTokenAddress] = 0;
+
+            // TODO: Ask matt do we have to reset the interest after claiming?
+            newTotalInterestEarned[_cTokenAddress] = 0;
 
             emit Rewarded(charityWallet, amount);
         }
@@ -503,7 +495,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
         (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
-        uint256 valueUSD = _value * tokenPrice ;
+        uint256 valueUSD = _value * tokenPrice;
         valueUSD = valueUSD / safepow(10, priceDecimals);
 
         uint256 _decimals = decimals(_cTokenAddress);

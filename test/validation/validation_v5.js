@@ -323,13 +323,13 @@ const validate = async () => {
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
-    const c1walletTx = await ihelp.getClaimableCharityInterestOf(charity1Address);
+    const c1walletTx = await charityPool1.claimableInterest();
     const c1wallet = fromBigNumber(c1walletTx);
 
-    const c2walletTx = await ihelp.getClaimableCharityInterestOf(charity2Address);
+    const c2walletTx = await  charityPool2.claimableInterest();
     const c2wallet = fromBigNumber(c2walletTx);
 
-    const c3walletTx = await ihelp.getClaimableCharityInterestOf(charity3Address);
+    const c3walletTx = await  charityPool3.claimableInterest();
     const c3wallet = fromBigNumber(c3walletTx);
 
     const devpoolTx = await dai.balanceOf(developmentPool);
@@ -453,38 +453,6 @@ const validate = async () => {
 
     let upkeepStatus = await ihelp.processingState().then(data => data.status);
     await processUpkeep(upkeepStatus);
-
-    // transfer the contributions to the end wallets
-    //console.log('dev claiming...', developmentPool);
-    const devTx1 = await ihelp.connect(developmentPoolSigner).getClaimableCharityInterest();
-    //console.log(devTx1.toString());
-
-    let devTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, devTx1.toString());
-    //console.log(devTx1Approve['hash']);
-    await devTx1Approve.wait();
-
-    var options = {
-      gasPrice: 21500000000,
-      gasLimit: 10000000,
-      //nonce:8
-    };
-
-    yellow("Claiming interest for development pool...");
-    const devclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(developmentPool, options);
-    //console.log(devclaimTx['hash']);
-    await devclaimTx.wait();
-
-    const stakeTx1 = await ihelp.connect(stakingPoolSigner).getClaimableCharityInterest();
-    //console.log(stakeTx1.toString());
-
-    let stakeTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, stakeTx1.toString());
-    //console.log(stakeTx1Approve['hash']);
-    await stakeTx1Approve.wait();
-
-    yellow("Claiming interest for stakingPool pool...");
-    const stakeclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(stakingPool, options);
-    //console.log(stakeclaimTx['hash']);
-    await stakeclaimTx.wait();
 
     /*
       // run the reward distribution script

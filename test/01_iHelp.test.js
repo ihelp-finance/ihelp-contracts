@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const BigNumber = require('big.js');
 const { abi } = require("../artifacts/contracts/ihelp/Swapper.sol/Swapper.json");
+const { yellow } = require("../scripts/deployUtils");
 
 use(smock.matchers);
 
@@ -21,7 +22,9 @@ describe("iHelp", function () {
     beforeEach(async function () {
         const IHelp = await smock.mock("iHelpToken");
         const Mock = await smock.mock("ERC20MintableMock");
-        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
+        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock", {
+            signer: owner
+        });
 
         [owner, addr1, addr2, addr3, stakingPool, developmentPool, holdingPool, operator, ...addrs] = await ethers.getSigners();
         const CTokenMock = await smock.mock("CTokenMock");
@@ -73,11 +76,11 @@ describe("iHelp", function () {
         });
 
         it("Should set correct developmentShareOfInterest", async function () {
-            expect(await iHelp.developmentShareOfInterest()).to.be.equal((500).toFixed());
+            expect(await iHelp.developmentShareOfInterest()).to.be.equal((100).toFixed());
         });
 
         it("Should set correct stakingShareOfInterest", async function () {
-            expect(await iHelp.stakingShareOfInterest()).to.be.equal((500).toFixed());
+            expect(await iHelp.stakingShareOfInterest()).to.be.equal((100).toFixed());
         });
 
         it("Should set correct __tokensMintedPerPhase", async function () {
@@ -198,14 +201,6 @@ describe("iHelp", function () {
             const charityPool1 = await CharityPool.deploy();
             const charityPool2 = await CharityPool.deploy();
 
-            const swapper = await smock.fake(abi);
-            swapper.getAmountsOutByPath.returns(args => args[1]);
-            swapper.swap.returns(args => args[2]);
-
-
-            await charityPool1.setVariable('swapper', swapper.address);
-            await charityPool2.setVariable('swapper', swapper.address);
-
             await charityPool1.setVariable('operator', owner.address);
             await charityPool2.setVariable('operator', owner.address);
 
@@ -213,11 +208,13 @@ describe("iHelp", function () {
                 provider: "Provider1",
                 underlyingToken: cTokenUnderlyingMock.address,
                 lendingAddress: cTokenMock.address,
-                priceFeed: addr3.address
+                currency: "currency1",
+                priceFeed: addrs[5].address
             }]
 
             priceFeedProvider.getAllDonationCurrencies.returns(donationCurrencies);
 
+            console.log(await priceFeedProvider.getAllDonationCurrencies());
             await charityPool1.setVariable('totalInterestEarned', {
                 [cTokenMock.address]: 20
             });
@@ -225,6 +222,9 @@ describe("iHelp", function () {
             await charityPool2.setVariable('totalInterestEarned', {
                 [cTokenMock.address]: 40
             });
+
+            ;
+
             await iHelp.registerCharityPool(charityPool1.address);
             await iHelp.registerCharityPool(charityPool2.address);
 
@@ -249,16 +249,24 @@ describe("iHelp", function () {
             await charityPool1.setVariable('swapper', swapper.address);
             await charityPool2.setVariable('swapper', swapper.address);
 
+            await charityPool1.setVariable('stakingPool', stakingPool.address);
+            await charityPool1.setVariable('developmentPool', developmentPool.address);
+
+            await charityPool2.setVariable('stakingPool', stakingPool.address);
+            await charityPool2.setVariable('developmentPool', developmentPool.address);
+
             await charityPool1.setVariable('holdingToken', cTokenUnderlyingMock.address);
             await charityPool2.setVariable('holdingToken', cTokenUnderlyingMock.address);
 
             await charityPool1.setVariable('operator', owner.address);
             await charityPool2.setVariable('operator', owner.address);
+
             donationCurrencies = [{
                 provider: "Provider1",
                 underlyingToken: cTokenUnderlyingMock.address,
                 lendingAddress: cTokenMock.address,
-                priceFeed: addr3.address
+                currency: "currency1",
+                priceFeed: addrs[5].address
             }]
 
             priceFeedProvider.getAllDonationCurrencies.returns(donationCurrencies);
@@ -578,12 +586,6 @@ describe("iHelp", function () {
         });
 
 
-        describe("Perfect interest", async function () {
-            it("Should calculate the perfect interest", async function () {
-                await iHelp.dripStage1();
-                expect(await iHelp.calculatePerfectRedeemInterest()).to.equal(400);
-            });
-        });
 
         describe("Dump", async function () {
             beforeEach(async function () {
@@ -603,7 +605,9 @@ describe("iHelp", function () {
 
                     await cTokenUnderlyingMock.setVariable('_balances', {
                         [charityPool1.address]: 160,
-                        [holdingPoolAddr]: 40
+                        [developmentPool.address]: 20,
+                        [stakingPool.address]: 20
+
                     });
                 });
 
@@ -611,7 +615,8 @@ describe("iHelp", function () {
                     cTokenUnderlyingMock.balanceOf.reset();
                     await cTokenUnderlyingMock.setVariable('_balances', {
                         [charityPool1.address]: 160,
-                        [holdingPoolAddr]: 40
+                        [developmentPool.address]: 20,
+                        [stakingPool.address]: 20
                     });
                 });
 
@@ -620,14 +625,12 @@ describe("iHelp", function () {
             // Since mocking the second pool is tedious it's sufficient to do calculations for the frist pool
             it("Should do correct demo calculations for the first pool", async function () {
 
-
                 await iHelp.dripStage1();
                 const pool1InterestShare = await iHelp.charityInterestShare(charityPool1.address);
                 await iHelp.dripStage2();
                 await iHelp.dripStage4();
 
                 const developmentPool = await iHelp.developmentPool();
-                const charityPoolAddress = charityPool1.address;
                 const stakingPool = await iHelp.stakingPool();
 
                 const shareOfInterst = {
@@ -637,14 +640,13 @@ describe("iHelp", function () {
                 };
 
                 const previouscCaimableCharityInterest = {
-                    charity: await iHelp.claimableCharityInterest(charityPoolAddress),
-                    development: await iHelp.claimableCharityInterest(developmentPool),
-                    stakingPool: await iHelp.claimableCharityInterest(stakingPool)
+                    charity: await charityPool1.claimableInterest(),
+                    development: await cTokenUnderlyingMock.balanceOf(developmentPool),
+                    stakingPool: await cTokenUnderlyingMock.balanceOf(stakingPool)
                 };
 
-                const interest = await iHelp.calculatePerfectRedeemInterest();
+                await iHelp.connect(operator).dump();
 
-                await iHelp.connect(operator).dump(interest);
                 const { status, totalCharityPoolContributions, newInterestUS } = await iHelp.processingState();
 
                 expect(status).to.equal(0);
@@ -654,53 +656,16 @@ describe("iHelp", function () {
                 const differenceInInterest = 200 / pool1InterestShare;
                 const correctedInterestShare = pool1InterestShare * differenceInInterest;
 
-                const claimableCharityIntrest = await iHelp.claimableCharityInterest(charityPoolAddress);
-                const claimableDevCharityIntrest = await iHelp.claimableCharityInterest(developmentPool);
-                const claimableStakeCharityIntrest = await iHelp.claimableCharityInterest(stakingPool);
+                const claimableCharityIntrest = await charityPool1.claimableInterest();
+                const claimableDevCharityIntrest = await cTokenUnderlyingMock.balanceOf(developmentPool);
+                const claimableStakeCharityIntrest = await cTokenUnderlyingMock.balanceOf(stakingPool);
 
                 expect(claimableCharityIntrest).to.equal(previouscCaimableCharityInterest.charity.add(correctedInterestShare * shareOfInterst.charity));
                 expect(claimableDevCharityIntrest).to.equal(previouscCaimableCharityInterest.development.add(correctedInterestShare * shareOfInterst.development));
                 expect(claimableStakeCharityIntrest).to.equal(previouscCaimableCharityInterest.stakingPool.add(correctedInterestShare * shareOfInterst.stakingPool));
-
-                expect(await iHelp.charityInterestShare(charityPool1.address)).to.equal(0);
             });
         });
 
-    });
-
-    describe("Interest claiming", function () {
-        beforeEach(async function () {
-            await iHelp.setVariable('claimableCharityInterest', {
-                [addr1.address]: 200
-            });
-        });
-
-        it("Should not claim interest if it was not called by the holding pool", async function () {
-
-            const mockCharityAddress = addr1.address;
-            await iHelp.claimInterest(mockCharityAddress);
-            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
-        });
-
-        it("Should not claim interest if it called by the holding pool but the address is a charity pool", async function () {
-            const mockCharityAddress = addr1.address;
-            await iHelp.registerCharityPool(addr1.address);
-            await iHelp.connect(holdingPool).claimInterest(holdingPool.address);
-            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(200);
-        });
-
-        it("Should claim ad reset the interest", async function () {
-            const mockCharityAddress = addr1.address;
-            cTokenUnderlyingMock.transferFrom.returns(1);
-            await iHelp.connect(holdingPool).claimInterest(mockCharityAddress);
-            expect(await iHelp.claimableCharityInterest(mockCharityAddress)).to.equal(0);
-        });
-
-        it("Should revert if the transfer fails", async function () {
-            const mockCharityAddress = addr1.address;
-            cTokenUnderlyingMock.transferFrom.returns(0);
-            await expect(iHelp.connect(holdingPool).claimInterest(mockCharityAddress)).to.be.reverted;
-        });
     });
 
     describe("Tokens claiming", function () {
@@ -739,13 +704,6 @@ describe("iHelp", function () {
                 [owner.address]: 2
             });
             expect(await iHelp.claimableTokens()).to.equal(2);
-        });
-
-        it("Should return the getClaimableCharityInterestOf", async function () {
-            await iHelp.setVariable("claimableCharityInterest", {
-                [owner.address]: 2
-            });
-            expect(await iHelp.claimableCharityInterest(owner.address)).to.equal(2);
         });
 
         it("Should return the balance", async function () {
