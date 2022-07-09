@@ -501,7 +501,7 @@ contract Analytics is IAnalytics {
         AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](currencies.length);
       
         for (uint i = 0; i < currencies.length; i++) {
-            uint256 decimals = IERC20(currencies[i].lendingAddress).decimals();
+            uint256 decimals = IERC20(currencies[i].underlyingToken).decimals();
             (uint256 price, uint256 priceDecimals) = _iHelp.priceFeedProvider().getUnderlyingTokenPrice(currencies[i].lendingAddress);
           
             result[i].decimals = decimals;
