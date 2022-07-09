@@ -362,7 +362,7 @@ contract Analytics is IAnalytics {
             address cTokenAddress = currencies[index].lendingAddress;
             (uint256 price, uint256 decimals) = _charity.getUnderlyingTokenPrice(cTokenAddress);
             uint256 contribution = _charity.balances(_user, cTokenAddress);
-            uint256 contributionUSD = (contribution * price) / 10 ** decimals;
+            uint256 contributionUSD = (contribution * price) / 10**decimals;
 
             result[index] = AnalyticsUtils.UserCharityTokenContributions({
                 tokenAddress: currencies[index].lendingAddress,
@@ -392,7 +392,7 @@ contract Analytics is IAnalytics {
             address cTokenAddress = currencies[index].lendingAddress;
             (uint256 price, uint256 decimals) = _charity.getUnderlyingTokenPrice(cTokenAddress);
             uint256 contribution = _charity.donationBalances(_user, cTokenAddress);
-            uint256 contributionUSD = (contribution * price) / 10 ** decimals;
+            uint256 contributionUSD = (contribution * price) / 10**decimals;
 
             result[index] = AnalyticsUtils.UserCharityTokenContributions({
                 tokenAddress: currencies[index].lendingAddress,
@@ -465,6 +465,28 @@ contract Analytics is IAnalytics {
                 iHelpTokensInCirculation: circulationSupply,
                 iHelpStaked: _iHelp.balanceOf(xHelpAddress)
             });
+    }
+
+    /**
+     * Get user allowance for all donation currencies
+     */
+    function getDonationCurrencyAllowances(CharityPool _charity, address _user)
+        external
+        view
+        returns (AnalyticsUtils.WalletAllowance[] memory)
+    {
+        PriceFeedProvider.DonationCurrency[] memory currencies = _charity.priceFeedProvider().getAllDonationCurrencies();
+        AnalyticsUtils.WalletAllowance[] memory result = new AnalyticsUtils.WalletAllowance[](currencies.length);
+
+        for (uint256 index = 0; index < currencies.length; index++) {
+            result[index] = AnalyticsUtils.WalletAllowance({
+                tokenAddress: currencies[index].underlyingToken,
+                currency: currencies[index].currency,
+                allowance: IERC20(currencies[index].underlyingToken).allowance(_user, address(_charity))
+            });
+        }
+
+        return result;
     }
 
     /**

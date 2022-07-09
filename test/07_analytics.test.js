@@ -534,7 +534,19 @@ describe("Analytics", function () {
 
                 expect(result[1].totalContributions).to.equal(75)
                 expect(result[1].tokenAddress).to.equal(cTokenMock2.address);
+            })
 
+            it("should return user token allowances per charity", async () => {
+               await uMock1.increaseAllowance(charityPool1.address, 1000);
+               await uMock2.increaseAllowance(charityPool1.address, 1000);
+
+                const result = await analytics.getDonationCurrencyAllowances(charityPool1.address, owner.address);
+                expect(result.length).to.equal(2);
+                expect(result[0].allowance).to.equal(1000);
+                expect(result[0].tokenAddress).to.equal(uMock1.address);
+
+                expect(result[1].allowance).to.equal(1000)
+                expect(result[1].tokenAddress).to.equal(uMock2.address);
             })
         })
     });

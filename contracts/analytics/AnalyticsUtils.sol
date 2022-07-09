@@ -58,4 +58,10 @@ library AnalyticsUtils {
         string currency;
         uint256 balance;
     }
+
+    struct WalletAllowance {
+        address tokenAddress;
+        string currency;
+        uint256 allowance;
+    }
 }
