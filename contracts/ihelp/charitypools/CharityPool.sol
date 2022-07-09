@@ -280,7 +280,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
-
+            require(priceFeedProvider.hasDonationCurrency(address(_donationToken)), "Donation/invalid-currency");
             // Add up the donation amount before the swap
             _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(
                 tokenaddress,
