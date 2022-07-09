@@ -207,22 +207,14 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Withdraw the sender's entire balance back to them.
      */
-    function withdrawTokens(address _cTokenAddress) public {
-        uint256 _balance = balances[msg.sender][_cTokenAddress];
-        _withdraw(msg.sender, _cTokenAddress, _balance);
-        // Withdraw from Compound and transfer
-        require(ICErc20(_cTokenAddress).redeemUnderlying(_balance) == 0, "Funding/redeem");
-        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _balance), "Funding/transfer");
-        emit Withdrawn(msg.sender, _cTokenAddress, _balance);
-    }
-
-    function withdrawAmount(address _cTokenAddress, uint256 _amount) public {
+    function withdrawTokens(address _cTokenAddress, uint256 _amount) public {
+        if(_amount == 0) {
+            _amount =  balances[msg.sender][_cTokenAddress];
+        }
         _withdraw(msg.sender, _cTokenAddress, _amount);
-
         // Withdraw from Compound and transfer
         require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
         require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
-
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
 

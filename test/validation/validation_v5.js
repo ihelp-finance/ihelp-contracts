@@ -702,10 +702,10 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw71Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
+  const withdraw71Txu1 = await charityPool2.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw71Txu1.wait();
 
-  const withdraw72Txu1 = await charityPool3.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', daiDecimals));
+  const withdraw72Txu1 = await charityPool3.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', daiDecimals));
   await withdraw72Txu1.wait();
 
   //await upkeepStep();
@@ -901,7 +901,7 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw22Txu2 = await charityPool1.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('2500', daiDecimals));
+  const withdraw22Txu2 = await charityPool1.connect(userSigner2).withdrawTokens(ethers.utils.parseUnits('2500', daiDecimals));
   await withdraw22Txu2.wait();
 
   //await upkeepStep();
@@ -1025,10 +1025,10 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw291Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
+  const withdraw291Txu1 = await charityPool2.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw291Txu1.wait();
 
-  const withdraw291Txu2 = await charityPool2.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('9000', usdcDecimals));
+  const withdraw291Txu2 = await charityPool2.connect(userSigner2).withdrawTokens(ethers.utils.parseUnits('9000', usdcDecimals));
   await withdraw291Txu2.wait();
 
   // stake the HELP tokens to xHELP

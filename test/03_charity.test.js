@@ -215,28 +215,28 @@ describe("Charity Pool", function () {
         });
 
         it("Should withdraw all balance", async function () {
-            await charityPool.withdrawTokens(cTokenMock.address);
+            await charityPool.withdrawTokens(cTokenMock.address, 0);
             expect(await charityPool.balanceOf(owner.address, cTokenMock.address)).to.equal(0);
         });
 
         it("Should withdraw partial balance", async function () {
-            await charityPool.withdrawAmount(cTokenMock.address, 10);
+            await charityPool.withdrawTokens(cTokenMock.address, 10);
             expect(await charityPool.balanceOf(owner.address, cTokenMock.address)).to.equal(90);
         });
 
         it("Should fail to withdraw over balance", async function () {
-            await expect(charityPool.withdrawAmount(cTokenMock.address, 101)).to.be.revertedWith("Funding/no-funds");
+            await expect(charityPool.withdrawTokens(cTokenMock.address, 101)).to.be.revertedWith("Funding/no-funds");
             expect(await charityPool.balanceOf(owner.address, cTokenMock.address,)).to.equal(100);
         });
 
         it("Should decrease balance", async function () {
-            await charityPool.withdrawTokens(cTokenMock.address);
+            await charityPool.withdrawTokens(cTokenMock.address, 0);
             expect(await charityPool.balanceOf(owner.address, cTokenMock.address)).to.equal(0);
             expect(await charityPool.balance(cTokenMock.address)).to.equal(0);
         });
 
         it("Should emit withdrawn event", async function () {
-            expect(await charityPool.withdrawTokens(cTokenMock.address))
+            expect(await charityPool.withdrawTokens(cTokenMock.address, 0))
                 .to.emit(charityPool, "Withdrawn");
         });
 
@@ -419,7 +419,7 @@ describe("Charity Pool", function () {
             const deposit = parseEther("200");
             const withdrawal = parseEther("150");
             await charityPool.depositTokens(cTokenMock.address, deposit);
-            await charityPool.withdrawAmount(cTokenMock.address, withdrawal);
+            await charityPool.withdrawTokens(cTokenMock.address, withdrawal);
             cTokenMock.balanceOfUnderlying.returns(deposit.sub(withdrawal).add(interest));
             expect(await charityPool.accountedBalances(cTokenMock.address)).to.equal(deposit.sub(withdrawal));
             expect(await charityPool.interestEarned(cTokenMock.address)).to.equal(interest);
@@ -430,7 +430,7 @@ describe("Charity Pool", function () {
             const deposit = 200;
             const withdrawal = 50;
             await charityPool.depositTokens(cTokenMock.address, deposit);
-            await charityPool.withdrawAmount(cTokenMock.address, withdrawal);
+            await charityPool.withdrawTokens(cTokenMock.address, withdrawal);
             expect(await charityPool.interestEarned(cTokenMock.address)).to.equal(0);
         });
 
