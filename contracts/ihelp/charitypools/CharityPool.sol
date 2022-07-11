@@ -282,7 +282,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
                 console.log("Current Token Balance::", receivedAmount);
                 _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
-                console.log("AMOUNT AFTER SWAP::", _amount);
             }
 
             (uint256 devFee, uint256 stakingFee, ) = ihelpToken.getFees();
