@@ -1,0 +1,97 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js" integrity="sha512-oMd9Re3VgJcXuZJn9DN6X7S7JUc7xLYZ2UyZ85Mm/xzaW3lwBr4fV2zjuu/n5jY/Of/2JOx35CTa6zvQNxb31Q==" crossorigin="anonymous" referrerpolicy="no-referrer">
+</script>
+
+<h2><span class="fromAccount"></span></h2>
+<h2><span class="toAccount"></span></h2>
+
+<div id="updateform" style="display:none">
+    <input id="arg1" placeholder="old implementation" />
+    <input id="arg2" placeholder="new implementation" />
+    <button class="updateButton">Update Contract</button>
+    <div id="result">
+
+    </div>
+</div>
+
+<script type='text/javascript'>
+    async function init() {
+
+        // <button class="connectButton">Connect</button>
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('MetaMask is installed!');
+            console.log(window.ethereum)
+            window.web3 = new Web3(window.ethereum);
+            await window.ethereum.enable();
+
+            // fetch the abi
+            function httpGet(theUrl) {
+                var xmlHttp = new XMLHttpRequest();
+                xmlHttp.open("GET", theUrl, false); // false for synchronous request
+                xmlHttp.send(null);
+                return xmlHttp.responseText;
+            }
+
+            const content = await httpGet('https://dev.ihelp.finance/api/v1/data/contracts')
+            const contracts = JSON.parse(content)
+
+            const chainId = parseInt(window.ethereum.chainId).toString()
+            window.DefaultProxyAdmin = contracts[chainId][0]['contracts']['DefaultProxyAdmin']
+
+            console.log(window.DefaultProxyAdmin)
+
+            window.contract = new web3.eth.Contract(window.DefaultProxyAdmin.abi);
+
+            getAccount()
+
+        }
+    }
+    init()
+
+    const updateButton = document.querySelector('.updateButton');
+    const fromAccount = document.querySelector('.fromAccount');
+    const toAccount = document.querySelector('.toAccount');
+
+    updateButton.addEventListener('click', () => {
+        updateContract();
+    });
+
+
+    async function getAccount() {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        fromAccount.innerHTML = `from: ${account}`;
+        toAccount.innerHTML = `to: ${window.DefaultProxyAdmin.address}`;
+
+        document.querySelector('#updateform').style.display = ''
+
+    }
+
+    const updateContract = async() => {
+
+        const data = {
+            'arg1': document.querySelector('#arg1').value,
+            'arg2': document.querySelector('#arg2').value,
+        }
+
+        const tx = {
+            nonce: '0x00',
+            // gasPrice: '0x09184e72a000',
+            // gas: '0x2710',
+            from: window.ethereum.selectedAddress,
+            to: window.DefaultProxyAdmin.address,
+            value: "0x00", // this is the value in wei to send
+            data: window.contract.methods.upgrade(data.arg1, data.arg2).encodeABI()
+        }
+        console.log(tx)
+
+        const txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+        });
+
+        console.log({ txHash });
+
+        document.querySelector('#result').innerText = JSON.stringify(txHash)
+
+    }
+</script>

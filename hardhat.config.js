@@ -153,9 +153,9 @@ module.exports = {
     },
     proxyAdmin: {
       default: 3,
-      //TODO: @Matt add multi sign address here 
+      //TODO: multi sign address here 
       4: proxyAdminOwner,
-      'localhost': "0x346abB57CfB43aD3Bb8210E3DD1dB12353160A0b"
+      'localhost': "0x8D87FcE1394ad41d4149f210AB259fa30e4f731e", // 0x346abB57CfB43aD3Bb8210E3DD1dB12353160A0b"
     },
     charity1wallet: {
       default: 4,
