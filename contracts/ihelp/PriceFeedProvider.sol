@@ -19,6 +19,7 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     mapping(address => DonationCurrency) private _donationCurrencies;
+    mapping(address => bool) public allowedDirectDonationCurrencies;
     EnumerableSet.AddressSet private _donationCurrencyMapping;
 
     /**
@@ -27,8 +28,7 @@ contract PriceFeedProvider is OwnableUpgradeable {
     function initialize(DonationCurrency[] memory _initialDonationCurrencies) public initializer {
         __Ownable_init();
         for (uint256 i = 0; i < _initialDonationCurrencies.length; i++) {
-            _donationCurrencyMapping.add(_initialDonationCurrencies[i].lendingAddress);
-            _donationCurrencies[_initialDonationCurrencies[i].lendingAddress] = _initialDonationCurrencies[i];
+            _addDonationCurrency(_initialDonationCurrencies[i]);
         }
     }
 
@@ -58,12 +58,17 @@ contract PriceFeedProvider is OwnableUpgradeable {
     }
 
     function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
+        _addDonationCurrency(_donationCurrency);
+    }
+
+    function _addDonationCurrency(DonationCurrency memory _donationCurrency) internal {
         require(_donationCurrency.lendingAddress != address(0), "price-feed/invalid-lending");
         require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
         require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
         require(!hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/already-exists");
         _donationCurrencyMapping.add(_donationCurrency.lendingAddress);
         _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
+        _setDirectDonationCurrency(_donationCurrency.underlyingToken, true);
     }
 
     function updateDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
@@ -71,13 +76,17 @@ contract PriceFeedProvider is OwnableUpgradeable {
         require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
         require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
         require(hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/not-found");
+        setDirectDonationCurrency(_donationCurrencies[_donationCurrency.lendingAddress].underlyingToken, false);
         _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
+        setDirectDonationCurrency(_donationCurrency.underlyingToken, true);
     }
 
     function removeDonationCurrency(address _lendingAddress) public onlyOwner {
-        //TODO: !IMPORTANT. Make sure to redeem the intereset corresponding to this donation currency in 
+        //TODO: !IMPORTANT. Make sure to redeem the intereset corresponding to this donation currency in
         // all the charity pools before the token is removed
         _donationCurrencyMapping.remove(_lendingAddress);
+        _setDirectDonationCurrency(_donationCurrencies[_lendingAddress].underlyingToken, false);
+        delete _donationCurrencies[_lendingAddress];
     }
 
     function getDonationCurrency(address _lendingAddress) public view returns (DonationCurrency memory) {
@@ -87,6 +96,14 @@ contract PriceFeedProvider is OwnableUpgradeable {
 
     function hasDonationCurrency(address _lendingAddress) public view returns (bool) {
         return _donationCurrencyMapping.contains(_lendingAddress);
+    }
+
+    function setDirectDonationCurrency(address _currencyAddress, bool status) public onlyOwner {
+        _setDirectDonationCurrency(_currencyAddress, status);
+    }
+
+    function _setDirectDonationCurrency(address _currencyAddress, bool status) internal {
+        allowedDirectDonationCurrencies[_currencyAddress] = status;
     }
 
     function getAllDonationCurrencies() public view returns (DonationCurrency[] memory) {

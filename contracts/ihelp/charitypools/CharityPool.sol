@@ -245,10 +245,12 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function directDonation(IERC20 _donationToken, uint256 _amount) public {
-        if (_amount > 0) {
-            // Get The underlying token for this cToken
-            require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
+        if (_amount == 0) {
+            return;
         }
+
+        require(priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)), "Donation/invalid-currency");
+        require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
         _directDonation(_donationToken, msg.sender, _amount);
     }
 
@@ -261,7 +263,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
-            require(priceFeedProvider.hasDonationCurrency(address(_donationToken)), "Donation/invalid-currency");
             // Add up the donation amount before the swap
             _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(
                 tokenaddress,
@@ -496,7 +497,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
         uint256 valueUSD = _value * tokenPrice;
         valueUSD = valueUSD / safepow(10, priceDecimals);
-
         uint256 _decimals = decimals(_cTokenAddress);
         if (_decimals < holdingDecimals) {
             valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
