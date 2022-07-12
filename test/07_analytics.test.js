@@ -13,7 +13,7 @@ describe("Analytics", function () {
     let stakingPool, developmentPool, holdingPool;
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
-    let proceFeedProviderMock;
+    let priceFeedProviderMock;
 
     beforeEach(async function () {
         const IHelp = await smock.mock("iHelpToken");
@@ -25,9 +25,9 @@ describe("Analytics", function () {
         CTokenMock = await smock.mock("CTokenMock");
 
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
-        proceFeedProviderMock = await PriceFeedProvider.deploy();
+        priceFeedProviderMock = await PriceFeedProvider.deploy();
 
-        proceFeedProviderMock.hasDonationCurrency.returns(true);
+        priceFeedProviderMock.hasDonationCurrency.returns(true);
 
         const WMock = await ethers.getContractFactory("WTokenMock");
         const Analytics = await ethers.getContractFactory("Analytics");
@@ -54,7 +54,7 @@ describe("Analytics", function () {
             priceFeed: addrs[5].address
         }];
 
-        await proceFeedProviderMock.initialize(donationCurrencies)
+        await priceFeedProviderMock.initialize(donationCurrencies)
 
         iHelp = await IHelp.deploy();
 
@@ -66,7 +66,7 @@ describe("Analytics", function () {
             developmentPool.address,
             holdingPool.address,
             mockContract.address,
-            proceFeedProviderMock.address
+            priceFeedProviderMock.address
         );
 
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
@@ -77,13 +77,9 @@ describe("Analytics", function () {
 
         await charityPool1.setVariable("operator", owner.address);
         await charityPool2.setVariable("operator", owner.address);
-        await charityPool1.setVariable("priceFeedProvider", proceFeedProviderMock.address);
-        await charityPool2.setVariable("priceFeedProvider", proceFeedProviderMock.address);
 
-        swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
-
-        charityPool1.getUnderlyingTokenPrice.returns(100000000);
-        charityPool2.getUnderlyingTokenPrice.returns(100000000);
+        charityPool1.getUnderlyingTokenPrice.returns([1e9, 9]);
+        charityPool2.getUnderlyingTokenPrice.returns([1e9, 9]);
 
         charityPool1.calculateTotalInterestEarned.returns(20);
         charityPool2.calculateTotalInterestEarned.returns(30);
@@ -123,8 +119,8 @@ describe("Analytics", function () {
             });
 
             it("should return the total generated interest by a underlying currency", async () => {
-                await charityPool1.setVariable("priceFeedProvider", proceFeedProviderMock.address)
-                await charityPool2.setVariable("priceFeedProvider", proceFeedProviderMock.address)
+                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address)
+                await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address)
 
 
 
@@ -518,13 +514,16 @@ describe("Analytics", function () {
 
             })
 
-            it("should return user  token donations per charity", async () => {
+            it("should return user token donations per charity", async () => {
                 await charityPool1.setVariable("donationBalances", {
                     [owner.address]: {
                         [cTokenMock1.address]: 25,
                         [cTokenMock2.address]: 75
                     }
                 })
+
+                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address);
+                await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address);
 
                 const result = await analytics.getUserTokenDonationsPerCharity(charityPool1.address, owner.address);
                 expect(result.length).to.equal(2);
@@ -536,8 +535,11 @@ describe("Analytics", function () {
             })
 
             it("should return user token allowances per charity", async () => {
-               await uMock1.increaseAllowance(charityPool1.address, 1000);
-               await uMock2.increaseAllowance(charityPool1.address, 1000);
+                await uMock1.increaseAllowance(charityPool1.address, 1000);
+                await uMock2.increaseAllowance(charityPool1.address, 1000);
+
+                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address);
+                await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address);
 
                 const result = await analytics.getDonationCurrencyAllowances(charityPool1.address, owner.address);
                 expect(result.length).to.equal(2);

@@ -326,10 +326,10 @@ const validate = async () => {
     const c1walletTx = await charityPool1.claimableInterest();
     const c1wallet = fromBigNumber(c1walletTx);
 
-    const c2walletTx = await  charityPool2.claimableInterest();
+    const c2walletTx = await charityPool2.claimableInterest();
     const c2wallet = fromBigNumber(c2walletTx);
 
-    const c3walletTx = await  charityPool3.claimableInterest();
+    const c3walletTx = await charityPool3.claimableInterest();
     const c3wallet = fromBigNumber(c3walletTx);
 
     const devpoolTx = await dai.balanceOf(developmentPool);
@@ -430,12 +430,7 @@ const validate = async () => {
     const method = upkeepStatusMapping[upkeepStatus];
     cyan("Processing upkeep, status ", method);
     while (upkeepStatus == newUpkeepstatus) {
-      if (method === 'dump') {
-        const perfectRedeemInterest = await ihelp.calculatePerfectRedeemInterest();
-        await ihelp.functions[method](perfectRedeemInterest);
-      } else {
-        await ihelp.functions[method]();
-      }
+      await ihelp.functions[method]();
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
 
@@ -613,7 +608,7 @@ const validate = async () => {
   await stakeTx4u1.wait();
 
   await rewardStep();
-  
+
   yellow("Getting outputs ");
 
   await getOutputs(INPUT);

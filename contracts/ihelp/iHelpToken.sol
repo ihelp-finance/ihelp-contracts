@@ -157,8 +157,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
         __Ownable_init();
 
-        console.log("Initializing iHelp Token Contract...");
-
         operator = _operator;
         stakingPool = _stakingPool;
         developmentPool = _developmentPool;
@@ -173,8 +171,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         developmentShareOfInterest = 100;
         stakingShareOfInterest = 100;
         
-        // TODO: removed the charityShareOfInterest since it's directly reflected by ye charity contract's holding token balance
-        // charityShareOfInterest = 0.95 * 1e18;
 
         __totalSupply = __tokensMintedPerPhase * 1e18;
         __totalCirculating = 0;

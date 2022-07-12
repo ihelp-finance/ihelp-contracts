@@ -16,7 +16,7 @@ describe("Charity Pool", function () {
     let wTokenMock;
     let CTokenMock;
     let swapperMock;
-    let priceFeedProviderMock
+    let priceFeedProviderMock, aggregator;
     beforeEach(async function () {
         const CharityPool = await smock.mock("CharityPool");
 
@@ -26,7 +26,7 @@ describe("Charity Pool", function () {
         const WMock = await ethers.getContractFactory("WTokenMock");
         CTokenMock = await smock.mock("CTokenMock");
 
-        const aggregator = await smock.fake(abi);
+        aggregator = await smock.fake(abi);
         aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
 
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
@@ -37,7 +37,7 @@ describe("Charity Pool", function () {
         cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
 
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
-        cTokenMock = await CTokenMock.deploy(cTokenUnderlyingMock.address, 10000);
+        cTokenMock = await CTokenMock.deploy(cTokenUnderlyingMock.address, 1000);
         wTokenMock = await WMock.deploy();
 
         charityPool = await CharityPool.deploy();
@@ -264,6 +264,9 @@ describe("Charity Pool", function () {
     });
 
     describe("Direct Donations", function () {
+        const stakeFee = 100;
+        const devFee = 100;
+        const charityFee = 800;
         beforeEach(async function () {
             await cTokenUnderlyingMock.mint(owner.address, parseEther("100"));
             await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("100"));
@@ -274,6 +277,19 @@ describe("Charity Pool", function () {
             swapperMock.swap.returns(args => {
                 return args[2];
             });
+            iHelpMock.developmentShareOfInterest.returns(devFee);
+            iHelpMock.charityShareOfInterest.returns(charityFee);
+            iHelpMock.stakingShareOfInterest.returns(stakeFee);
+            iHelpMock.getFees.returns([devFee, stakeFee, charityFee]);
+
+            await priceFeedProviderMock.addDonationCurrency({
+                provider: "TestProvide2r",
+                lendingAddress: holdingMock.address,
+                currency: "HoldingToken",
+                underlyingToken: holdingMock.address,
+                priceFeed: aggregator.address
+            })
+
         });
 
         it("Should do nothing when donating 0", async function () {
@@ -295,7 +311,7 @@ describe("Charity Pool", function () {
         it("Should send staking fee", async function () {
             await charityPool.setVariable('holdingToken', cTokenUnderlyingMock.address);
             const amount = parseEther("10");
-            const fee = await charityPool.stakingFee();
+            const fee = await iHelpMock.stakingShareOfInterest();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
 
             await charityPool.directDonation(cTokenUnderlyingMock.address, amount);
@@ -312,7 +328,7 @@ describe("Charity Pool", function () {
 
         it("Should send development fee", async function () {
             const amount = parseEther("10");
-            const fee = await charityPool.devFee();
+            const fee = await iHelpMock.developmentShareOfInterest();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
 
             // Mint the holding tokens to the charity in order to simulate the swaps
@@ -325,10 +341,12 @@ describe("Charity Pool", function () {
 
         it("Should send donation to the charity wallet", async function () {
             const amount = parseEther("10");
-            const fee = await charityPool.charityFee();
+            const fee = await iHelpMock.charityShareOfInterest();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
             // Mint the holding tokens to the charity in order to simulate the swaps
             await holdingMock.mint(owner.address, amount);
+
+            console.log("Expected share", expectedAmountAfterTax);
 
             await expect(charityPool.directDonation(holdingMock.address, amount))
                 .to.emit(holdingMock, "Transfer")
@@ -339,7 +357,7 @@ describe("Charity Pool", function () {
         it("Should keep the donation in the charity contract", async function () {
             await charityPool.setVariable("charityWallet", holdingPool.address);
             const amount = parseEther("10");
-            const fee = await charityPool.charityFee();
+            const fee = await iHelpMock.charityShareOfInterest();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
             // Mint the holding tokens to the charity in order to simulate the swaps
             await holdingMock.mint(owner.address, amount);
@@ -357,9 +375,6 @@ describe("Charity Pool", function () {
             // Simulated conversion parity 1/2..
             const convertedAmount = amount.div(2);
             swapperMock.getNativeRoutedTokenPrice.returns(() => convertedAmount)
-            const charityFee = await charityPool.charityFee();
-            const stakeFee = await charityPool.devFee();
-            const devFee = await charityPool.stakingFee();
 
             const charityAmount = convertedAmount.mul(charityFee).div(1000);
             const devAmount = convertedAmount.mul(devFee).div(1000);
@@ -498,13 +513,12 @@ describe("Charity Pool", function () {
         it("Should calculate accountedBalanceUSD", async function () {
             const interest = 10000;
             const deposit = parseEther("200");
-            const expectedBalanceInUsd = deposit.mul(1e9); // 18-9 decimalls
+            const expectedBalanceInUsd = deposit;
 
             cTokenMock.balanceOfUnderlying.returns(deposit.add(interest));
 
             await charityPool.depositTokens(cTokenMock.address, deposit);
             await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            swapperMock.getAmountsOutByPath.returns(arg => parseUnits('' + arg[1], 9));
 
             expect(await charityPool.accountedBalanceUSD()).to.equal(expectedBalanceInUsd);
         });

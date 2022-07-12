@@ -37,12 +37,14 @@ describe("PriceFeedProvider", function () {
 
         donationCurrencies = [{
             provider: "Provider1",
+            currency: "ETH",
             underlyingToken: underlyingMock1.address,
             lendingAddress: cTokenMock1.address,
             currency: "currency1",
             priceFeed: chainLinkAggretator.address
         }, {
             provider: "Provider2",
+            currency: "ETH",
             underlyingToken: underlyingMock2.address,
             lendingAddress: cTokenMock2.address,
             currency: "currency2",
@@ -73,6 +75,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if lending token is 0x", async function () {
                 await expect(priceFeedProvider.addDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: constants.ZERO_ADDRESS,
                     priceFeed: chainLinkAggretator.address
@@ -82,6 +85,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if price feed is 0x", async function () {
                 await expect(priceFeedProvider.addDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: constants.ZERO_ADDRESS
@@ -91,6 +95,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if undelying token is 0x", async function () {
                 await expect(priceFeedProvider.addDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: constants.ZERO_ADDRESS,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: chainLinkAggretator.address
@@ -100,6 +105,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if already exists", async function () {
                 await expect(priceFeedProvider.addDonationCurrency({
                     provider: "Provider3",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: chainLinkAggretator.address
@@ -109,6 +115,7 @@ describe("PriceFeedProvider", function () {
             it("should add new donation currency", async function () {
                 expect(await priceFeedProvider.addDonationCurrency({
                     provider: "Provider3",
+                    currency: "ETH",
                     underlyingToken: addrs[5].address,
                     lendingAddress: addrs[6].address,
                     priceFeed: addrs[7].address
@@ -151,6 +158,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if lending token is 0x", async function () {
                 await expect(priceFeedProvider.updateDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: constants.ZERO_ADDRESS,
                     priceFeed: chainLinkAggretator.address
@@ -160,6 +168,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if price feed is 0x", async function () {
                 await expect(priceFeedProvider.updateDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: constants.ZERO_ADDRESS
@@ -169,6 +178,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if undelying token is 0x", async function () {
                 await expect(priceFeedProvider.updateDonationCurrency({
                     provider: "Provider",
+                    currency: "ETH",
                     underlyingToken: constants.ZERO_ADDRESS,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: chainLinkAggretator.address
@@ -178,6 +188,7 @@ describe("PriceFeedProvider", function () {
             it("should revert if donation currency is not found", async function () {
                 await expect(priceFeedProvider.updateDonationCurrency({
                     provider: "Provider3",
+                    currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: addr1.address,
                     priceFeed: chainLinkAggretator.address
@@ -185,12 +196,13 @@ describe("PriceFeedProvider", function () {
             });
 
             it("should update donation currency", async function () {
-                expect(await priceFeedProvider.updateDonationCurrency({
+                await priceFeedProvider.updateDonationCurrency({
                     provider: "Provider3",
+                    currency: "ETH",
                     underlyingToken: addrs[5].address,
                     lendingAddress: cTokenMock2.address,
                     priceFeed: addrs[7].address
-                }));
+                });
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 

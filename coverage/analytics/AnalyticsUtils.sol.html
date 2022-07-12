@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Code coverage report for utils/IERC20.sol</title>
+    <title>Code coverage report for analytics/AnalyticsUtils.sol</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -16,7 +16,7 @@
 <div class='wrapper'>
   <div class='pad1'>
     <h1>
-      <a href="../index.html">all files</a> / <a href="index.html">utils/</a> IERC20.sol
+      <a href="../index.html">all files</a> / <a href="index.html">analytics/</a> AnalyticsUtils.sol
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
@@ -121,9 +121,7 @@
 76
 77
 78
-79
-80</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+79</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -205,80 +203,79 @@
 &nbsp;
 pragma solidity ^0.8.9;
 &nbsp;
-/**
- * @dev Interface of the ERC20 standard as defined in the EIP.
- */
-interface IERC20 {
-    /**
-     * @dev Returns the amount of tokens in existence.
-     */
-    function totalSupply() external view returns (uint256);
-    
-    function decimals() external view returns (uint8);
+library AnalyticsUtils {
+    struct GeneralStats {
+        uint256 totalValueLocked;
+        uint256 totalInterestGenerated;
+        uint256 totalHelpers;
+        uint256 totalCharities;
+    }
 &nbsp;
-    /**
-     * @dev Returns the amount of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
+    struct CharityStats {
+        uint256 totalValueLocked;
+        uint256 totalYieldGenerated;
+        uint256 numerOfContributors;
+        uint256 totalDirectDonations;
+    }
 &nbsp;
-    /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transfer(address recipient, uint256 amount) external returns (bool);
+    struct IndividualCharityContributionInfo {
+        string  charityName;
+        address charityAddress;
+        uint256 totalContributions;
+        uint256 totalDonations;
+    }
 &nbsp;
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
+    struct StakingPoolStats {
+        uint256 iHelpTokensInCirculation;
+        uint256 iHelpStaked;
+    }
 &nbsp;
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 amount) external returns (bool);
+    struct UserStats {
+        uint256 totalDirectDonations;
+        uint256 totalInterestGenerated;
+        uint256 totalContributions;
+    }
 &nbsp;
-    /**
-     * @dev Moves `amount` tokens from `sender` to `recipient` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    struct UserCharityContributions {
+        string  charityName;
+        address charityAddress;
+        uint256 totalContributions;
+    }
 &nbsp;
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    struct UserCharityTokenContributions {
+        address tokenAddress;
+        string currency;
+        uint256 totalContributions;
+    }
 &nbsp;
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    struct CharityBalanceInfo {
+        address charityAddress;
+        string charityName;
+        uint256 balance;
+    }
+&nbsp;
+    struct WalletBalance {
+        address tokenAddress;
+        string currency;
+        uint256 balance;
+    }
+&nbsp;
+    struct WalletAllowance {
+        address tokenAddress;
+        string currency;
+        uint256 allowance;
+    }
+&nbsp;
+    struct DonationCurrencyDetails  {
+        string provider;
+        string currency;
+        address underlyingToken;
+        address lendingAddress;
+        address priceFeed;
+        uint256 price;
+        uint256 priceDecimals;
+        uint256 decimals;
+    }
 }
 &nbsp;</pre></td></tr>
 </table></pre>
