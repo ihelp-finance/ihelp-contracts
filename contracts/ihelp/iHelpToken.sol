@@ -603,16 +603,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     // getters used for iHelp interface definition
     function getUnderlyingToken() public view returns (IERC20) {
         return underlyingToken;
-    }
+    }   
 
-    // getters used for iHelp interface definition
-    function getStakingPool() public view returns (address) {
-        return stakingPool;
-    }
-
-    // getters used for iHelp interface definition
-    function getHoldingPool() public view returns (address) {
-        return holdingPool;
+    function getPools() public view returns (address, address, address) {
+        return (developmentPool, stakingPool, holdingPool);
     }
 
     function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {

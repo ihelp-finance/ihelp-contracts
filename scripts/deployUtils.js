@@ -12,7 +12,7 @@ const web3 = new Web3('http://127.0.0.1:7545');
 
 
 module.exports.deployCharityPoolToNetwork = async ({
-    charityName, operatorAddress, holdingPoolAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, stakingPoolAddress, developmentPoolAddress, wrappedNativeAddress, priceFeedProvider
+    charityName, operatorAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, wrappedNativeAddress, priceFeedProvider
 }, network) => {
     const FILE_PATH = path.join('deployed-charities', `${network}.json`);
 
@@ -29,13 +29,10 @@ module.exports.deployCharityPoolToNetwork = async ({
     const tx = await factory.createCharityPool({
         charityName,
         operatorAddress,
-        holdingPoolAddress,
         charityWalletAddress,
         holdingTokenAddress,
         ihelpAddress,
         swapperAddress,
-        stakingPoolAddress,
-        developmentPoolAddress,
         wrappedNativeAddress,
         priceFeedProvider
     });
@@ -49,8 +46,6 @@ module.exports.deployCharityPoolToNetwork = async ({
     });
 
     console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network);
-    console.log(`       holdingToken ${holdingTokenAddress}`);
-    console.log(`       holdingPool ${holdingPoolAddress}`);
     console.log(`       charityWalletAddress ${charityWalletAddress}`);
 
     writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
@@ -59,7 +54,7 @@ module.exports.deployCharityPoolToNetwork = async ({
 };
 
 module.exports.getTokenAddresses = async (currency, lender, chainId) => {
-    
+
     let ctokenaddress = null;
     let pricefeed = null;
     let tokenaddress = null;
@@ -75,10 +70,10 @@ module.exports.getTokenAddresses = async (currency, lender, chainId) => {
             tokenaddress = (await deployments.getOrNull("iHelp")).address;
             ctokenaddress = null;
             pricefeed = null;
-        } 
+        }
         else {
             tokenaddress = (await deployments.getOrNull(currency)).address;
-            ctokenaddress = (await deployments.getOrNull('c'+currency)).address;
+            ctokenaddress = (await deployments.getOrNull('c' + currency)).address;
             pricefeed = addresses[lender][currency]['priceFeed']
         }
 

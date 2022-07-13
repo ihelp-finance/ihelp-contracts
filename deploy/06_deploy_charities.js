@@ -103,14 +103,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     const charityResult = await deployCharityPoolToNetwork({
       charityName: charityName,
       operatorAddress: signer._address,
-      holdingPoolAddress: holdingPool,
       charityWalletAddress: charityWalletAddress,
       holdingTokenAddress: holdingtokenAddress,
       ihelpAddress: ihelpAddress,
       swapperAddress: swapperAddress,
       priceFeedProvider: priceFeedProviderAddresss,
-      stakingPoolAddress: stakingPool,
-      developmentPoolAddress: developmentPool,
       wrappedNativeAddress: nativeWrapper //TODO: @MAtt , Need to set the native wrapper for the non testing environment
     }, network.name);
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });

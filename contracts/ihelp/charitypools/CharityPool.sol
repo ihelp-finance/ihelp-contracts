@@ -65,10 +65,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     string public name;
     address public operator;
     address public charityWallet;
-    address public holdingPool;
     address public swapperPool;
-    address public stakingPool;
-    address public developmentPool;
     address public holdingToken;
 
     uint256 public totalDonationsUSD;
@@ -128,10 +125,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         name = configuration.charityName;
 
         operator = configuration.operatorAddress;
-        holdingPool = configuration.holdingPoolAddress;
         swapperPool = configuration.swapperAddress;
-        stakingPool = configuration.stakingPoolAddress;
-        developmentPool = configuration.developmentPoolAddress;
         charityWallet = configuration.charityWalletAddress;
         holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
@@ -144,6 +138,18 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
         // since the next rewards will go to the new wallets.
         charityWallet = _newAddress;
+    }
+
+    function developmentPool() public view returns (address) {
+        return ihelpToken.developmentPool();
+    }
+
+    function stakingPool() public view returns (address) {
+        return ihelpToken.stakingPool();
+    }
+
+    function holdingPool() public view returns (address) {
+        return ihelpToken.holdingPool();
     }
 
     /**
@@ -249,7 +255,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             return;
         }
 
-        require(priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)), "Donation/invalid-currency");
+        require(
+            priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)),
+            "Donation/invalid-currency"
+        );
         require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
         _directDonation(_donationToken, msg.sender, _amount);
     }
@@ -292,17 +301,19 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             // 2.5% to staking pool as swapped dai
             uint256 stakingFeeAmount = (_amount * stakingFee) / 1000;
 
-            require(IERC20(holdingToken).transfer(developmentPool, developerFeeAmount), "Funding/developer transfer");
-            require(IERC20(holdingToken).transfer(stakingPool, stakingFeeAmount), "Funding/developer transfer");
+            (address _developmentPool, address _stakingPool, address _holdingPool) = ihelpToken.getPools();
+
+            require(IERC20(holdingToken).transfer(_developmentPool, developerFeeAmount), "Funding/developer transfer");
+            require(IERC20(holdingToken).transfer(_stakingPool, stakingFeeAmount), "Funding/developer transfer");
 
             // 95% to charity as native currency of pool
             uint256 charityDonation = _amount - developerFeeAmount - stakingFeeAmount;
 
             // if charityWallet uses holdingPool (for off-chain transfers) then deposit the direction donation amount to this contract
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
-            console.log(charityWallet, holdingPool);
+            console.log(charityWallet, _holdingPool);
 
-            if (charityWallet != holdingPool) {
+            if (charityWallet != _holdingPool) {
                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
                 console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
@@ -378,8 +389,9 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
             console.log("Dev and stake fees::", devFee, stakeFee);
 
-            require(IERC20(holdingToken).transfer(developmentPool, devFeeShare), "Funding/transfer");
-            require(IERC20(holdingToken).transfer(stakingPool, stakeFeeShare), "Funding/transfer");
+            (address _developmentPool, address _stakingPool,) = ihelpToken.getPools();
+            require(IERC20(holdingToken).transfer(_developmentPool, devFeeShare), "Funding/transfer");
+            require(IERC20(holdingToken).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
 
             // reset the lastinterestearned incrementer
             currentInterestEarned[_cTokenAddress] = 0;
@@ -506,11 +518,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return valueUSD;
     }
 
-    function setStakingPool(address _pool) public onlyOperatorOrOwner {
-        require(_pool != address(0), "Pool cannot be null");
-        stakingPool = _pool;
-    }
-
     // increment and return the total interest generated
     function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
         _calculateTotalIncrementalInterest(_cTokenAddress);
@@ -603,7 +610,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function getAllDonationCurrencies() public view returns (PriceFeedProvider.DonationCurrency[] memory) {
-        return priceFeedProvider.getAllDonationCurrencies(); 
+        return priceFeedProvider.getAllDonationCurrencies();
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {

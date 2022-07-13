@@ -99,11 +99,11 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function stakingPool() public view returns (address) {
-        return ihelpToken.getStakingPool();
+        return ihelpToken.stakingPool();
     }
 
     function holdingPool() public view returns (address) {
-        return ihelpToken.getHoldingPool();
+        return ihelpToken.holdingPool();
     }
 
     function totalToReward() public view returns (uint256) {

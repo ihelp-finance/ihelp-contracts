@@ -45,13 +45,10 @@ describe("Charity Pool", function () {
         await charityPool.initialize({
             charityName: "TestCharity",
             operatorAddress: operator.address,
-            holdingPoolAddress: holdingPool.address,
             charityWalletAddress: charityWallet.address,// address _charityWallet,
             holdingTokenAddress: holdingMock.address, //_holdingToken,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
-            stakingPoolAddress: stakingPool.address,
-            developmentPoolAddress: developmentPool.address,
             wrappedNativeAddress: wTokenMock.address,
             priceFeedProvider: priceFeedProviderMock.address
         });
@@ -63,6 +60,12 @@ describe("Charity Pool", function () {
             underlyingToken: cTokenUnderlyingMock.address,
             priceFeed: aggregator.address
         }]);
+
+        iHelpMock.stakingPool.returns(stakingPool.address);
+        iHelpMock.developmentPool.returns(developmentPool.address);
+        iHelpMock.holdingPool.returns(holdingPool.address);
+        iHelpMock.getPools.returns([developmentPool.address, stakingPool.address, holdingPool.address]);
+
 
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
@@ -110,19 +113,6 @@ describe("Charity Pool", function () {
 
         it("Should not allow to set new operator", async function () {
             await expect(charityPool.connect(addr1).transferOperator(addr2.address)).to.be.revertedWith("is-operator-or-owner");
-        });
-
-        it("Should set new stakingPool", async function () {
-            await expect(charityPool.setStakingPool(addr1.address)).not.to.be.reverted;
-            expect(await charityPool.stakingPool()).to.equal(addr1.address);
-        });
-
-        it("Should not allow to set new operator", async function () {
-            await expect(charityPool.connect(addr1).setStakingPool(addr2.address)).to.be.revertedWith("is-operator-or-owner");
-        });
-
-        it("Should not set zero address as operator", async function () {
-            await expect(charityPool.setStakingPool('0x0000000000000000000000000000000000000000')).to.be.reverted;
         });
 
         it("Should update the charity wallet", async function () {

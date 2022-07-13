@@ -6,19 +6,16 @@ library CharityPoolUtils {
     struct CharityPoolConfiguration {
         string charityName;
         address operatorAddress;
-        address holdingPoolAddress;
         address charityWalletAddress;
         address holdingTokenAddress;
         address ihelpAddress;
         address swapperAddress;
-        address stakingPoolAddress;
-        address developmentPoolAddress;
         address wrappedNativeAddress;
         address priceFeedProvider;
     }
 
     struct DirectDonationsCounter {
-        uint256 totalContribNativeToken; // TODO: Ask Ask mat how should we keep track of each native token?
+        uint256 totalContribNativeToken; 
         uint256 totalContribUSD;
         uint256 contribAfterSwapUSD;
         uint256 charityDonationUSD;
