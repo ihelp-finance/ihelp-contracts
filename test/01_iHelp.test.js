@@ -44,7 +44,6 @@ describe("iHelp", function () {
             stakingPool.address,
             developmentPool.address,
             holdingPool.address,
-            // TODO: Is the  cTokenUnderlyingMock == holdingTOken
             cTokenUnderlyingMock.address,
             priceFeedProvider.address
         );

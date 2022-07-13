@@ -566,6 +566,9 @@ describe("Analytics", function () {
                     }
                 })
 
+                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address);
+                await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address);
+
                 const result = await analytics.getUserTokenContributionsPerCharity(charityPool1.address, owner.address);
                 expect(result.length).to.equal(2);
                 expect(result[0].totalContributions).to.equal(20);

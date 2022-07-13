@@ -4,7 +4,7 @@ const { parseEther } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
 use(smock.matchers);
 describe("xHelp", function () {
-    let Token;
+    let xHelp;
     let tokenContract;
     let ihelp;
     let owner;
@@ -15,16 +15,17 @@ describe("xHelp", function () {
 
 
     beforeEach(async function () {
-        Token = await ethers.getContractFactory("xHelpToken");
+        xHelp = await ethers.getContractFactory("xHelpToken");
         const IHelp = await ethers.getContractFactory("iHelpToken");
         const Mock = await smock.mock("ERC20MintableMock");
 
         [owner, addr1, addr2, stakingPool, ...addrs] = await ethers.getSigners();
 
-        tokenContract = await Token.deploy();
+        tokenContract = await xHelp.deploy();
         mockContract = await Mock.deploy("Mock", "MOK", 18);
         ihelp = await IHelp.deploy();
 
+        
         await ihelp.initialize(
             "iHelp",
             "IHLP",
@@ -32,7 +33,8 @@ describe("xHelp", function () {
             stakingPool.address,
             addr1.address,
             addr1.address,
-            mockContract.address
+            mockContract.address,
+            addrs[7].address
         );
         await tokenContract.initialize("TOK", "TOK", ihelp.address);
         await ihelp.increaseAllowance(tokenContract.address, parseEther('999999999999'));
