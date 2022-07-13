@@ -284,8 +284,17 @@ contract Analytics is IAnalytics {
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
-            result.totalDirectDonations += registry.totalDonations;
-            result.totalContributions += registry.totalContribUSD;
+
+            PriceFeedProvider.DonationCurrency[] memory currencies = charity
+                .priceFeedProvider()
+                .getAllDonationCurrencies();
+
+            for (uint256 index2 = 0; index2 < currencies.length; index2++) {
+                result.totalContributions += charity.balances(_user, currencies[index2].lendingAddress);
+            }
+
+            result.totalDirectDonations += registry.totalContribUSD;
+            result.totalDonationsCount += registry.totalDonations;
             result.totalInterestGenerated += _iHelp.contirbutorGeneratedInterest(_user, address(charity));
         }
 
@@ -334,10 +343,15 @@ contract Analytics is IAnalytics {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             uint256 userDonations = charity.donationsRegistry(_user).totalContribUSD;
             uint256 normalContributions = charity.balanceOfUSD(_user);
+            uint256 _yieldGenerated = _iHelp.contirbutorGeneratedInterest(_user, address(charity));
+
             result[index] = AnalyticsUtils.UserCharityContributions({
                 charityAddress: address(charity),
                 charityName: charity.name(),
-                totalContributions: userDonations + normalContributions
+                totalContributions: normalContributions,
+                totalDonations: userDonations,
+                yieldGenerated: _yieldGenerated,
+                tokenStatistics: getUserTokenContributionsPerCharity(charity, _user)
             });
         }
         return result;
@@ -347,13 +361,11 @@ contract Analytics is IAnalytics {
      * Returns an array that contains the charity contribution info for a given user
      */
     function getUserTokenContributionsPerCharity(CharityPool _charity, address _user)
-        external
+        public
         view
         returns (AnalyticsUtils.UserCharityTokenContributions[] memory)
     {
-        PriceFeedProvider.DonationCurrency[] memory currencies = _charity
-            .priceFeedProvider()
-            .getAllDonationCurrencies();
+        PriceFeedProvider.DonationCurrency[] memory currencies = _charity.getAllDonationCurrencies();
 
         AnalyticsUtils.UserCharityTokenContributions[]
             memory result = new AnalyticsUtils.UserCharityTokenContributions[](currencies.length);
@@ -363,7 +375,6 @@ contract Analytics is IAnalytics {
             (uint256 price, uint256 decimals) = _charity.getUnderlyingTokenPrice(cTokenAddress);
             uint256 contribution = _charity.balances(_user, cTokenAddress);
             uint256 contributionUSD = (contribution * price) / 10**decimals;
-
             result[index] = AnalyticsUtils.UserCharityTokenContributions({
                 tokenAddress: currencies[index].lendingAddress,
                 currency: currencies[index].currency,
@@ -475,7 +486,9 @@ contract Analytics is IAnalytics {
         view
         returns (AnalyticsUtils.WalletAllowance[] memory)
     {
-        PriceFeedProvider.DonationCurrency[] memory currencies = _charity.priceFeedProvider().getAllDonationCurrencies();
+        PriceFeedProvider.DonationCurrency[] memory currencies = _charity
+            .priceFeedProvider()
+            .getAllDonationCurrencies();
         AnalyticsUtils.WalletAllowance[] memory result = new AnalyticsUtils.WalletAllowance[](currencies.length);
 
         for (uint256 index = 0; index < currencies.length; index++) {
@@ -498,12 +511,16 @@ contract Analytics is IAnalytics {
         returns (AnalyticsUtils.DonationCurrencyDetails[] memory)
     {
         PriceFeedProvider.DonationCurrency[] memory currencies = _iHelp.priceFeedProvider().getAllDonationCurrencies();
-        AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](currencies.length);
-      
-        for (uint i = 0; i < currencies.length; i++) {
+        AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](
+            currencies.length
+        );
+
+        for (uint256 i = 0; i < currencies.length; i++) {
             uint256 decimals = IERC20(currencies[i].underlyingToken).decimals();
-            (uint256 price, uint256 priceDecimals) = _iHelp.priceFeedProvider().getUnderlyingTokenPrice(currencies[i].lendingAddress);
-          
+            (uint256 price, uint256 priceDecimals) = _iHelp.priceFeedProvider().getUnderlyingTokenPrice(
+                currencies[i].lendingAddress
+            );
+
             result[i].decimals = decimals;
             result[i].provider = currencies[i].provider;
             result[i].currency = currencies[i].currency;

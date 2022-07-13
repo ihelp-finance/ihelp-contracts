@@ -30,6 +30,7 @@ library AnalyticsUtils {
     }
 
     struct UserStats {
+        uint256 totalDonationsCount;
         uint256 totalDirectDonations;
         uint256 totalInterestGenerated;
         uint256 totalContributions;
@@ -39,6 +40,9 @@ library AnalyticsUtils {
         string  charityName;
         address charityAddress;
         uint256 totalContributions;
+        uint256 totalDonations;
+        uint256 yieldGenerated;
+        UserCharityTokenContributions[] tokenStatistics;
     }
 
     struct UserCharityTokenContributions {

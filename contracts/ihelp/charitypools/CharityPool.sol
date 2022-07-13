@@ -602,6 +602,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return getUnderlying(_cTokenAddress).decimals();
     }
 
+    function getAllDonationCurrencies() public view returns (PriceFeedProvider.DonationCurrency[] memory) {
+        return priceFeedProvider.getAllDonationCurrencies(); 
+    }
+
     function balanceOfUSD(address _addr) public view returns (uint256) {
         uint256 result;
         PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
