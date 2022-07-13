@@ -13,7 +13,7 @@ describe("Analytics", function () {
     let stakingPool, developmentPool, holdingPool;
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
-    let priceFeedProviderMock;
+    let priceFeedProviderMock, xhelpMock;
 
     beforeEach(async function () {
         const IHelp = await smock.mock("iHelpToken");
@@ -36,6 +36,8 @@ describe("Analytics", function () {
         uMock1 = await Mock.deploy("Mock", "MOK", 18);
         uMock2 = await Mock.deploy("Mock", "MOK", 18);
         mockContract = await Mock.deploy("Mock", "MOK", 18);
+       
+        xhelpMock = await Mock.deploy("xHelp", "XHLP", 18);
 
         cTokenMock1 = await CTokenMock.deploy(uMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(uMock2.address, 1000);
@@ -494,8 +496,6 @@ describe("Analytics", function () {
                     expect(result2.tokenStatistics[0].totalContributions).to.equal(0);
                     expect(result2.tokenStatistics[1].tokenAddress).to.equal(cTokenMock2.address);
                     expect(result2.tokenStatistics[1].totalContributions).to.equal(0);
-
-
                 })
             })
 
@@ -610,6 +610,27 @@ describe("Analytics", function () {
 
                 expect(result[1].allowance).to.equal(1000)
                 expect(result[1].tokenAddress).to.equal(uMock2.address);
+            })
+            it("should return the iHelp wallet info", async () => {
+
+                await iHelp.setVariable("_balances", {
+                    [owner.address]: 100
+                })
+
+                await xhelpMock.setVariable("_balances", {
+                    [owner.address]: 100
+                })
+
+                await iHelp.approve(xhelpMock.address, 100);
+
+                const result = await analytics.walletInfo(
+                    iHelp.address,
+                    owner.address,
+                    xhelpMock.address
+                );
+                expect(result.iHelpBalance).to.equal(100)
+                expect(result.xHelpBalance).to.equal(100)
+                expect(result.stakingAllowance).to.equal(100)
             })
         })
     });

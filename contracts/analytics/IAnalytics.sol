@@ -141,6 +141,15 @@ interface IAnalytics {
     ) external view returns (AnalyticsUtils.UserStats memory);
 
     /**
+     * Return iHelp related wallet information
+     */
+    function walletInfo(
+        iHelpToken _iHelp,
+        address _user,
+        address _xHelpAddress
+    ) external view  returns (AnalyticsUtils.WalletInfo memory);
+
+    /**
      * Returns an array with all the charity pools and their contributions
      */
     function getCharityPoolsWithContributions(

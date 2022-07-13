@@ -301,6 +301,22 @@ contract Analytics is IAnalytics {
         return result;
     }
 
+
+    /**
+     * Return general statistics for a given user
+     */
+    function walletInfo(
+        iHelpToken _iHelp,
+        address _user,
+        address _xHelpAddress
+    ) external view override returns (AnalyticsUtils.WalletInfo memory) {
+        AnalyticsUtils.WalletInfo memory result;
+        result.iHelpBalance = _iHelp.balanceOf(_user);
+        result.xHelpBalance = IERC20(_xHelpAddress).balanceOf(_user);
+        result.stakingAllowance = _iHelp.allowance(_user, _xHelpAddress);
+        return result;
+    }
+
     /**
      * Returns an array with all the charity pools and their contributions
      */
@@ -470,7 +486,7 @@ contract Analytics is IAnalytics {
         returns (AnalyticsUtils.StakingPoolStats memory)
     {
         // TODO: Ask matt is this sufficient for getting the iHelp circulation supply or should we consider any oher locked up funds
-        uint256 circulationSupply = _iHelp.totalSupply() - _iHelp.balanceOf(xHelpAddress);
+        uint256 circulationSupply = _iHelp.__totalCirculating() - _iHelp.balanceOf(xHelpAddress);
         return
             AnalyticsUtils.StakingPoolStats({
                 iHelpTokensInCirculation: circulationSupply,

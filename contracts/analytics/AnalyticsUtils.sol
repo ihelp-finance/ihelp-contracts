@@ -18,7 +18,7 @@ library AnalyticsUtils {
     }
 
     struct IndividualCharityContributionInfo {
-        string  charityName;
+        string charityName;
         address charityAddress;
         uint256 totalContributions;
         uint256 totalDonations;
@@ -36,8 +36,14 @@ library AnalyticsUtils {
         uint256 totalContributions;
     }
 
+    struct WalletInfo {
+        uint256 iHelpBalance;
+        uint256 xHelpBalance;
+        uint256 stakingAllowance;
+    }
+
     struct UserCharityContributions {
-        string  charityName;
+        string charityName;
         address charityAddress;
         uint256 totalContributions;
         uint256 totalDonations;
@@ -69,7 +75,7 @@ library AnalyticsUtils {
         uint256 allowance;
     }
 
-    struct DonationCurrencyDetails  {
+    struct DonationCurrencyDetails {
         string provider;
         string currency;
         address underlyingToken;
