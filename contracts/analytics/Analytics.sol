@@ -486,7 +486,7 @@ contract Analytics is IAnalytics {
         returns (AnalyticsUtils.StakingPoolStats memory)
     {
         // TODO: Ask matt is this sufficient for getting the iHelp circulation supply or should we consider any oher locked up funds
-        uint256 circulationSupply = _iHelp.__totalCirculating() - _iHelp.balanceOf(xHelpAddress);
+        uint256 circulationSupply = _iHelp.totalCirculating() - _iHelp.balanceOf(xHelpAddress);
         return
             AnalyticsUtils.StakingPoolStats({
                 iHelpTokensInCirculation: circulationSupply,
