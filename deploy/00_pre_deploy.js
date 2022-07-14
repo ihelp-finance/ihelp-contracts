@@ -98,12 +98,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
     cyan("\nDeploying WETH...")
     wethResult = await deploy("WETH", {
-      args: [
-        'WETH Test Token',
-        'WETH',
-        18
-      ],
-      contract: 'ERC20MintableMock',
+      args: [],
+      contract: 'WTokenMock',
       from: deployer,
       skipIfAlreadyDeployed: true
     });
