@@ -42,6 +42,14 @@ yarn test test/00_e2e-validation.test.js
 
 ```
 
+## Event Listeners
+
+We use event listeners to keep track of time-series-based on-chain events throughout the iHelp protocol. Start the listener after configuring your hardhat config (and running yarn chain if local) using the command below:
+
+```
+node scripts/eventListener.js
+```
+
 ## Deployed Contracts
 
 ### iHelp (ERC20Upgradeable)

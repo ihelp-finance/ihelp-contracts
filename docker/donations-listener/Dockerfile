@@ -4,7 +4,7 @@ ENV NODE_ENV=production
 
 WORKDIR /worker
 
-ADD artifacts/contracts/ihelp/iHelpToken.sol/iHelpToken.json worker
+ADD artifacts/contracts/ihelp/iHelpToken.sol/iHelpToken.json .
 
 COPY ./docker/donations-listener/package.json . 
 COPY ./artifacts/contracts/ihelp/iHelpToken.sol/iHelpToken.json .

@@ -12,5 +12,3 @@ async function getDirectDonactionsBySenders(contractAddress, provider, senderAdd
 module.exports = {
     getDirectDonactionsBySenders
 }
-
-
