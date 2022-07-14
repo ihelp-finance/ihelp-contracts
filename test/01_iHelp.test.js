@@ -174,8 +174,6 @@ describe("iHelp", function () {
 
             it("Should register a new charity pool", async function () {
                 await iHelp.registerCharityPool(addr2.address);
-                expect(await iHelp.__charityPoolRegistry(addr2.address)).to.not.equal('0x0000000000000000000000000000000000000000');
-
                 expect(await iHelp.numberOfCharities()).to.equal(1);
             });
         });
@@ -188,7 +186,6 @@ describe("iHelp", function () {
             it("Should deregister a new charity pool", async function () {
                 await iHelp.registerCharityPool(addr2.address);
                 await iHelp.deregisterCharityPool(addr2.address);
-                expect(await iHelp.__charityPoolRegistry(addr2.address)).to.equal('0x0000000000000000000000000000000000000000');
 
                 expect(await iHelp.numberOfCharities()).to.equal(0);
             });
@@ -247,12 +244,6 @@ describe("iHelp", function () {
 
             await charityPool1.setVariable('swapper', swapper.address);
             await charityPool2.setVariable('swapper', swapper.address);
-
-            await charityPool1.setVariable('stakingPool', stakingPool.address);
-            await charityPool1.setVariable('developmentPool', developmentPool.address);
-
-            await charityPool2.setVariable('stakingPool', stakingPool.address);
-            await charityPool2.setVariable('developmentPool', developmentPool.address);
 
             await charityPool1.setVariable('holdingToken', cTokenUnderlyingMock.address);
             await charityPool2.setVariable('holdingToken', cTokenUnderlyingMock.address);
@@ -606,7 +597,6 @@ describe("iHelp", function () {
                         [charityPool1.address]: 160,
                         [developmentPool.address]: 20,
                         [stakingPool.address]: 20
-
                     });
                 });
 
