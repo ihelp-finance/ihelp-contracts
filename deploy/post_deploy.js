@@ -1,5 +1,6 @@
 
 
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 const { parseEther } = require('ethers/lib/utils');
 const { dim, yellow, cyan, fromBigNumber, chainName, getSwapAddresses, getTokenAddresses, green } = require('../scripts/deployUtils');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
@@ -11,6 +12,26 @@ const csvWriter = createCsvWriter({
   ],
   append: false
 });
+
+async function getPair(swapv2Factory, signer, token1Address, token2Address) {
+  let pair = await swapv2Factory.connect(signer).getPair(token1Address, token2Address);
+  dim('   pair', pair, ZERO_ADDRESS);
+
+  try {
+    if (pair === ZERO_ADDRESS) {
+      dim("    creating pair");
+      const createPairTx = await swapv2Factory.connect(signer).createPair(token1Address, token2Address);
+      await createPairTx.wait();
+      dim('   pair created');
+      pair = await swapv2Factory.getPair(token1Address, token2Address);
+      dim('   new pair', pair);
+    }
+  }
+  catch (e) {
+    console.log(e);
+  }
+  return pair;
+}
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) => {
   let {
@@ -95,29 +116,13 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
 
     const decimals = await token1contract.decimals();
 
-    let getPair1 = await swapv2Factory.getPair(token1Address, ethAddress);
-    dim('   pair', getPair1);
+    let pair = await getPair(swapv2Factory, signer, token1Address, ethAddress)
+    dim('   pair', pair);
+    const swapv2Pair1 = new ethers.Contract(pair, IUniswapV2Pair['abi'], mainnetInfura);
+    let pairSupply = await getPairSupply(swapv2Pair1, signer, 18, decimals);
+    dim('   pairSupply', pairSupply);
 
-    try {
-      const createPairTx = await swapv2Factory.connect(signer).createPair(token1Address, ethAddress);
-      await createPairTx.wait();
-      dim('   pair created');
-      getPair1 = await swapv2Factory.connect(userSigner).getPair(token1Address, ethAddress);
-      dim('   new pair', getPair1);
-    }
-    catch (e) { }
-
-    const swapv2Pair1 = new ethers.Contract(getPair1, IUniswapV2Pair['abi'], mainnetInfura);
-
-    let pairSupply1 = 0;
-    try {
-      pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
-      pairSupply1 = fromBigNumber(pairSupply1, 18 - decimals > 0 ? 18 - decimals : 18);
-    }
-    catch (e) { }
-    dim('   pairSupply', pairSupply1);
-
-    if (pairSupply1 == 0) {
+    if (pairSupply == 0) {
 
       const currentBalance1 = await token1contract.balanceOf(userAccount);
 
@@ -158,7 +163,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
         pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
         pairSupply1 = fromBigNumber(pairSupply1, token2decimals - decimals > 0 ? token2decimals - decimals : token2decimals);
       }
-      catch (e) { }
+      catch (e) {
+        console.log(e)
+      }
       dim('   new pairSupply', pairSupply1);
 
     }
@@ -192,29 +199,13 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     //console.log(token1value,token2value)
     //console.log(token1decimals,token2decimals)
 
-    let getPair1 = await swapv2Factory.getPair(token1Address, token2Address);
-    dim('   pair', getPair1);
+    let pair = await getPair(swapv2Factory, signer, token1Address, token2Address);
+    const swapv2Pair1 = new ethers.Contract(pair, IUniswapV2Pair['abi'], mainnetInfura);
 
-    try {
-      const createPairTx = await swapv2Factory.connect(signer).createPair(token1Address, token2Address);
-      await createPairTx.wait();
-      dim('   pair created');
-      getPair1 = await swapv2Factory.connect(userSigner).getPair(token1Address, token2Address);
-      dim('   new pair', getPair1);
-    }
-    catch (e) { }
+    let pairSupply = await getPairSupply(swapv2Pair1, signer, token2decimals, token1decimals);
+    dim('   pairSupply', pairSupply);
 
-    const swapv2Pair1 = new ethers.Contract(getPair1, IUniswapV2Pair['abi'], mainnetInfura);
-
-    let pairSupply1 = 0;
-    try {
-      pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
-      pairSupply1 = fromBigNumber(pairSupply1, token2decimals - token1decimals > 0 ? token2decimals - token1decimals : token2decimals);
-    }
-    catch (e) { }
-    dim('   pairSupply', pairSupply1);
-
-    if (pairSupply1 == 0) {
+    if (pairSupply == 0) {
 
       const currentBalance1 = await token1contract.balanceOf(userAccount);
 
@@ -344,3 +335,17 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
 };
 module.exports.tags = ["PostDeploy"];
 module.exports.runAtTheEnd = true;
+
+
+async function getPairSupply(swapv2Pair1, signer, token2decimals, token1decimals) {
+  let pairSupply1 = 0;
+  try {
+    pairSupply1 = await swapv2Pair1.connect(signer).totalSupply();
+    pairSupply1 = fromBigNumber(pairSupply1, token2decimals - token1decimals > 0 ? token2decimals - token1decimals : token2decimals);
+  }
+  catch (e) {
+    console.log(e);
+  }
+  return pairSupply1;
+}
+

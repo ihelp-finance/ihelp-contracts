@@ -81,6 +81,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ],
       contract: 'ERC20MintableMock',
       from: deployer,
+      skipIfAlreadyDeployed: true
     });
 
     cyan("\nDeploying cUSDC...");
@@ -92,6 +93,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ],
       contract: 'CTokenMock',
       from: deployer,
+      skipIfAlreadyDeployed: true
     });
 
     cyan("\nDeploying WETH...")
@@ -103,6 +105,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ],
       contract: 'ERC20MintableMock',
       from: deployer,
+      skipIfAlreadyDeployed: true
     });
 
     cyan("\nDeploying cWETH...")
