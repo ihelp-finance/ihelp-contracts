@@ -392,7 +392,7 @@ describe("Charity Pool", function () {
 
             // Mint the holding tokens to the charity in order to simulate the swaps
             await holdingMock.mint(charityPool.address, amount);
-            await expect(charityPool.donateNative({
+            await expect(charityPool.directDonationNative({
                 value: amount,
                 gasPrice: parseUnits('4', 'gwei'),
                 gasLimit: '500000',

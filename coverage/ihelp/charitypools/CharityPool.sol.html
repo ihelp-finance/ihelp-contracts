@@ -1967,7 +1967,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 &nbsp;
     receive() external payable {}
 &nbsp;
-    function donateNative() public payable {
+    function directDonationNative() public payable {
         uint256 amount = msg.value;
         _donationsRegistry[msg.sender].totalContribNativeToken += amount;
         wrappedNative.deposit{value: amount}();
