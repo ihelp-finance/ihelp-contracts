@@ -285,14 +285,7 @@ contract Analytics is IAnalytics {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
 
-            PriceFeedProvider.DonationCurrency[] memory currencies = charity
-                .priceFeedProvider()
-                .getAllDonationCurrencies();
-
-            for (uint256 index2 = 0; index2 < currencies.length; index2++) {
-                result.totalContributions += charity.balances(_user, currencies[index2].lendingAddress);
-            }
-
+            result.totalContributions += charity.balanceOfUSD(_user);
             result.totalDirectDonations += registry.totalContribUSD;
             result.totalDonationsCount += registry.totalDonations;
             result.totalInterestGenerated += _iHelp.contirbutorGeneratedInterest(_user, address(charity));

@@ -36,7 +36,7 @@ describe("Analytics", function () {
         uMock1 = await Mock.deploy("Mock", "MOK", 18);
         uMock2 = await Mock.deploy("Mock", "MOK", 18);
         mockContract = await Mock.deploy("Mock", "MOK", 18);
-       
+
         xhelpMock = await Mock.deploy("xHelp", "XHLP", 18);
 
         cTokenMock1 = await CTokenMock.deploy(uMock1.address, 1000);
@@ -123,8 +123,6 @@ describe("Analytics", function () {
             it("should return the total generated interest by a underlying currency", async () => {
                 await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address)
                 await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address)
-
-
 
                 await charityPool2.setVariable("totalInterestEarned", {
                     [cTokenMock1.address]: 25,
@@ -382,6 +380,9 @@ describe("Analytics", function () {
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
+                await charityPool1.setVariable("holdingDecimals", 18);
+                await charityPool2.setVariable("holdingDecimals", 18);
+
                 const result = await analytics.userStats(iHelp.address, addr1.address, 0, 0);
                 expect(result.totalDirectDonations).to.equal(60);
                 expect(result.totalContributions).to.equal(50);
@@ -530,7 +531,7 @@ describe("Analytics", function () {
                 charityPool1.name.returns("Charity1");
                 charityPool2.name.returns("Charity2");
 
-                iHelp.totalSupply.returns(200);
+                iHelp.totalCirculating.returns(200);
                 iHelp.balanceOf.returns(100)
 
                 const result = await analytics.stakingPoolState(iHelp.address, owner.address)
