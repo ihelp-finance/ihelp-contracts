@@ -69,6 +69,9 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function claimableRewardOf(address _addr) public view returns (uint256) {
         uint256 totalStaked = totalSupply();
+        if(totalStaked == 0){
+            return 0;
+        }
         console.log("totalStaked", totalStaked);
 
         uint256 totalReward = totalToReward();
