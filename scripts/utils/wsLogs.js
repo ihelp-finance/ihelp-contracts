@@ -3,7 +3,7 @@ const ethers = require('ethers');
 const EXPECTED_PONG_BACK = 15000
 const KEEP_ALIVE_CHECK_INTERVAL = 7500
 
-const Web3LogListener = (nodeUrl, filter) => {
+const Web3LogListener = (nodeUrl, filters) => {
     let start;
     start = (callback, onError) => {
         try {
@@ -39,16 +39,23 @@ const Web3LogListener = (nodeUrl, filter) => {
                 clearInterval(pingTimeout)
             })
 
-            provider.on(filter, (data) => {
-                callback(data);
-            })
+            filters.map(filter => ({ topics: [filter] })).forEach(filter => {
+                provider.on(filter, (data) => {
+                    callback(data);
+                })
+            });
         } catch (error) {
             console.log(error);
+
+            // try and destroy the provider
+            provider.destroy().catch(console.log);
+         
             if (typeof onError === 'function') {
                 onError(error);
             } else {
                 throw error
             }
+
         }
     }
     return { start };
