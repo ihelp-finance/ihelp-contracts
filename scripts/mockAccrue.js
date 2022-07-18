@@ -155,8 +155,8 @@ const mockAccrue = async() => {
       percentofcdai = 0;
       accrualValue = 0;
     }
-    //console.log('percentCDAI', percentofcdai.toFixed(0));
-    //console.log('accrualValue', accrualValue);
+    console.log('percentCDAI', percentofcdai.toFixed(0));
+    console.log('accrualValue', accrualValue);
 
     return accrualValue;
 
@@ -179,11 +179,18 @@ const mockAccrue = async() => {
     const getCash = getCashTx.toString();
     console.log('getCashUsdc', getCash);
 
-    const percentofcusdc = totalb.times(1e6).div(getCash);
+    let accrualValue = null;
+    let percentofcusdc = null;
+    
+    if (getCash != 0) {
+      percentofcusdc = totalb.times(1e6).div(getCash);
+      accrualValue = ethers.utils.parseUnits(Big(value).times(1e6).div(percentofcusdc).toFixed(0), usdcDecimals).toString();
+    }else {
+      percentofcusdc = 0;
+      accrualValue = 0;
+    }
     console.log('percentCUSDC', percentofcusdc.toFixed(0));
-
-    const accrualValue = ethers.utils.parseUnits(Big(value).times(1e6).div(percentofcusdc).toFixed(0), usdcDecimals).toString();
-    //console.log('accrualValue', accrualValue);
+    console.log('accrualValue', accrualValue);
 
     return accrualValue;
 
