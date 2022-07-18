@@ -112,7 +112,7 @@ contract Analytics is IAnalytics {
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
             address charity = _iHelp.charityAt(index);
-            result += _iHelp.contirbutorGeneratedInterest(_account, charity);
+            result += _iHelp.contributorGeneratedInterest(_account, charity);
         }
         return result;
     }
@@ -288,7 +288,7 @@ contract Analytics is IAnalytics {
             result.totalContributions += charity.balanceOfUSD(_user);
             result.totalDirectDonations += registry.totalContribUSD;
             result.totalDonationsCount += registry.totalDonations;
-            result.totalInterestGenerated += _iHelp.contirbutorGeneratedInterest(_user, address(charity));
+            result.totalInterestGenerated += _iHelp.contributorGeneratedInterest(_user, address(charity));
         }
 
         return result;
@@ -352,7 +352,7 @@ contract Analytics is IAnalytics {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             uint256 userDonations = charity.donationsRegistry(_user).totalContribUSD;
             uint256 normalContributions = charity.balanceOfUSD(_user);
-            uint256 _yieldGenerated = _iHelp.contirbutorGeneratedInterest(_user, address(charity));
+            uint256 _yieldGenerated = _iHelp.contributorGeneratedInterest(_user, address(charity));
 
             result[index] = AnalyticsUtils.UserCharityContributions({
                 charityAddress: address(charity),

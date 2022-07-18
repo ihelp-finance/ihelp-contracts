@@ -200,14 +200,14 @@ const mockAccrue = async() => {
   const usdcDecimals = await usdc.decimals();
 
   // accrue DAI
-  const aval1 = await calculateAccrualValueDai(100000);
+  const aval1 = await calculateAccrualValueDai(1);
   const accrueTxDai1 = await cdai.accrueCustom(aval1);
   await accrueTxDai1.wait();
 
   // accrue USDC
-  const aval2 = await calculateAccrualValueUsdc(100000);
-  const accrueTxUsdc1 = await cusdc.accrueCustom(aval2);
-  await accrueTxUsdc1.wait();
+  // const aval2 = await calculateAccrualValueUsdc(100000);
+  // const accrueTxUsdc1 = await cusdc.accrueCustom(aval2);
+  // await accrueTxUsdc1.wait();
 
   const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);

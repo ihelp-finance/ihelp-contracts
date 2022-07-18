@@ -66,7 +66,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     mapping(uint256 => uint256) public cumulativeInterestByPhase;
 
     mapping(address => uint256) public contributorTokenClaims;
-    mapping(address => mapping(address => uint256)) public contirbutorGeneratedInterest;
+    mapping(address => mapping(address => uint256)) public contributorGeneratedInterest;
 
     EnumerableSet.AddressSet private charityPoolList;
     ProcessingState public processingState;
@@ -442,6 +442,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             uint256 poolContribution = CharityPool(payable(charity)).accountedBalanceUSD();
             // console.log("poolContribution", poolContribution);
+            
+            uint256 newInterestUSD = processingState.newInterestUS; // represents capital contributed + interest generated
 
             if (poolContribution > 0) {
                 // console.log("totalCharityPoolContributions", processingState.totalCharityPoolContributions);
@@ -474,8 +476,12 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("contribTokens", contribTokens);
 
                     contributorTokenClaims[contributorList[ii]] += contribTokens;
-                    contirbutorGeneratedInterest[contributorList[ii]][charity] += contribTokens;
-                    totalContributorGeneratedInterest += contribTokens;
+                    
+                    uint256 userInterest = userShare.mul(newInterestUSD);
+
+                    contributorGeneratedInterest[contributorList[ii]][charity] += userInterest;
+                    totalContributorGeneratedInterest += userInterest;
+                    
                 }
                 processingState.ii = 0;
             }
