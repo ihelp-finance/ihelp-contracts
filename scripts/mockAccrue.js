@@ -76,7 +76,7 @@ const chainName = (chainId) => {
 
 let userAccount, userSigner;
 let signer;
-let ihelp,cDAI,cUSDC,dai,USDC;
+let ihelp,cDAI,cUSDC,dai,USDC,charityPool1,charityPool2,charityPool3;
 
 const mockAccrue = async() => {
 
