@@ -6,9 +6,31 @@ const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
-const externalContracts = require('../../react-app/src/contracts/external_contracts');
+// const externalContracts = require('../../ihelp-app/client/src/contracts/external_contracts');
 
-//const { assert, use, expect } = require("chai");
+function dim() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.dim.call(chalk, ...arguments));
+  }
+}
+
+function cyan() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.cyan.call(chalk, ...arguments));
+  }
+}
+
+function yellow() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.yellow.call(chalk, ...arguments));
+  }
+}
+
+function green() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.green.call(chalk, ...arguments));
+  }
+}
 
 let userAccount, userSigner;
 let signer;
@@ -77,15 +99,15 @@ const upkeep = async() => {
     const stakingPoolSigner = await hardhat.ethers.provider.getSigner(stakingPool);
     const holdingPoolSigner = await hardhat.ethers.provider.getSigner(holdingPool);
 
-    console.log(`signer: ${signer._address}`);
-    console.log(`holder: ${holdingPool}`);
+    console.log(`\nsigner: ${signer._address}`);
+    //console.log(`holder: ${holdingPool}`);
 
     // get the signer eth balance
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
-    const startbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
-    console.log(`start holding balance: ${fromBigNumber(startbalanceholding)}`);
+    // const startbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
+    // console.log(`start holding balance: ${fromBigNumber(startbalanceholding)}`);
 
     // const currentBlock= await hardhat.ethers.provider.getBlockNumber()
 
@@ -94,6 +116,57 @@ const upkeep = async() => {
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
     ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
     
+    
+    const upkeepStatusMapping = {
+    0: "dripStage1",
+    1: "dripStage2",
+    2: "dripStage3",
+    3: "dripStage4",
+    4: "dump"
+  };
+
+
+  // Incrementally go trough all upkeep steps
+  const processUpkeep = async (upkeepStatus) => {
+    let newUpkeepstatus = upkeepStatus;
+    const method = upkeepStatusMapping[upkeepStatus];
+    cyan("Processing upkeep, status ", method);
+    while (upkeepStatus == newUpkeepstatus) {
+      await ihelp.functions[method]();
+      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
+    }
+
+    green("New Upkeep status ", newUpkeepstatus.toNumber());
+
+    // Return when the upkeep status goes back to 0
+    if (newUpkeepstatus.toNumber() === 0) {
+      return;
+    }
+    await processUpkeep(newUpkeepstatus);
+  };
+
+
+  const upkeepStep = async () => {
+
+    let upkeepStatus = await ihelp.processingState().then(data => data.status);
+    await processUpkeep(upkeepStatus);
+    
+  };
+  
+  await upkeepStep()
+  
+  const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
+  console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
+  
+  // const endbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
+  // console.log(`end holding balance: ${fromBigNumber(endbalanceholding)}`);
+  
+  console.log(`signer cost:`,fromBigNumber(startbalance)-fromBigNumber(balanceend));
+  //console.log(`holder cost:`,fromBigNumber(startbalanceholding)-fromBigNumber(endbalanceholding));
+  
+  console.log('\nUPKEEP COMPLETE.\n');
+    
+  /*
     const mockDai = false;
     
     let dai,cdai,usdc,cusdc;
@@ -205,7 +278,8 @@ const upkeep = async() => {
     console.log(`holder cost:`,fromBigNumber(startbalanceholding)-fromBigNumber(endbalanceholding));
 
     console.log('\nUPKEEP COMPLETE.\n');
-
+    */
+    
 }
 
 upkeep();

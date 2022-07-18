@@ -2,8 +2,8 @@ const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
-const dotenv = require('dotenv');
-dotenv.config({ path: '/core/ihelp/ihelp-dev-local/packages/hardhat/.env' });
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
