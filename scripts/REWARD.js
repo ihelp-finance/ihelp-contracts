@@ -6,7 +6,7 @@ const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
-const externalContracts = require('../../react-app/src/contracts/external_contracts');
+// const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const IUniswapV2Factory = require("@uniswap/v2-core/build/IUniswapV2Factory.json");
 const IUniswapV2Pair = require("@uniswap/v2-core/build/IUniswapV2Pair.json");
@@ -94,85 +94,28 @@ const upkeep = async() => {
 
     signer = await hardhat.ethers.provider.getSigner(deployer);
 
-    const stakingPoolSigner = await hardhat.ethers.provider.getSigner(stakingPool);
-
     console.log(`signer: ${deployer}`);
-    console.log(`staking signer: ${stakingPool}`);
 
     // get the signer eth balance
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
-    const startbalancestaking = await hardhat.ethers.provider.getBalance(stakingPool);
-    console.log(`start staking balance: ${fromBigNumber(startbalancestaking)}`);
-
-    const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
-    ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
-
     const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
     xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
 
-    const swapperAddress = (await hardhat.deployments.get('swapper')).address;
-    swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
-
     let dai,cdai,usdc,cusdc;
-    const getTokenAddresses = async(currency, lender) => {
 
-        let ctokenaddress = null;
-        let pricefeed = null;
-        let tokenaddress = null;
-
-        let addresses = fs.readFileSync(`../networks/${chainName(chainId)}-lending.json`);
-        addresses = JSON.parse(addresses);
-
-        if (currency == 'DAI') {
-            tokenaddress = addresses[lender]['Tokens']['DAI'];
-            ctokenaddress = addresses[lender]['lendingTokens']['DAI'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-        }
-        else if (currency == 'USDC') {
-            tokenaddress = addresses[lender]['Tokens']['USDC'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDC'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-        }
-        else if (currency == 'USDT') {
-            tokenaddress = addresses[lender]['Tokens']['USDT'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDT'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDT'];
-        }
-
-        return {
-            "token": tokenaddress,
-            "lendingtoken": ctokenaddress,
-            "pricefeed": pricefeed
-        };
-
-    }
-    
     const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
     const chainId = 43114;
     
-    const daiAddresses = await getTokenAddresses('DAI', 'traderjoe');
-    const daiAddress = daiAddresses['token'];
-    dai = new ethers.Contract(daiAddress, externalContracts[chainId.toString()]['contracts']['DAI']['abi'], mainnetInfura);
-
     const stakepool1Tx = await xhelp.totalAwarded();
     const stakepool1 = fromBigNumber(stakepool1Tx);
     console.log('\nStart Awarded:',stakepool1)
 
-    // take the staking pool dai amount and distribute this across stakers
-    const stakepoolTx = await dai.balanceOf(stakingPool);
-    const stakepool = fromBigNumber(stakepoolTx);
-    console.log('\nAmount of Dai to Reward:',stakepool);
-    
     let stakepool2 = parseFloat(stakepool1);
     
-    if (parseFloat(stakepool) > 0) {
+    // if (parseFloat(stakepool) > 0) {
     
-        // approve the staking pool address to send from xhelp contract
-        let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress,stakepoolTx.toString());
-        await rewardApprove.wait();
-        
         const calcRewardsTx = await xhelp.distributeRewards();
         await calcRewardsTx.wait();
         
@@ -181,20 +124,15 @@ const upkeep = async() => {
         console.log('\nEnd Awarded:',stakepool2)
         console.log('\nNewly Awarded:',(parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6))
 
-    }
+    // }
     
     const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`end signer balance: ${fromBigNumber(balanceend)}`);
-    
-    const endbalancestaking = await hardhat.ethers.provider.getBalance(stakingPool);
-    console.log(`end staking balance: ${fromBigNumber(endbalancestaking)}`);
-    
+
     const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);
-    const stakerCost = fromBigNumber(startbalancestaking)-fromBigNumber(endbalancestaking);
-    
+
     console.log(`signer cost:`,signerCost);
-    console.log(`staker cost:`,stakerCost);
-    
+
     console.log('\nREWARD DISTRIBUTION COMPLETE.\n');
     
     
