@@ -72,6 +72,10 @@ const chainName = (chainId) => {
             return 'Matic';
         case 31337:
             return 'HardhatEVM';
+        case 43113:
+            return 'Fuji';
+        case 43114:
+            return 'Avalanche';
         case 80001:
             return 'Matic (Mumbai)';
         default:
@@ -86,32 +90,21 @@ const upkeep = async() => {
     let {
         deployer,
         stakingPool,
-        developmentPool,
-        holdingPool,
-        charity1wallet,
-        charity2wallet,
-        charity3wallet,
-        userAccount,
     } = await hardhat.getNamedAccounts();
-
-    console.log(`user:`, userAccount);
-
-    userSigner = await hardhat.ethers.provider.getSigner(userAccount)
 
     signer = await hardhat.ethers.provider.getSigner(deployer);
 
-    const charity1walletSigner = await hardhat.ethers.provider.getSigner(charity1wallet);
-    const charity2walletSigner = await hardhat.ethers.provider.getSigner(charity2wallet);
-    const charity3walletSigner = await hardhat.ethers.provider.getSigner(charity3wallet);
-    const developmentPoolSigner = await hardhat.ethers.provider.getSigner(developmentPool);
     const stakingPoolSigner = await hardhat.ethers.provider.getSigner(stakingPool);
-    const holdingPoolSigner = await hardhat.ethers.provider.getSigner(holdingPool);
 
+    console.log(`signer: ${deployer}`);
     console.log(`staking signer: ${stakingPool}`);
 
     // get the signer eth balance
-    const balance = await hardhat.ethers.provider.getBalance(stakingPool);
-    console.log(`staking balance: ${fromBigNumber(balance)}`);
+    const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
+    console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
+    
+    const startbalancestaking = await hardhat.ethers.provider.getBalance(stakingPool);
+    console.log(`start staking balance: ${fromBigNumber(startbalancestaking)}`);
 
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
     ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
@@ -122,41 +115,30 @@ const upkeep = async() => {
     const swapperAddress = (await hardhat.deployments.get('swapper')).address;
     swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
 
-    const charity1Address = (await hardhat.deployments.get('charityPool1')).address;
-    charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
-
-    const charity2Address = (await hardhat.deployments.get('charityPool2')).address;
-    charityPool2 = await hardhat.ethers.getContractAt('CharityPool', charity2Address, signer);
-
-    const charity3Address = (await hardhat.deployments.get('charityPool3')).address;
-    charityPool3 = await hardhat.ethers.getContractAt('CharityPool', charity3Address, signer);
-
-    const mockDai = false;
-
-    let dai;
+    let dai,cdai,usdc,cusdc;
     const getTokenAddresses = async(currency, lender) => {
 
         let ctokenaddress = null;
         let pricefeed = null;
         let tokenaddress = null;
 
-        let addresses = fs.readFileSync(`../networks/${chainName(chainId)}-${lender}.json`);
+        let addresses = fs.readFileSync(`../networks/${chainName(chainId)}-lending.json`);
         addresses = JSON.parse(addresses);
 
         if (currency == 'DAI') {
-            tokenaddress = addresses['Tokens']['DAI']['address'];
-            ctokenaddress = addresses['cTokens']['cDAI']['address'];
-            pricefeed = addresses['PriceOracleProxy']['DAI'];
+            tokenaddress = addresses[lender]['Tokens']['DAI'];
+            ctokenaddress = addresses[lender]['lendingTokens']['DAI'];
+            pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
         }
         else if (currency == 'USDC') {
-            tokenaddress = addresses['Tokens']['USDC']['address'];
-            ctokenaddress = addresses['cTokens']['cUSDC']['address'];
-            pricefeed = addresses['PriceOracleProxy']['USDC'];
+            tokenaddress = addresses[lender]['Tokens']['USDC'];
+            ctokenaddress = addresses[lender]['lendingTokens']['USDC'];
+            pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
         }
-        else if (currency == 'WETH') {
-            tokenaddress = '0xc778417E063141139Fce010982780140Aa0cD5Ab';
-            ctokenaddress = null;
-            pricefeed = addresses['PriceOracleProxy']['WETH'];
+        else if (currency == 'USDT') {
+            tokenaddress = addresses[lender]['Tokens']['USDT'];
+            ctokenaddress = addresses[lender]['lendingTokens']['USDT'];
+            pricefeed = addresses[lender]['PriceOracleProxy']['USDT'];
         }
 
         return {
@@ -167,53 +149,66 @@ const upkeep = async() => {
 
     }
     
-    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW");
-    const chainId = 4;
+    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
+    const chainId = 43114;
     
-    const daiAddresses = await getTokenAddresses('DAI', 'compound');
+    const daiAddresses = await getTokenAddresses('DAI', 'traderjoe');
     const daiAddress = daiAddresses['token'];
     dai = new ethers.Contract(daiAddress, externalContracts[chainId.toString()]['contracts']['DAI']['abi'], mainnetInfura);
 
-    // console.log('');
-    // green('Signer Address:', signer._address);
-    // green('DAI Address:', daiAddress);
-    // green('cDAI Address:', cDaiAddress);
-    // green('USDC Address:', usdcAddress);
-    // green('cUSDC Address:', cUsdcAddress);
-    // green('WETH Address:', wethAddress);
-    // green('cETH Address:', cEthAddress);
-    // green('iHelp Address:', ihelpAddress);
-    // green('xHelp Address:', xhelpAddress);
-    // green('Swapper Address:', swapperAddress);
-    // green('CharityPool 1 Address:', charity1Address);
-    // green('CharityPool 2 Address:', charity2Address);
-    // green('CharityPool 3 Address:', charity3Address);
-    // // green('CharityPool 4 Address:', charity4Address);
-    // green('Development Pool Address:', developmentPool);
-    // green('Staking Pool Address:', stakingPool);
-    // green('Holding Pool Address:', holdingPool);
-    // green('');
+    const stakepool1Tx = await xhelp.totalAwarded();
+    const stakepool1 = fromBigNumber(stakepool1Tx);
+    console.log('\nStart Awarded:',stakepool1)
 
-    //console.log('\nSTARTING REWARD DISTRIBUTION...\n');
+    // take the staking pool dai amount and distribute this across stakers
+    const stakepoolTx = await dai.balanceOf(stakingPool);
+    const stakepool = fromBigNumber(stakepoolTx);
+    console.log('\nAmount of Dai to Reward:',stakepool);
+    
+    let stakepool2 = parseFloat(stakepool1);
+    
+    if (parseFloat(stakepool) > 0) {
+    
+        // approve the staking pool address to send from xhelp contract
+        let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress,stakepoolTx.toString());
+        await rewardApprove.wait();
+        
+        const calcRewardsTx = await xhelp.distributeRewards();
+        await calcRewardsTx.wait();
+        
+        const stakepool2Tx = await xhelp.totalAwarded();
+        stakepool2 = fromBigNumber(stakepool2Tx);
+        console.log('\nEnd Awarded:',stakepool2)
+        console.log('\nNewly Awarded:',(parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6))
 
-    // stakingPool dai accumulates from share of generated interest to the staking pool wallet
+    }
+    
+    const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
+    console.log(`end signer balance: ${fromBigNumber(balanceend)}`);
+    
+    const endbalancestaking = await hardhat.ethers.provider.getBalance(stakingPool);
+    console.log(`end staking balance: ${fromBigNumber(endbalancestaking)}`);
+    
+    const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);
+    const stakerCost = fromBigNumber(startbalancestaking)-fromBigNumber(endbalancestaking);
+    
+    console.log(`signer cost:`,signerCost);
+    console.log(`staker cost:`,stakerCost);
+    
+    console.log('\nREWARD DISTRIBUTION COMPLETE.\n');
+    
+    
+    // const { Webhook } = require('discord-webhook-node');
+    // const hook = new Webhook("");
+     
+    // const IMAGE_URL = 'https://avalanche.ihelp.finance/assets/ihelp_icon.png';
+    // hook.setUsername('iHelp Job Monitor');
+    // hook.setAvatar(IMAGE_URL);
+     
+    // hook.send("Reward Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Staking Cost: '+stakerCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4)+'\n   Staker Balance: '+fromBigNumber(endbalancestaking).toFixed(4) +'\nNewly Awarded:' + (parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6));
 
-    // At the end of the distribution period the accumulated Dai in the staking pool is swapped for HELP tokens (essentially a buyback) on uniswap and/or sushiswap, increasing the xHELP to HELP ratio/exchange rate
 
-    // These buyback events will accumulate this ratio over time 
-
-    // Users can then trade their xHELP tokens back for HELP tokens
-
-    // test swap of eth to dai
-
-    // REWARD DISTRIBUTION
-
-    // check the balance of dai in the staking pool
-
-    // with the staking pool balance, on reward distribution swap out dai with help tokens
-
-    // send the help tokens to the xhelp contract to increase the exchange rate
-
+    /*
     let stakingPoolBalance = await dai.connect(stakingPoolSigner).balanceOf(stakingPool);
     console.log('stakingPoolDai', fromBigNumber(stakingPoolBalance));
     
@@ -243,8 +238,9 @@ const upkeep = async() => {
         console.log('help after:', fromBigNumber(currentBalanceHoldingAfter));
 
     }
+    */
 
-    console.log('\nREWARD DISTRIBUTION COMPLETE.\n');
+    
 
 }
 
