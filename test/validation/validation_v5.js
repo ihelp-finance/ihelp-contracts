@@ -412,6 +412,7 @@ const validate = async () => {
     // approve the staking pool address to send from xhelp contract
     let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
     await rewardApprove.wait();
+    await xhelp.distributeRewards();
   };
 
 
