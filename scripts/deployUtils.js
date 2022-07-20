@@ -23,6 +23,12 @@ module.exports.deployCharityPoolToNetwork = async ({
         deployedCharities = JSON.parse(fileData);
     }
 
+    const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
+    if (alreadyExists) {
+        this.yellow(`Chairty ${charityName} was already deployed, skipping...`);
+        return;
+    }
+
     const factoryDeployment = await deployments.get("CharityPoolCloneFactory");
     const factory = await ethers.getContractAt("CharityPoolCloneFactory", factoryDeployment.address);
 

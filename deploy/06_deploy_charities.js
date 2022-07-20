@@ -110,6 +110,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       priceFeedProvider: priceFeedProviderAddresss,
       wrappedNativeAddress: nativeWrapper //TODO: @MAtt , Need to set the native wrapper for the non testing environment
     }, network.name);
+
+    if(!charityResult) {
+      return;
+    }
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
     deployedCharities.push([contractName, charityResult]);
 
@@ -121,7 +125,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     await deployCharityPool('charityPool2', 'Charity Pool 2', holdingPool, 'USDC', 'compound');
     await deployCharityPool('charityPool3', 'Charity Pool 3', holdingPool, 'DAI', 'compound');
 
-    console.log('deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
+    console.log('newly deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
     let numberOfCharities = await ihelp.numberOfCharities();
     if (numberOfCharities.toString() == '0') {
       for (let i = 0; i < deployedCharities.length; i++) {
