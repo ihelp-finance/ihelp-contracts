@@ -299,14 +299,15 @@ describe("Analytics", function () {
 
         describe("Consolidated calls", () => {
             it("should return the general statistics in one call", async () => {
+        
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
                 charityPool1.accountedBalanceUSD.returns(200);
                 charityPool2.accountedBalanceUSD.returns(200);
 
-                charityPool1.calculateTotalInterestEarned.returns(20);
-                charityPool2.calculateTotalInterestEarned.returns(30);
+                charityPool1.totalInterestEarnedUSD.returns(20);
+                charityPool2.totalInterestEarnedUSD.returns(30);
 
                 charityPool1.numberOfContributors.returns(12);
                 charityPool2.numberOfContributors.returns(8);

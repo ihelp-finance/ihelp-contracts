@@ -248,7 +248,7 @@ contract Analytics is IAnalytics {
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPool charity = CharityPool(payable(_iHelp.charityAt(index)));
             result.totalValueLocked += charity.accountedBalanceUSD();
-            result.totalInterestGenerated += charity.calculateTotalInterestEarned();
+            result.totalInterestGenerated += charity.totalInterestEarnedUSD();
             result.totalHelpers += charity.numberOfContributors();
         }
         return result;
