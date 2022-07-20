@@ -23,7 +23,7 @@ async function getPair(swapv2Factory, signer, token1Address, token2Address) {
       const createPairTx = await swapv2Factory.connect(signer).createPair(token1Address, token2Address);
       await createPairTx.wait();
       dim('   pair created');
-      pair = await swapv2Factory.getPair(token1Address, token2Address);
+      pair = await swapv2Factory.connect(signer).getPair(token1Address, token2Address);
       dim('   new pair', pair);
     }
   }
@@ -161,7 +161,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
       let pairSupply1 = 0;
       try {
         pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
-        pairSupply1 = fromBigNumber(pairSupply1, token2decimals - decimals > 0 ? token2decimals - decimals : token2decimals);
+        pairSupply1 = fromBigNumber(pairSupply1, 18 - decimals > 0 ? 18 - decimals : 18);
       }
       catch (e) {
         console.log(e)
