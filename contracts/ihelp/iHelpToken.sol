@@ -140,7 +140,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         string memory _name,
         string memory _symbol,
         address _operator,
-        address _stakingPool,
         address _developmentPool,
         address _underlyingToken,
         address _priceFeedProviderAddress
@@ -150,7 +149,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __Ownable_init();
 
         operator = _operator;
-        stakingPool = _stakingPool;
         developmentPool = _developmentPool;
         underlyingToken = IERC20(_underlyingToken);
         priceFeedProvider = PriceFeedProvider(_priceFeedProviderAddress);

@@ -48,7 +48,7 @@ module.exports = async ({ getNamedAccounts, deployments, execute }) => {
 
   green('Updatding iHelp staking pool...');
   const signer = await ethers.provider.getSigner(deployer);
-  const ihelp = await ethers.getContractAt('iHelpToken', ihelp.address, signer);
+  const ihelp = await ethers.getContractAt('iHelpToken', ihelpToken.address, signer);
   await ihelp.setStakingPool(xhelpAddress);
   green('Staking pool was set to :', xhelpAddress);
 };
