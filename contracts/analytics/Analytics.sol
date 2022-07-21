@@ -334,7 +334,7 @@ contract Analytics is IAnalytics {
         }
         return result;
     }
-
+    
     /**
      * Returns an array that contains the charity contribution info for a given user
      */
