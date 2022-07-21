@@ -13,9 +13,8 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     uint256 internal __rewardAwarded;
 
-    uint256 public processingState;
-    uint256 public __processingGasLimit;
     uint256 public rewardPerTokenStored;
+    uint256 public totalClaimed;
 
     EnumerableSet.AddressSet private stakeholders;
 
@@ -45,7 +44,6 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __Ownable_init();
 
         ihelpToken = iHelpTokenInterface(_token);
-        __processingGasLimit = 300_000;
     }
 
     function rewardPerToken() public view returns (uint256) {
@@ -107,7 +105,8 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function totalToReward() public view returns (uint256) {
-        return rewardToken().balanceOf(stakingPool());
+        uint256 leftToClaim =  __rewardAwarded - totalClaimed;
+        return rewardToken().balanceOf(address(this)) - leftToClaim;
     }
 
     function getStakeholders() public view returns (address[] memory) {
@@ -126,15 +125,14 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         if (totalStaked > 0) {
             rewardPerTokenStored += (totalReward * 1e9) / totalStaked;
             __rewardAwarded += totalReward;
-            rewardToken().transferFrom(stakingPool(), address(this), totalReward);
         } else {
             rewardPerTokenStored = 0;
-            rewardToken().transferFrom(stakingPool(), msg.sender, totalReward);
+            rewardToken().transfer(msg.sender, totalReward);
         }
 
         console.log("rewardPerTokenStored", rewardPerTokenStored);
     }
-
+ 
     function claimReward() public updateReward(msg.sender) {
         uint256 claimAmount = claimableRewardOf(msg.sender);
        _claim(claimAmount, msg.sender);
@@ -152,6 +150,7 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         claimableStakeholderReward[msg.sender] -= amount;
         claimed[account] += amount;
+        totalClaimed += amount;
         rewardToken().transfer(msg.sender, amount);
     }
 }

@@ -1,6 +1,6 @@
 const { dim, green, chainName, getTokenAddresses, yellow } = require("../scripts/deployUtils");
 
-module.exports = async ({ getNamedAccounts, deployments }) => {
+module.exports = async ({ getNamedAccounts, deployments, execute }) => {
   const chainId = parseInt(await getChainId(), 10);
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -37,6 +37,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       from: deployer,
     }));
 
+
   yellow(`--- Initialized xHelp Token ---`);
 
   const xhelpResult = await deployments.get('xHelp');
@@ -44,6 +45,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   green('xHelp Proxy:', xhelpAddress);
   green('xHelp Implementation:', xhelpResult.implementation);
+
+  green('Updatding iHelp staking pool...');
+  const signer = await ethers.provider.getSigner(deployer);
+  const ihelp = await ethers.getContractAt('iHelpToken', ihelp.address, signer);
+  await ihelp.setStakingPool(xhelpAddress);
+  green('Staking pool was set to :', xhelpAddress);
 };
 
 module.exports.tags = ['xHelp'];

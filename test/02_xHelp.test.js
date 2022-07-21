@@ -13,7 +13,7 @@ describe("xHelp", function () {
     let addr1;
     let addr2;
     let addrs;
-    let stakingPool, mockContract;
+    let mockContract;
 
 
     beforeEach(async function () {
@@ -21,7 +21,7 @@ describe("xHelp", function () {
         const IHelp = await ethers.getContractFactory("iHelpToken");
         const Mock = await smock.mock("ERC20MintableMock");
 
-        [owner, addr1, addr2, stakingPool, ...addrs] = await ethers.getSigners();
+        [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
 
         tokenContract = await xHelp.deploy();
         mockContract = await Mock.deploy("Mock", "MOK", 18);
@@ -32,7 +32,6 @@ describe("xHelp", function () {
             "iHelp",
             "IHLP",
             owner.address,
-            stakingPool.address,
             addr1.address,
             addr1.address,
             mockContract.address,
@@ -52,10 +51,6 @@ describe("xHelp", function () {
 
         it("should set the right reward token", async function () {
             expect(await tokenContract.rewardToken()).to.equal(mockContract.address);
-        });
-
-        it("should set the right staking pool", async function () {
-            expect(await tokenContract.stakingPool()).to.equal(stakingPool.address);
         });
 
         it("shouldn't have any stakeholders", async function () {
@@ -159,10 +154,9 @@ describe("xHelp", function () {
         describe('Distribute', () => {
             it('should distribute to owner', async () => {
                 // Generate some rewards
-                await mockContract.mint(stakingPool.address, 10);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, 10);
+                await mockContract.mint(tokenContract.address, 10);
 
-                await expect(tokenContract.distributeRewards()).to.emit(mockContract, "Transfer").withArgs(stakingPool.address, owner.address, 10);
+                await expect(tokenContract.distributeRewards()).to.emit(mockContract, "Transfer").withArgs(tokenContract.address, owner.address, 10);
 
                 expect(await tokenContract.totalToReward()).to.equal(0);
             })
@@ -171,14 +165,14 @@ describe("xHelp", function () {
                 const depositAmount = parseEther('1');
                 const rewardAmount = parseEther('10');
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.deposit(depositAmount);
-                await expect(tokenContract.distributeRewards()).to.emit(mockContract, "Transfer").withArgs(stakingPool.address, tokenContract.address, rewardAmount);
+                await tokenContract.distributeRewards();
 
                 const result = BigNumber.from(rewardAmount).div(depositAmount);
                 expect(await tokenContract.rewardPerTokenStored()).to.equal(1e9 * result.toNumber());
                 expect(await tokenContract.totalToReward()).to.equal(0);
+                expect(await tokenContract.totalAwarded()).to.equal(parseEther('10'));
             })
 
             it("should distribute to owner after everybody withdraws", async function () {
@@ -188,10 +182,9 @@ describe("xHelp", function () {
                 await tokenContract.deposit(depositAmount);
                 await tokenContract.withdraw(depositAmount);
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
 
-                await expect(tokenContract.distributeRewards()).to.emit(mockContract, "Transfer").withArgs(stakingPool.address, owner.address, rewardAmount);
+                await expect(tokenContract.distributeRewards()).to.emit(mockContract, "Transfer").withArgs(tokenContract.address, owner.address, rewardAmount);
             })
 
         })
@@ -201,8 +194,7 @@ describe("xHelp", function () {
             const rewardAmount = parseEther('10');
 
             beforeEach(async () => {
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.deposit(depositAmount);
                 await tokenContract.connect(addr1).deposit(depositAmount);
                 await tokenContract.distributeRewards();
@@ -225,8 +217,7 @@ describe("xHelp", function () {
                 await ihelp.connect(addr2).increaseAllowance(tokenContract.address, parseEther('999999999999'));
                 await tokenContract.connect(addr2).deposit(depositAmount);
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.distributeRewards();
                 // expected amounts for user 1 and 2
                 const expectedAmount1 = BigNumber.from(rewardAmount).div(2).add(BigNumber.from(rewardAmount).div(3));
@@ -243,8 +234,7 @@ describe("xHelp", function () {
                 await tokenContract.withdraw(depositAmount);
                 expect(await tokenContract.userRewardPerTokenPaid(owner.address), "User tokens paid should be correct").to.equal(await tokenContract.rewardPerTokenStored())
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.distributeRewards();
 
                 expect(await tokenContract.claimableReward()).to.be.closeTo(expectedAmount, parseEther('0.0001'))
@@ -256,8 +246,7 @@ describe("xHelp", function () {
                 await tokenContract.withdraw(depositAmount);
                 expect(await tokenContract.userRewardPerTokenPaid(owner.address), "User tokens paid should be correct").to.equal(await tokenContract.rewardPerTokenStored())
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.distributeRewards();
 
                 expect(await tokenContract.connect(addr1).claimableReward()).to.be.closeTo(expectedAmount, parseEther('0.0001'))
@@ -272,8 +261,7 @@ describe("xHelp", function () {
 
                 await tokenContract.withdraw(depositAmount.div(2));
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.distributeRewards();
 
                 expect(await tokenContract.claimableReward()).to.be.closeTo(expectedAmount1, parseEther('0.0001'))
@@ -287,8 +275,7 @@ describe("xHelp", function () {
                 await tokenContract.withdraw(depositAmount);
                 await tokenContract.connect(addr1).withdraw(depositAmount);
 
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.distributeRewards();
 
                 expect(await tokenContract.rewardPerTokenStored()).to.equal(0);
@@ -302,24 +289,29 @@ describe("xHelp", function () {
             const rewardAmount = parseEther('10');
 
             beforeEach(async () => {
-                await mockContract.mint(stakingPool.address, rewardAmount);
-                await mockContract.connect(stakingPool).approve(tokenContract.address, rewardAmount);
+                await mockContract.mint(tokenContract.address, rewardAmount);
                 await tokenContract.deposit(depositAmount);
                 await tokenContract.distributeRewards();
             });
 
             it("should claim reward", async function () {
-                // Execute the claim call and check for teh transfer
                 await expect(tokenContract.claimReward()).to.emit(mockContract, "Transfer").withArgs(tokenContract.address, owner.address, rewardAmount);
-
                 expect(await tokenContract.claimableReward()).to.equal(0);
+                expect(await tokenContract.totalClaimed()).to.equal(rewardAmount);
+
             });
 
             it("should claim specific reward", async function () {
-                // Deposit tokens
-
                 await expect(tokenContract.claimSpecificReward(rewardAmount.div(2))).to.emit(mockContract, "Transfer").withArgs(tokenContract.address, owner.address, rewardAmount.div(2));
                 expect(await tokenContract.claimableReward()).to.equal(rewardAmount.div(2));
+                expect(await tokenContract.totalClaimed()).to.equal(rewardAmount.div(2));
+            });
+
+            it("should do correct distribution after users claims", async function () {
+                await tokenContract.claimReward();
+                await mockContract.mint(tokenContract.address, rewardAmount);
+                await tokenContract.distributeRewards();
+                expect(await tokenContract.claimableReward()).to.equal(rewardAmount);
             });
 
         })
