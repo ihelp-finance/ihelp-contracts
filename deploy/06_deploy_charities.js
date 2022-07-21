@@ -121,9 +121,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   };
 
   if (isTestEnvironment == true) {
-    await deployCharityPool('charityPool1', 'Charity Pool 1', holdingPool, 'DAI', 'compound');
-    await deployCharityPool('charityPool2', 'Charity Pool 2', holdingPool, 'USDC', 'compound');
-    await deployCharityPool('charityPool3', 'Charity Pool 3', holdingPool, 'DAI', 'compound');
+    await deployCharityPool('charityPool1', 'Charity Pool 1', ethersLib.constants.AddressZero, 'DAI', 'compound');
+    await deployCharityPool('charityPool2', 'Charity Pool 2', ethersLib.constants.AddressZero, 'USDC', 'compound');
+    await deployCharityPool('charityPool3', 'Charity Pool 3', ethersLib.constants.AddressZero, 'DAI', 'compound');
 
     console.log('newly deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
     let numberOfCharities = await ihelp.numberOfCharities();
@@ -154,8 +154,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
       console.log(c['Organization Name']);
 
-      await deployCharityPool(`${c['Organization Name']}-DAI-traderjoe`, c['Organization Name'], holdingPool, 'DAI', 'traderjoe');
-      await deployCharityPool(`${c['Organization Name']}-USDC-traderjoe`, c['Organization Name'], holdingPool, 'USDC', 'traderjoe');
+      await deployCharityPool(`${c['Organization Name']}-DAI-traderjoe`, c['Organization Name'], ethersLib.constants.AddressZero, 'DAI', 'traderjoe');
+      await deployCharityPool(`${c['Organization Name']}-USDC-traderjoe`, c['Organization Name'], ethersLib.constants.AddressZero, 'USDC', 'traderjoe');
       //await deployCharityPool(`${c['Organization Name']}-USDT`, c['Organization Name'], holdingPool, 'USDT', 'aave');
 
       if (ci < charityJsonRun.length - 1) {

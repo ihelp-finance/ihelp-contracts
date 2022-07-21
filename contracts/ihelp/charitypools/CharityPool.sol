@@ -134,7 +134,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
-        require(_newAddress != charityWallet && _newAddress != address(0), "charity-wallet/invalid-addr");
+        require(_newAddress != charityWallet, "charity-wallet/invalid-addr");
         //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
         // since the next rewards will go to the new wallets.
         charityWallet = _newAddress;
@@ -146,10 +146,6 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function stakingPool() public view returns (address) {
         return ihelpToken.stakingPool();
-    }
-
-    function holdingPool() public view returns (address) {
-        return ihelpToken.holdingPool();
     }
 
     /**
@@ -301,7 +297,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             // 2.5% to staking pool as swapped dai
             uint256 stakingFeeAmount = (_amount * stakingFee) / 1000;
 
-            (address _developmentPool, address _stakingPool, address _holdingPool) = ihelpToken.getPools();
+            (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
 
             require(IERC20(holdingToken).transfer(_developmentPool, developerFeeAmount), "Funding/developer transfer");
             require(IERC20(holdingToken).transfer(_stakingPool, stakingFeeAmount), "Funding/developer transfer");
@@ -309,11 +305,11 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             // 95% to charity as native currency of pool
             uint256 charityDonation = _amount - developerFeeAmount - stakingFeeAmount;
 
-            // if charityWallet uses holdingPool (for off-chain transfers) then deposit the direction donation amount to this contract
+            // if charityWallet uses address(0) (for off-chain transfers) then deposit the direction donation amount to this contract
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
-            console.log(charityWallet, _holdingPool);
+            console.log("Charity Wallet::", charityWallet);
 
-            if (charityWallet != _holdingPool) {
+            if (charityWallet != address(0)) {
                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
                 console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
@@ -389,7 +385,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
             console.log("Dev and stake fees::", devFee, stakeFee);
 
-            (address _developmentPool, address _stakingPool,) = ihelpToken.getPools();
+            (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
             require(IERC20(holdingToken).transfer(_developmentPool, devFeeShare), "Funding/transfer");
             require(IERC20(holdingToken).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
 

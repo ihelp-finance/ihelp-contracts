@@ -10,9 +10,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deploy, catchUnknownSigner, get } = deployments;
   const {
     deployer,
-    stakingPool,
     developmentPool,
-    holdingPool,
     proxyAdmin
   } = await getNamedAccounts();
 
@@ -38,9 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
             args: ['iHelp Token',
               'HELP',
               deployer, // operator
-              stakingPool, // 15% of interest
               developmentPool, // 5% of interest
-              holdingPool, // 20% of interest
               holdingtokenAddress, // underlying dai token for ihelp transfer
               PriceFeedProvider.address // the price feed provider address
             ]
@@ -66,4 +62,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 };
 
 module.exports.tags = ['iHelp'];
-module.exports.dependecies = ['Mocks', 'PriceFeedProvider'];
+module.exports.dependecies = ['Mocks', 'PriceFeedProvider', 'xHelp'];

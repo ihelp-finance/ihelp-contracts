@@ -4,6 +4,7 @@ const { smock } = require("@defi-wonderland/smock");
 const BigNumber = require('big.js');
 const { abi } = require("../artifacts/contracts/ihelp/Swapper.sol/Swapper.json");
 const { yellow } = require("../scripts/deployUtils");
+const { constants } = require('@openzeppelin/test-helpers');
 
 use(smock.matchers);
 
@@ -15,7 +16,7 @@ describe("iHelp", function () {
     let addr3;
     let addrs;
     let cTokenMock;
-    let stakingPool, cTokenUnderlyingMock, developmentPool, holdingPool;
+    let stakingPool, cTokenUnderlyingMock, developmentPool;
     let priceFeedProvider;
 
 
@@ -26,7 +27,7 @@ describe("iHelp", function () {
             signer: owner
         });
 
-        [owner, addr1, addr2, addr3, stakingPool, developmentPool, holdingPool, operator, ...addrs] = await ethers.getSigners();
+        [owner, addr1, addr2, addr3, stakingPool, developmentPool, operator, ...addrs] = await ethers.getSigners();
         const CTokenMock = await smock.mock("CTokenMock");
 
         cTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
@@ -43,7 +44,6 @@ describe("iHelp", function () {
             operator.address,
             stakingPool.address,
             developmentPool.address,
-            holdingPool.address,
             cTokenUnderlyingMock.address,
             priceFeedProvider.address
         );
@@ -60,10 +60,6 @@ describe("iHelp", function () {
 
         it("Should set the right staking pool", async function () {
             expect(await iHelp.stakingPool()).to.equal(stakingPool.address);
-        });
-
-        it("Should set the right holding pool", async function () {
-            expect(await iHelp.holdingPool()).to.equal(holdingPool.address);
         });
 
         it("Should set the right holding pool", async function () {
@@ -432,7 +428,7 @@ describe("iHelp", function () {
                 await iHelp.dripStage1();
                 await iHelp.dripStage2();
 
-                const { totalCharityPoolContributions, tokensToCirculate } = await iHelp.processingState();
+                const { totalCharityPoolContributions, tokensToCirculate, newInterestUS } = await iHelp.processingState();
                 const contribution1 = await charityPool1.accountedBalanceUSD();
 
                 const share1 = contribution1 / totalCharityPoolContributions;
@@ -458,21 +454,24 @@ describe("iHelp", function () {
                 const userSharePool1 = 20 / contribution1;
                 const userSharePool2 = 40 / contribution2;
 
-                const contributionTokens1 = userSharePool1 * poolTokens1;
-                const contributionTokens2 = userSharePool2 * poolTokens2;
+                const contributionTokens1 = userSharePool1 * newInterestUS;
+                const contributionTokens2 = userSharePool2 * newInterestUS;
+                
+                const tokenClaims1 = userSharePool1 * poolTokens1;
+                const tokenClaims2 = userSharePool2 * poolTokens2;
 
 
                 await expect(iHelp.dripStage4()).to.not.be.reverted;
                 const userTokenClaim = await iHelp.contributorTokenClaims(addr1.address);
-                const totalUserTokenClaimCharity1 = await iHelp.contirbutorGeneratedInterest(addr1.address, charityPool1.address);
-                const totalUserTokenClaimCharity2 = await iHelp.contirbutorGeneratedInterest(addr1.address, charityPool2.address);
+                const totalUserTokenClaimCharity1 = await iHelp.contributorGeneratedInterest(addr1.address, charityPool1.address);
+                const totalUserTokenClaimCharity2 = await iHelp.contributorGeneratedInterest(addr1.address, charityPool2.address);
 
                 // Should keep track of the total claimable tokens
                 expect(totalUserTokenClaimCharity1).to.equal((contributionTokens1).toFixed());
                 expect(totalUserTokenClaimCharity2).to.equal((contributionTokens2).toFixed());
 
                 // Check that the total contribution was added correctly
-                expect(userTokenClaim).to.equal((contributionTokens1 + contributionTokens2).toFixed());
+                expect(userTokenClaim).to.equal((tokenClaims1 + tokenClaims2).toFixed());
             });
 
             describe("Upkeep -- dripStage4", function () {
@@ -587,8 +586,7 @@ describe("iHelp", function () {
 
                 cTokenUnderlyingMock.balanceOf.returns(0);
 
-                const holdingPoolAddr = await iHelp.holdingPool();
-                await charityPool1.setVariable('charityWallet', holdingPoolAddr);
+                await charityPool1.setVariable('charityWallet', constants.ZERO_ADDRESS);
 
                 charityPool1.redeemInterest.returns(async () => {
                     cTokenUnderlyingMock.balanceOf.reset();

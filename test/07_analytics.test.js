@@ -10,7 +10,7 @@ describe("Analytics", function () {
     let addr1;
     let addr2;
     let addrs;
-    let stakingPool, developmentPool, holdingPool;
+    let developmentPool;
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
     let priceFeedProviderMock, xhelpMock;
@@ -21,7 +21,7 @@ describe("Analytics", function () {
 
         const Mock = await smock.mock("ERC20MintableMock");
 
-        [owner, addr1, addr2, operator, stakingPool, developmentPool, holdingPool, swapperPool, ...addrs] = await ethers.getSigners();
+        [owner, addr1, addr2, operator, stakingPool, developmentPool, swapperPool, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
 
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
@@ -64,9 +64,7 @@ describe("Analytics", function () {
             "iHelp",
             "IHLP",
             operator.address,
-            stakingPool.address,
             developmentPool.address,
-            holdingPool.address,
             mockContract.address,
             priceFeedProviderMock.address
         );
@@ -145,7 +143,7 @@ describe("Analytics", function () {
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
-                await iHelp.setVariable("contirbutorGeneratedInterest", {
+                await iHelp.setVariable("contributorGeneratedInterest", {
                     [addr1.address]: {
                         [charityPool1.address]: 10,
                         [charityPool2.address]: 20
@@ -376,7 +374,7 @@ describe("Analytics", function () {
                     }
                 });
 
-                iHelp.contirbutorGeneratedInterest.returns(25);
+                iHelp.contributorGeneratedInterest.returns(25);
 
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
@@ -447,7 +445,7 @@ describe("Analytics", function () {
                         }
                     });
 
-                    await iHelp.setVariable("contirbutorGeneratedInterest", {
+                    await iHelp.setVariable("contributorGeneratedInterest", {
                         [addr1.address]: {
                             [charityPool1.address]: 10,
                             [charityPool2.address]: 20

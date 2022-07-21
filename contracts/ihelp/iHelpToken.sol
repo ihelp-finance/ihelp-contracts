@@ -43,7 +43,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     address public operator;
     address public stakingPool;
     address public developmentPool;
-    address public holdingPool;
 
     // Processing gas limit
     uint256 public __processingGasLimit;
@@ -143,7 +142,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         address _operator,
         address _stakingPool,
         address _developmentPool,
-        address _holdingPool,
         address _underlyingToken,
         address _priceFeedProviderAddress
     ) public initializer {
@@ -154,7 +152,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         operator = _operator;
         stakingPool = _stakingPool;
         developmentPool = _developmentPool;
-        holdingPool = _holdingPool;
         underlyingToken = IERC20(_underlyingToken);
         priceFeedProvider = PriceFeedProvider(_priceFeedProviderAddress);
 
@@ -442,7 +439,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             uint256 poolContribution = CharityPool(payable(charity)).accountedBalanceUSD();
             // console.log("poolContribution", poolContribution);
-            
+
             uint256 newInterestUSD = processingState.newInterestUS; // represents capital contributed + interest generated
 
             if (poolContribution > 0) {
@@ -476,12 +473,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     console.log("contribTokens", contribTokens);
 
                     contributorTokenClaims[contributorList[ii]] += contribTokens;
-                    
+
                     uint256 userInterest = userShare.mul(newInterestUSD);
 
                     contributorGeneratedInterest[contributorList[ii]][charity] += userInterest;
                     totalContributorGeneratedInterest += userInterest;
-                    
                 }
                 processingState.ii = 0;
             }
@@ -612,16 +608,16 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return underlyingToken;
     }
 
-    function getPools()
-        public
-        view
-        returns (
-            address,
-            address,
-            address
-        )
-    {
-        return (developmentPool, stakingPool, holdingPool);
+    function getPools() public view returns (address, address) {
+        return (developmentPool, stakingPool);
+    }
+
+    function setStakingPool(address _poolAddress) external onlyOperatorOrOwner {
+        stakingPool = _poolAddress;
+    }
+
+    function setDevelopmentPool(address _poolAddress) external onlyOperatorOrOwner {
+        developmentPool = _poolAddress;
     }
 
     function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {

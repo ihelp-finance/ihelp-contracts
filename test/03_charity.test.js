@@ -4,6 +4,7 @@ const { parseEther, parseUnits } = require("ethers/lib/utils");
 const { smock } = require("@defi-wonderland/smock");
 const { getDirectDonactionsBySenders } = require("../scripts/eventQuery")
 const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
+const { constants } = require('@openzeppelin/test-helpers');
 use(smock.matchers);
 
 describe("Charity Pool", function () {
@@ -63,10 +64,7 @@ describe("Charity Pool", function () {
 
         iHelpMock.stakingPool.returns(stakingPool.address);
         iHelpMock.developmentPool.returns(developmentPool.address);
-        iHelpMock.holdingPool.returns(holdingPool.address);
-        iHelpMock.getPools.returns([developmentPool.address, stakingPool.address, holdingPool.address]);
-
-
+        iHelpMock.getPools.returns([developmentPool.address, stakingPool.address]);
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
     });
@@ -78,11 +76,6 @@ describe("Charity Pool", function () {
 
         it("Should set the right price feed provider", async function () {
             expect(await charityPool.priceFeedProvider()).to.equal(priceFeedProviderMock.address);
-        });
-
-
-        it("Should set the right holding pool", async function () {
-            expect(await charityPool.holdingPool()).to.equal(holdingPool.address);
         });
 
         it("Should set the right development pool", async function () {
@@ -118,10 +111,6 @@ describe("Charity Pool", function () {
         it("Should update the charity wallet", async function () {
             await expect(charityPool.setCharityWallet(addr1.address)).not.to.be.reverted;
             expect(await charityPool.charityWallet()).to.equal(addr1.address);
-        });
-
-        it("Should not set zero address as charityWallet", async function () {
-            await expect(charityPool.setCharityWallet('0x0000000000000000000000000000000000000000')).to.be.reverted;
         });
 
         it("Should return the balance of cToken", async function () {
@@ -345,7 +334,7 @@ describe("Charity Pool", function () {
 
 
         it("Should keep the donation in the charity contract", async function () {
-            await charityPool.setVariable("charityWallet", holdingPool.address);
+            await charityPool.setVariable("charityWallet", constants.ZERO_ADDRESS);
             const amount = parseEther("10");
             const fee = await iHelpMock.charityShareOfInterest();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
