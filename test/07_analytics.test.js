@@ -533,7 +533,7 @@ describe("Analytics", function () {
                 iHelp.balanceOf.returns(100)
 
                 const result = await analytics.stakingPoolState(iHelp.address, owner.address)
-                expect(result.iHelpTokensInCirculation).to.equal(100);
+                expect(result.iHelpTokensInCirculation).to.equal(200);
                 expect(result.iHelpStaked).to.equal(100);
             })
 
