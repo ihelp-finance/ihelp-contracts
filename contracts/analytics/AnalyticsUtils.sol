@@ -24,6 +24,14 @@ library AnalyticsUtils {
         uint256 totalDonations;
     }
 
+     struct CharityContributor {
+        address contributorAddress;
+        uint256 totalContributions;
+        uint256 totalDonations;
+        uint256 totalDonationsCount;
+        uint256 totalInterestGenerated;
+    }
+
     struct StakingPoolStats {
         uint256 iHelpTokensInCirculation;
         uint256 iHelpStaked;

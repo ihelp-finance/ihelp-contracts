@@ -8,7 +8,6 @@ import "../ihelp/charitypools/CharityPoolUtils.sol";
 import "./AnalyticsUtils.sol";
 import "./IAnalytics.sol";
 import "../utils/IERC20.sol";
-
 /**
  * @title Analytics
  */
@@ -28,7 +27,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -46,7 +45,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -72,7 +71,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -167,7 +166,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -192,7 +191,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -211,7 +210,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view override returns (uint256) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -242,7 +241,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) public view override returns (AnalyticsUtils.GeneralStats memory) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
         AnalyticsUtils.GeneralStats memory result;
         result.totalCharities = _limit;
         for (uint256 index = _offset; index < _limit; index++) {
@@ -277,7 +276,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) public view override returns (AnalyticsUtils.UserStats memory) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         AnalyticsUtils.UserStats memory result;
 
@@ -293,7 +292,6 @@ contract Analytics is IAnalytics {
 
         return result;
     }
-
 
     /**
      * Return general statistics for a given user
@@ -318,7 +316,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view returns (AnalyticsUtils.IndividualCharityContributionInfo[] memory) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         AnalyticsUtils.IndividualCharityContributionInfo[]
             memory result = new AnalyticsUtils.IndividualCharityContributionInfo[](_limit);
@@ -344,7 +342,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view returns (AnalyticsUtils.UserCharityContributions[] memory) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         AnalyticsUtils.UserCharityContributions[] memory result = new AnalyticsUtils.UserCharityContributions[](_limit);
 
@@ -453,7 +451,7 @@ contract Analytics is IAnalytics {
         uint256 _offset,
         uint256 _limit
     ) external view returns (AnalyticsUtils.CharityBalanceInfo[] memory) {
-        (_offset, _limit) = paginationChecks(_iHelp, _offset, _limit);
+        (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         AnalyticsUtils.CharityBalanceInfo[] memory result = new AnalyticsUtils.CharityBalanceInfo[](_limit);
 
@@ -541,20 +539,45 @@ contract Analytics is IAnalytics {
         return result;
     }
 
+    /**
+     * Returns an array that contains the charity contributors
+     */
+    function getContributorsPerCharity(
+        CharityPool _charity,
+        uint256 _offset,
+        uint256 _limit
+    ) public view returns (AnalyticsUtils.CharityContributor[] memory) {
+        (_offset, _limit) = paginationChecks(_charity.numberOfContributors, _offset, _limit);
+
+        AnalyticsUtils.CharityContributor[]
+            memory result = new AnalyticsUtils.CharityContributor[](_limit);
+
+        for (uint256 index = _offset; index < _limit; index++) {
+            address _user = _charity.contributorAt(index);
+            CharityPoolUtils.DirectDonationsCounter memory registry = _charity.donationsRegistry(_user);
+            result[index].contributorAddress = _user;
+            result[index].totalContributions += _charity.balanceOfUSD(_user);
+            result[index].totalDonations += registry.totalContribUSD;
+            result[index].totalDonationsCount += registry.totalDonations;
+            result[index].totalInterestGenerated += _charity.ihelpToken().contributorGeneratedInterest(_user, address(_charity));
+        }
+        return result;
+    }
+
     function paginationChecks(
-        iHelpToken _iHelp,
+        function () view external returns (uint256) arrLenFn,
         uint256 _offset,
         uint256 _limit
     ) internal view returns (uint256, uint256) {
-        uint256 charities = _iHelp.numberOfCharities();
-        require(_offset < charities, "Offset to large");
+        uint256 length = arrLenFn();
+        require(_offset < length, "Offset to large");
 
         if (_limit == 0) {
-            _limit = charities;
+            _limit = length;
         }
 
-        if (_offset + _limit >= charities) {
-            _limit = charities - _offset;
+        if (_offset + _limit >= length) {
+            _limit = length - _offset;
         }
 
         return (_offset, _limit);

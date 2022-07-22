@@ -297,7 +297,6 @@ describe("Analytics", function () {
 
         describe("Consolidated calls", () => {
             it("should return the general statistics in one call", async () => {
-        
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
@@ -634,6 +633,66 @@ describe("Analytics", function () {
                 expect(result.iHelpBalance).to.equal(100)
                 expect(result.xHelpBalance).to.equal(100)
                 expect(result.stakingAllowance).to.equal(100)
+            })
+
+            it("should return the contributors of a charity ", async () => {
+
+                charityPool1.numberOfContributors.returns(2);
+                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address);
+                await charityPool1.setVariable("ihelpToken", iHelp.address);
+
+                await charityPool1.setVariable("_donationsRegistry", {
+                    [addr1.address]: {
+                        totalContribNativeToken: 0,
+                        totalContribUSD: 20,
+                        totalDonations: 5,
+                        contribAfterSwapUSD: 0,
+                        charityDonationUSD: 0,
+                        devContribUSD: 0,
+                        stakeContribUSD: 0
+                    },
+                    [addr2.address]: {
+                        totalContribNativeToken: 0,
+                        totalContribUSD: 25,
+                        totalDonations: 2,
+                        contribAfterSwapUSD: 0,
+                        charityDonationUSD: 0,
+                        devContribUSD: 0,
+                        stakeContribUSD: 0
+                    },
+
+                });
+
+                await iHelp.setVariable("contributorGeneratedInterest", {
+                    [addr1.address]: {
+                        [charityPool1.address]: 10,
+                    },
+                    [addr2.address]: {
+                        [charityPool1.address]: 10,
+                    },
+                });
+
+                charityPool1.contributorAt.returns(args => {
+                    const a = [
+                        addr1.address,
+                        addr2.address
+                    ]
+                    return (a[args[0]])
+                });
+
+                const result = await analytics.getContributorsPerCharity(charityPool1.address, 0, 0);
+                expect(result[0].contributorAddress).to.equal(addr1.address);
+                expect(result[0].totalContributions).to.equal("0");
+                expect(result[0].totalDonations).to.equal("20" );
+                expect(result[0].totalDonationsCount).to.equal("5");
+                expect(result[0].totalInterestGenerated).to.equal("10");
+                
+                expect(result[1 ].contributorAddress).to.equal(addr2.address);
+                expect(result[1].totalContributions).to.equal("0");
+                expect(result[1].totalDonations).to.equal("25" );
+                expect(result[1].totalDonationsCount).to.equal("2");
+                expect(result[1].totalInterestGenerated).to.equal("10");
+
             })
         })
     });
