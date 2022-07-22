@@ -8,6 +8,8 @@ const chalk = require('chalk')
 const ethers = require('ethers')
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
+const db = require('../../ihelp-app/config/db.js');
+
 const IUniswapV2Factory = require("@uniswap/v2-core/build/IUniswapV2Factory.json");
 const IUniswapV2Pair = require("@uniswap/v2-core/build/IUniswapV2Pair.json");
 const IUniswapV2Router02 = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json");
@@ -116,24 +118,37 @@ const upkeep = async() => {
     
     // if (parseFloat(stakepool) > 0) {
     
-        const calcRewardsTx = await xhelp.distributeRewards();
-        await calcRewardsTx.wait();
-        
-        const stakepool2Tx = await xhelp.totalAwarded();
-        stakepool2 = fromBigNumber(stakepool2Tx);
-        console.log('\nEnd Awarded:',stakepool2)
-        console.log('\nNewly Awarded:',(parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6))
+    const calcRewardsTx = await xhelp.distributeRewards();
+    await calcRewardsTx.wait();
+    
+    const stakepool2Tx = await xhelp.totalAwarded();
+    stakepool2 = fromBigNumber(stakepool2Tx);
+    console.log('\nEnd Awarded:',stakepool2)
+    
+    const newlyAwarded = parseFloat(stakepool2) - parseFloat(stakepool1)
+    console.log('\nNewly Awarded:',newlyAwarded.toFixed(6))
+    
+    const data = {
+        reward:newlyAwarded,
+        total_reward:stakepool2 
+    }
+    
+    if (newlyAwarded > 0) {
+        await db.StakingStat.create(data)
+    }
 
     // }
     
     const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
-    console.log(`end signer balance: ${fromBigNumber(balanceend)}`);
+    console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
     const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);
 
     console.log(`signer cost:`,signerCost);
 
     console.log('\nREWARD DISTRIBUTION COMPLETE.\n');
+    
+    process.exit(0)
     
     
     // const { Webhook } = require('discord-webhook-node');
