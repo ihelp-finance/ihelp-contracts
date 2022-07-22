@@ -15,7 +15,7 @@ const csvWriter = createCsvWriter({
 
 async function getPair(swapv2Factory, signer, token1Address, token2Address) {
   let pair = await swapv2Factory.connect(signer).getPair(token1Address, token2Address);
-  dim('   pair', pair, ZERO_ADDRESS);
+  dim('   pair', pair);
 
   try {
     if (pair === ZERO_ADDRESS) {
@@ -221,6 +221,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
           await MintTx1.wait();
         }
       }
+      console.log('minting token1... success');
 
       const currentBalance2 = await token2contract.balanceOf(userAccount);
       if (fromBigNumber(currentBalance2, token2decimals) < parseFloat(token2value) || fromBigNumber(currentBalance2, token2decimals) == 0) {
@@ -266,8 +267,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     await activateLiquidityPool('USDC', 'DAI', '50000000', '50000000', 'compound', 'uniswap');
     await activateETHLiquidityPool('USDC', '50000000', 'compound', 'uniswap');
     await activateETHLiquidityPool('DAI', '50000000', 'compound', 'uniswap');
-
-    // await activateLiquidityPool('WETH', 'DAI', '3500', '50000000', 'compound', 'uniswap');
+    await activateETHLiquidityPool('WETH', '50000000', 'compound', 'uniswap');
+    await activateLiquidityPool('WETH', 'DAI', '50000000', '50000000', 'compound', 'uniswap');
 
   }
 

@@ -6,6 +6,8 @@ import "../utils/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+import "hardhat/console.sol";
+
 contract Swapper is OwnableUpgradeable {
     //address of the swap router (uniswap v2 format)
     IUniswapV2Router02 public SWAP_ROUTER;
@@ -115,10 +117,17 @@ contract Swapper is OwnableUpgradeable {
         uint256 _amountIn
     ) external view returns (uint256) {
         address[] memory path;
-        path = new address[](3);
-        path[0] = _tokenIn;
-        path[1] = SWAP_ROUTER.WETH();
-        path[2] = _tokenOut;
+
+        if (_tokenIn == SWAP_ROUTER.WETH() || _tokenOut == SWAP_ROUTER.WETH()) {
+            path = new address[](2);
+            path[0] = _tokenIn;
+            path[1] = _tokenOut;
+        } else {
+            path = new address[](3);
+            path[0] = _tokenIn;
+            path[1] = SWAP_ROUTER.WETH();
+            path[2] = _tokenOut;
+        }
 
         return getAmountsOutByPath(path, _amountIn);
     }

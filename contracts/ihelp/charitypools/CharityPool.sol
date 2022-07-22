@@ -268,19 +268,25 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
-            // Add up the donation amount before the swap
-            _donationsRegistry[_account].totalContribUSD += swapper.getNativeRoutedTokenPrice(
+            console.log("holdingTokenAmount", tokenaddress, holdingToken);
+
+            uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(
                 tokenaddress,
                 holdingToken,
                 _amount
             );
 
+            console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
+
+            // Add up the donation amount before the swap
+            _donationsRegistry[_account].totalContribUSD += holdingTokenAmount;
+
             // keep track of donation balances
             donationBalances[_account][address(_donationToken)] += _amount;
-
+        
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
-                uint256 minAmount = (_amount * 95) / 100;
+                uint256 minAmount = (holdingTokenAmount * 95) / 100;
 
                 // TODO: This should enable support for tokens that have fee on transfer
                 uint256 receivedAmount = _donationToken.balanceOf(address(this));

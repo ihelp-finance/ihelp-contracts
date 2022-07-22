@@ -41,6 +41,7 @@ module.exports = async ({ getNamedAccounts, deployments, getTokenAddresses }) =>
   const swapperAddress = swapperResult.address;
 
   green('swapper Proxy:', swapperAddress);
+  green('swapper Router:', swapperAddresses['router']);
   green('swapper Implementation:', swapperResult.implementation);
 };
 
