@@ -22,6 +22,7 @@ library AnalyticsUtils {
         address charityAddress;
         uint256 totalContributions;
         uint256 totalDonations;
+        uint256 totalInterestGenerated;
     }
 
      struct CharityContributor {

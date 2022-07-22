@@ -327,7 +327,8 @@ contract Analytics is IAnalytics {
                 charityAddress: address(charity),
                 charityName: charity.name(),
                 totalContributions: charity.accountedBalanceUSD(),
-                totalDonations: charity.totalDonationsUSD()
+                totalDonations: charity.totalDonationsUSD(),
+                totalInterestGenerated: charity.totalInterestEarnedUSD()
             });
         }
         return result;
