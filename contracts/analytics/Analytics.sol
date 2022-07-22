@@ -549,6 +549,7 @@ contract Analytics is IAnalytics {
     ) public view returns (AnalyticsUtils.CharityContributor[] memory) {
         (_offset, _limit) = paginationChecks(_charity.numberOfContributors, _offset, _limit);
 
+        require(address(_charity.ihelpToken()) != address(0), "not-found/iHelp");
         AnalyticsUtils.CharityContributor[]
             memory result = new AnalyticsUtils.CharityContributor[](_limit);
 

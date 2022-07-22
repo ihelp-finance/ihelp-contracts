@@ -108,7 +108,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       ihelpAddress: ihelpAddress,
       swapperAddress: swapperAddress,
       priceFeedProvider: priceFeedProviderAddresss,
-      wrappedNativeAddress: nativeWrapper //TODO: @MAtt , Need to set the native wrapper for the non testing environment
+      wrappedNativeAddress: nativeWrapper
     }, network.name);
 
     if(!charityResult) {

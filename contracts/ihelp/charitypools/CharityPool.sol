@@ -480,6 +480,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256, uint256) {
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         return priceFeedProvider.getUnderlyingTokenPrice(_cTokenAdddress);
     }
 
@@ -610,6 +611,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         uint256 result;
         PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
