@@ -29,7 +29,7 @@ const runListener = async() => {
 
     const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'ws://')
 
-    console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
+    // console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
 
     const provider = new ethers.providers.JsonRpcProvider(nodeUrl);
     iHelp = new ethers.Contract(ihelpContract.address, ihelpContract.abi, provider);
@@ -38,7 +38,32 @@ const runListener = async() => {
 
     analytics = new ethers.Contract(analyticsContract.address, analyticsContract.abi, provider);
 
-    const web3 = new Web3(nodeUrlWs);
+    const options = {
+        timeout: 30000, // ms
+    
+        clientConfig: {
+            // Useful if requests are large
+            maxReceivedFrameSize: 100000000,   // bytes - default: 1MiB
+            maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
+    
+            // Useful to keep a connection alive
+            keepalive: true,
+            keepaliveInterval: -1 // ms
+        },
+    
+        // Enable auto reconnection
+        reconnect: {
+            auto: true,
+            delay: 1000, // ms
+            maxAttempts: 10,
+            onTimeout: false
+        }
+    };
+    
+    // Connect
+    let providerWeb3, web3;
+    providerWeb3 = new Web3.providers.WebsocketProvider(nodeUrlWs, options);
+    web3 = new Web3(providerWeb3);
 
     // listen only from the latest block
     const currentBlock = await provider.getBlock("latest")
@@ -73,7 +98,7 @@ const runListener = async() => {
 
         // subscription.on('changed', changed => console.log('changed',filter['name'],changed))
         subscription.on('error', err => { console.log('err', filter['name'], err) })
-        subscription.on('connected', nr => console.log('connected', filter['name'], nr))
+        //subscription.on('connected', nr => console.log('connected', filter['name'], nr))
 
     })
 
