@@ -4,7 +4,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
 
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, proxyAdmin } = await getNamedAccounts();
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
   yellow("Protocol Contracts - Deploy Script for Charity Pool Factories");
