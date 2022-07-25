@@ -8,7 +8,6 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
 require('@nomiclabs/hardhat-ethers');
-require('@openzeppelin/hardhat-upgrades');
 require("solidity-coverage");
 require("hardhat-gas-reporter");
 require('hardhat-contract-sizer');
@@ -180,8 +179,9 @@ module.exports = {
     }
   },
   gasReporter: {
-    enabled: false,
-    currency: 'USD'
+    enabled: true,
+    currency: 'USD',
+    excludeContracts: ["testing/"]
   },
 
   preprocess: preprocessOptions,
@@ -457,7 +457,6 @@ task("snapshot").setAction(async () => {
     method: "evm_snapshot",
   });
   debug(`Snapshotid: ${id}`);
-
 });
 
 task("revert")

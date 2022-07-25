@@ -35,8 +35,8 @@ describe('Charity Factory Deployment', function () {
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
         this.accounts = await ethers.getSigners();
-        this.factory = await deploy('CharityPoolCloneFactory');
-
+        const CharityPoolCloneFactory = await ethers.getContractFactory('CharityPoolCloneFactory');
+        this.factory = await CharityPoolCloneFactory.deploy(charityPool.address);
     });
 
     it('should deploy a factory ', async function () {

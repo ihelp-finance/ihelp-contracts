@@ -3,14 +3,14 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./CharityPool.sol";
-import "./CharityPoolUtils.sol";
+import "../CharityPool.sol";
+import "../CharityPoolUtils.sol";
 
 contract CharityPoolCloneFactory {
     address immutable charityPoolImplementation;
 
-    constructor() {
-        charityPoolImplementation = address(new CharityPool());
+    constructor(address _charityImplementation) {
+        charityPoolImplementation = _charityImplementation;
     }
 
     function createCharityPool(CharityPoolUtils.CharityPoolConfiguration memory configuration)

@@ -643,4 +643,10 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         wrappedNative.approve(address(this), amount);
         _directDonation(wrappedNative, msg.sender, amount);
     }
+
+    function version() public virtual pure returns(uint256) {
+        return 1;
+    }
+
+    uint256[27] private __gap;
 }

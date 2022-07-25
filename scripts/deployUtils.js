@@ -1,5 +1,4 @@
 
-const { deployments, ethers } = require("hardhat");
 const fs = require('fs');
 const { writeFileSync } = require('fs');
 const path = require('path');
@@ -9,11 +8,14 @@ const Big = require('big.js');
 const Web3 = require('web3');
 const { readFileSync } = require("fs");
 const web3 = new Web3('http://127.0.0.1:7545');
+const { deployments, ethers, getNamedAccounts } = require("hardhat");
+const ether = require('@openzeppelin/test-helpers/src/ether');
+
 
 
 module.exports.deployCharityPoolToNetwork = async ({
     charityName, operatorAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, wrappedNativeAddress, priceFeedProvider
-}, network) => {
+}, network, factoryContractName = "CharityBeaconFactory") => {
     const FILE_PATH = path.join('deployed-charities', `${network}.json`);
 
     let deployedCharities = [];
@@ -29,8 +31,8 @@ module.exports.deployCharityPoolToNetwork = async ({
         return;
     }
 
-    const factoryDeployment = await deployments.get("CharityPoolCloneFactory");
-    const factory = await ethers.getContractAt("CharityPoolCloneFactory", factoryDeployment.address);
+    const factoryDeployment = await deployments.get(factoryContractName);
+    const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
 
     const tx = await factory.createCharityPool({
         charityName,
@@ -200,3 +202,35 @@ module.exports.getNativeWrapper = async (chainId) => {
     return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
 }
 
+
+module.exports.updateCharityPools = async () => {
+    const { deployer } = await getNamedAccounts();
+    const result = await deployments.deploy('CharityPool_Implementation', {
+        contract: 'CharityPool',
+        from: deployer,
+        args: [],
+        log: true,
+    });
+    console.log('');
+    address = result.address
+    if (!result.newlyDeployed) {
+        this.yellow(`${chalk.gray(`Reusing deployment`)} (${address})`);
+    }
+
+    const beaconFactoryDeployment = await deployments.get("CharityBeaconFactory");
+    const signer = await ethers.getSigner(deployer);
+    this.yellow(`${chalk.gray(`Using beacon factory at`)} (${beaconFactoryDeployment.address})`);
+
+    const beaconFactory = await ethers.getContractAt("CharityBeaconFactory", beaconFactoryDeployment.address, signer);
+    const owner = await beaconFactory.owner();
+    if (owner === deployer) {
+        this.yellow(`${chalk.gray(`Updating beacon to address`)} (${beaconFactoryDeployment.address})`);
+        await beaconFactory.update(address);
+    } else {
+        const { data } = await beaconFactory.populateTransaction.update(address);
+        console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx to execute the update :
+       
+        ${chalk.yellow(`${data}`)}
+    `));
+    }
+}

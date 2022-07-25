@@ -91,8 +91,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
   const holdingtokenAddress = ihelpAddresses['underlyingToken'];
 
-
-
   console.log("Holding Token", "DAI", chainId, holdingtokenAddress);
 
   const deployedCharities = [];
