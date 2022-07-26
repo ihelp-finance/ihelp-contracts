@@ -17,6 +17,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   await deploy('CharityPool_Implementation', {
     contract: 'CharityPool',
     from: deployer,
+    skipIfAlreadyDeployed: true,
     args: [],
     log: true,
   });
