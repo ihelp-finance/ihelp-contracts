@@ -3,7 +3,7 @@ const { chainName, dim, yellow } = require("../scripts/deployUtils");
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
 
-  const { deploy, execute, catchUnknownSigner } = deployments;
+  const { deploy, execute, catchUnknownSigner, read} = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -33,19 +33,22 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   await catchUnknownSigner(
     deploy('CharityBeaconFactory', {
-      contract: 'CharityBeaconFactory',
       from: deployer,
       proxy: {
         owner: proxyAdmin,
         proxyContract: "OpenZeppelinTransparentProxy",
+        execute: {
+          init: {
+            methodName: "initialize",
+            args:[]
+          }
+        }
       },
       log: true,
       args: [charityPool.address],
-      log: true,
     })
   );
 
-  const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
   // Transfer the ownership to the proxy admin  is not in test mode
   await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
