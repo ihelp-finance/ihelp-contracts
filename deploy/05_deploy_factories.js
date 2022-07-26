@@ -47,10 +47,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-  if (!isTestEnvironment) {
-    // Transfer the ownership to the proxy admin  is not in test mode
-    await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
-  }
+  // Transfer the ownership to the proxy admin  is not in test mode
+  await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
+
 };
 
 module.exports.tags = ['FactoryDeployments'];
