@@ -3,7 +3,7 @@ const { chainName, dim, yellow } = require("../scripts/deployUtils");
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
 
-  const { deploy, execute, catchUnknownSigner, read} = deployments;
+  const { deploy, execute, catchUnknownSigner, read } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -40,19 +40,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         execute: {
           init: {
             methodName: "initialize",
-            args:[]
+            args: [charityPool.address]
           }
         }
       },
       log: true,
-      args: [charityPool.address],
     })
   );
 
-
-  // Transfer the ownership to the proxy admin  is not in test mode
-  await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
-
+  const owner = await read('CharityBeaconFactory', { from: deployer, log: true }, 'owner');
+  if (owner !== proxyAdmin) {
+    // Transfer the ownership to the proxy admin  is not in test mode
+    await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
+  }
 };
 
 module.exports.tags = ['FactoryDeployments'];

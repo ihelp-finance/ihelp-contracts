@@ -13,14 +13,11 @@ contract CharityBeaconFactory is OwnableUpgradeable {
     uint256 public counter;
     mapping(uint256 => address) private charities;
 
-    UpgradeableBeacon public immutable beacon;
-
-    constructor(address _charityImpl) {
-        beacon = new UpgradeableBeacon(_charityImpl);
-    }
-
-    function initialize() public initializer  {
+    UpgradeableBeacon public beacon;
+    
+    function initialize(address _charityImpl) public initializer  {
         __Ownable_init();
+        beacon = new UpgradeableBeacon(_charityImpl);
     }
 
     function createCharityPool(CharityPoolUtils.CharityPoolConfiguration memory configuration)
