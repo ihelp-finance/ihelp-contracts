@@ -286,9 +286,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   const ihelpAddress = await getAddress('iHelp');
   const xhelpAddress = await getAddress('xHelp');
   const swapperAddress = await getAddress('swapper');
-  const charity1Address = await getAddress('charityPool1');
-  const charity2Address = await getAddress('charityPool2');
-  const charity3Address = await getAddress('charityPool3');
+  // const charity1Address = await getAddress('charityPool1');
+  // const charity2Address = await getAddress('charityPool2');
+  // const charity3Address = await getAddress('charityPool3');
   const analyticsAddress = await getAddress('analytics');
   // const charity1Address = await getAddress('charityPool1');
   // const charity2Address = await getAddress('charityPool2');
@@ -306,9 +306,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
-  green('CharityPool 1 Address:', charity1Address);
-  green('CharityPool 2 Address:', charity2Address);
-  green('CharityPool 3 Address:', charity3Address);
+  // green('CharityPool 1 Address:', charity1Address);
+  // green('CharityPool 2 Address:', charity2Address);
+  // green('CharityPool 3 Address:', charity3Address);
   green('Analytics Address:', analyticsAddress);
   // green('CharityPool 1 Address:', charity1Address);
   // green('CharityPool 2 Address:', charity2Address);

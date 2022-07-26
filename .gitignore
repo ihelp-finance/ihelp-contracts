@@ -5,6 +5,7 @@ artifacts
 cache
 deployments
 node_modules
+charityAddresses.csv
 contractAddresses.csv
 package-lock.json
 tokens.json
