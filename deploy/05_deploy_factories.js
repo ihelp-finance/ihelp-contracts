@@ -40,7 +40,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         proxyContract: "OpenZeppelinTransparentProxy",
       },
       log: true,
-      from: deployer,
       args: [charityPool.address],
       log: true,
     })

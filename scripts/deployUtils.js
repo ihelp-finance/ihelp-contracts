@@ -228,7 +228,7 @@ module.exports.updateCharityPools = async () => {
         await beaconFactory.update(address);
     } else {
         const { data } = await beaconFactory.populateTransaction.update(address);
-        console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx to execute the update :
+        console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx from ${chalk.yellow(owner)} to execute the update :
        
         ${chalk.yellow(`${data}`)}
     `));
