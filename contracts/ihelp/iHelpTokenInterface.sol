@@ -12,4 +12,10 @@ interface iHelpTokenInterface is IERC20 {
     function developmentPool() external view returns (address);
     function getPools() external view returns (address, address);
     function getFees() external view returns(uint256, uint256, uint256);
+    function numberOfCharities() external view returns (uint256);
+    function charityAt(uint256 index) external view returns (address);
+    function priceFeedProvider() external view returns (address);
+    function totalContributorGeneratedInterest() external view returns (uint256);
+    function underlyingToken() external view returns (address);
+    function totalCirculating() external view returns (uint256);
 }

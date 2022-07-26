@@ -34,6 +34,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   await catchUnknownSigner(
     deploy('CharityBeaconFactory', {
       from: deployer,
+      skipIfAlreadyDeployed: true,
       proxy: {
         owner: proxyAdmin,
         proxyContract: "OpenZeppelinTransparentProxy",

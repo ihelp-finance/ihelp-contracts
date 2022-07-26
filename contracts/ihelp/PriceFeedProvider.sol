@@ -6,22 +6,16 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../utils/IERC20.sol";
+import "./PriceFeedProviderInterface.sol";
 
-contract PriceFeedProvider is OwnableUpgradeable {
+contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    struct DonationCurrency {
-        string provider;
-        string currency;
-        address underlyingToken;
-        address lendingAddress;
-        address priceFeed;
-    }
 
     mapping(address => DonationCurrency) private _donationCurrencies;
-    mapping(address => bool) public allowedDirectDonationCurrencies;
     EnumerableSet.AddressSet private _donationCurrencyMapping;
 
+    mapping(address => bool) public allowedDirectDonationCurrencies;
     /**
      * Initialzie the contract with a set of donation currencies
      */

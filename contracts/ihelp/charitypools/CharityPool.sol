@@ -15,12 +15,14 @@ import "../../utils/ICErc20.sol";
 import "../../utils/IWrappedNative.sol";
 
 import "../iHelpTokenInterface.sol";
+import "./CharityPoolInterface.sol";
+
 import "../SwapperInterface.sol";
-import "../PriceFeedProvider.sol";
+import "../PriceFeedProviderInterface.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -61,21 +63,21 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event OffChainClaim(address indexed receiver, uint256 amount);
 
     uint8 internal holdingDecimals;
+    SwapperInterface internal swapper;
+    EnumerableSet.AddressSet private contributors;
+    mapping(address => CharityPoolUtils.DirectDonationsCounter) private _donationsRegistry;
 
     string public name;
     address public operator;
     address public charityWallet;
     address public swapperPool;
     address public holdingToken;
-
     uint256 public totalDonationsUSD;
 
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => mapping(address => uint256)) public donationBalances;
 
     mapping(address => uint256) public accountedBalances;
-    mapping(address => CharityPoolUtils.DirectDonationsCounter) private _donationsRegistry;
-
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
     mapping(address => uint256) public lastTotalInterest;
@@ -84,10 +86,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
-    PriceFeedProvider public priceFeedProvider;
-
-    SwapperInterface internal swapper;
-    EnumerableSet.AddressSet private contributors;
+    PriceFeedProviderInterface public priceFeedProvider;
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
@@ -130,7 +129,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         holdingToken = configuration.holdingTokenAddress;
         holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
         wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
-        priceFeedProvider = PriceFeedProvider(configuration.priceFeedProvider);
+        priceFeedProvider = PriceFeedProviderInterface(configuration.priceFeedProvider);
     }
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
@@ -270,11 +269,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             address tokenaddress = address(_donationToken);
             console.log("holdingTokenAmount", tokenaddress, holdingToken);
 
-            uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(
-                tokenaddress,
-                holdingToken,
-                _amount
-            );
+            uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
 
             console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
 
@@ -283,7 +278,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             // keep track of donation balances
             donationBalances[_account][address(_donationToken)] += _amount;
-        
+
             if (tokenaddress != holdingToken) {
                 console.log("Swapping");
                 uint256 minAmount = (holdingTokenAmount * 95) / 100;
@@ -552,7 +547,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function accountedBalanceUSD() public view returns (uint256) {
-        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -565,7 +560,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function newTotalInterestEarnedUSD() public view returns (uint256) {
-        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -578,7 +573,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      *  Expensive function should be called by offchain process
      */
     function totalInterestEarnedUSD() public view returns (uint256) {
-        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -592,7 +587,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function calculateTotalInterestEarned() public view returns (uint256) {
         uint256 result;
-        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += totalInterestEarned[cTokenAddress];
@@ -612,14 +607,14 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return getUnderlying(_cTokenAddress).decimals();
     }
 
-    function getAllDonationCurrencies() public view returns (PriceFeedProvider.DonationCurrency[] memory) {
+    function getAllDonationCurrencies() public view returns (PriceFeedProviderInterface.DonationCurrency[] memory) {
         return priceFeedProvider.getAllDonationCurrencies();
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
         require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         uint256 result;
-        PriceFeedProvider.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
@@ -644,7 +639,7 @@ contract CharityPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _directDonation(wrappedNative, msg.sender, amount);
     }
 
-    function version() public virtual pure returns(uint256) {
+    function version() public pure virtual returns (uint256) {
         return 1;
     }
 
