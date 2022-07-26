@@ -3,7 +3,7 @@ const { chainName, dim, yellow } = require("../scripts/deployUtils");
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
 
-  const { deploy, execute } = deployments;
+  const { deploy, execute, catchUnknownSigner } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -30,19 +30,21 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   //   log: true,
   // });
 
+  await catchUnknownSigner(
+    deploy('CharityBeaconFactory', {
+      contract: 'CharityBeaconFactory',
+      from: deployer,
+      proxy: {
+        owner: proxyAdmin,
+        proxyContract: "OpenZeppelinTransparentProxy",
+      },
+      log: true,
+      from: deployer,
+      args: [charityPool.address],
+      log: true,
+    })
+  );
 
-  await deploy('CharityBeaconFactory', {
-    contract: 'CharityBeaconFactory',
-    from: deployer,
-    proxy: {
-      owner: proxyAdmin,
-      proxyContract: "OpenZeppelinTransparentProxy",
-    },
-    log: true,
-    from: deployer,
-    args: [charityPool.address],
-    log: true,
-  });
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
   if (!isTestEnvironment) {
