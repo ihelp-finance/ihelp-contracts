@@ -200,7 +200,7 @@ const mockAccrue = async() => {
   const usdcDecimals = await usdc.decimals();
 
   // accrue DAI
-  const aval1 = await calculateAccrualValueDai(1);
+  const aval1 = await calculateAccrualValueDai(600000);
   const accrueTxDai1 = await cdai.accrueCustom(aval1);
   await accrueTxDai1.wait();
 
