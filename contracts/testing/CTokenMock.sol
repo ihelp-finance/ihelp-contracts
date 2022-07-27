@@ -37,6 +37,7 @@ contract CTokenMock is ERC20Upgradeable {
         uint256 cTokens = cTokenValueOf(requestedAmount);
         _burn(msg.sender, cTokens);
         require(underlying.transfer(msg.sender, requestedAmount), "could not transfer tokens");
+        return 0;
     }
 
     function accrue() external {
@@ -57,6 +58,7 @@ contract CTokenMock is ERC20Upgradeable {
     }
 
     function exchangeRateCurrent() public view returns (uint256) {
+        // console.log(totalSupply(), underlying.balanceOf(address(this)));
         if (totalSupply() == 0) {
             return 1e18;
         } else {

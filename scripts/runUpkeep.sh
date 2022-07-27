@@ -4,7 +4,7 @@ rundir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 cd $rundir
 
-source ../.env
+source ../../.env
 
 echo RUNNING UPKEEP $(date) > UPKEEP.log 2>&1
 echo "" >> UPKEEP.log

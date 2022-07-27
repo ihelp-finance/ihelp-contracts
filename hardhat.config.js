@@ -2,15 +2,15 @@ const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
-const dotenv = require('dotenv');
-dotenv.config({ path: '/core/ihelp/ihelp-dev-local/packages/hardhat/.env' });
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
 require('@nomiclabs/hardhat-ethers');
-require('@openzeppelin/hardhat-upgrades');
 require("solidity-coverage");
 require("hardhat-gas-reporter");
+require('hardhat-contract-sizer');
 
 require("hardhat-deploy");
 
@@ -18,6 +18,7 @@ require("@eth-optimism/hardhat-ovm");
 
 require('hardhat-preprocessor');
 const { removeConsoleLog } = require('hardhat-preprocessor');
+const { parseEther } = require('ethers/lib/utils');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -30,7 +31,7 @@ let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lb
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
-let removeLogStatements = true;
+let removeLogStatements = false;
 
 let preprocessOptions = null;
 if (removeLogStatements) {
@@ -75,6 +76,7 @@ const stakingPoolPrivateKey = process.env.STAKINGPOOL_PRIVATE_KEY;
 const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
 // const proxyAdminPrivateKey = process.env.PROXYADMIN_PRIVATE_KEY;
 const reportGas = process.env.REPORT_GAS;
+const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER || "0x00bE248f907B25cb10a6dad52051e3427e0ba037";
 
 // gnosis-safe
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
@@ -87,6 +89,9 @@ module.exports = {
     hardhat: {
       gasPrice: 225000000000,
       forking: forkingData,
+      accounts: {
+        accountBalance: parseEther("1000000")
+      }
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
@@ -109,7 +114,7 @@ module.exports = {
       forking: forkingData
     },
     rinkeby: {
-      url: "http://localhost:7545",
+      url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW',
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -147,6 +152,9 @@ module.exports = {
     },
     proxyAdmin: {
       default: 3,
+      //TODO: multi sign address here 
+      4: proxyAdminOwner,
+      'localhost': "0x8D87FcE1394ad41d4149f210AB259fa30e4f731e", // 0x346abB57CfB43aD3Bb8210E3DD1dB12353160A0b"
     },
     charity1wallet: {
       default: 4,
@@ -172,10 +180,14 @@ module.exports = {
   },
   gasReporter: {
     enabled: true,
-    currency: 'USD'
+    currency: 'USD',
+    excludeContracts: ["testing/"]
   },
 
-  preprocess: preprocessOptions
+  preprocess: preprocessOptions,
+  mocha: {
+    timeout: 100000000
+  }
 
 };
 
@@ -445,7 +457,6 @@ task("snapshot").setAction(async () => {
     method: "evm_snapshot",
   });
   debug(`Snapshotid: ${id}`);
-
 });
 
 task("revert")

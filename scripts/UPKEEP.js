@@ -6,9 +6,31 @@ const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
-const externalContracts = require('../../react-app/src/contracts/external_contracts');
+// const externalContracts = require('../../ihelp-app/client/src/contracts/external_contracts');
 
-//const { assert, use, expect } = require("chai");
+function dim() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.dim.call(chalk, ...arguments));
+  }
+}
+
+function cyan() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.cyan.call(chalk, ...arguments));
+  }
+}
+
+function yellow() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.yellow.call(chalk, ...arguments));
+  }
+}
+
+function green() {
+  if (!process.env.HIDE_DEPLOY_LOG) {
+    console.log(chalk.green.call(chalk, ...arguments));
+  }
+}
 
 let userAccount, userSigner;
 let signer;
@@ -77,15 +99,15 @@ const upkeep = async() => {
     const stakingPoolSigner = await hardhat.ethers.provider.getSigner(stakingPool);
     const holdingPoolSigner = await hardhat.ethers.provider.getSigner(holdingPool);
 
-    console.log(`signer: ${signer._address}`);
-    console.log(`holder: ${holdingPool}`);
+    console.log(`\nsigner: ${signer._address}`);
+    //console.log(`holder: ${holdingPool}`);
 
     // get the signer eth balance
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
-    const startbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
-    console.log(`start holding balance: ${fromBigNumber(startbalanceholding)}`);
+    // const startbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
+    // console.log(`start holding balance: ${fromBigNumber(startbalanceholding)}`);
 
     // const currentBlock= await hardhat.ethers.provider.getBlockNumber()
 
@@ -94,118 +116,68 @@ const upkeep = async() => {
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
     ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
     
-    const mockDai = false;
     
-    let dai,cdai,usdc,cusdc;
-    const getTokenAddresses = async(currency, lender) => {
+    const upkeepStatusMapping = {
+    0: "dripStage1",
+    1: "dripStage2",
+    2: "dripStage3",
+    3: "dripStage4",
+    4: "dump"
+  };
 
-        let ctokenaddress = null;
-        let pricefeed = null;
-        let tokenaddress = null;
 
-        let addresses = fs.readFileSync(`../networks/${chainName(chainId)}-lending.json`);
-        addresses = JSON.parse(addresses);
-
-        if (currency == 'DAI') {
-            tokenaddress = addresses[lender]['Tokens']['DAI'];
-            ctokenaddress = addresses[lender]['lendingTokens']['DAI'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['DAI'];
-        }
-        else if (currency == 'USDC') {
-            tokenaddress = addresses[lender]['Tokens']['USDC'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDC'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDC'];
-        }
-        else if (currency == 'USDT') {
-            tokenaddress = addresses[lender]['Tokens']['USDT'];
-            ctokenaddress = addresses[lender]['lendingTokens']['USDT'];
-            pricefeed = addresses[lender]['PriceOracleProxy']['USDT'];
-        }
-
-        return {
-            "token": tokenaddress,
-            "lendingtoken": ctokenaddress,
-            "pricefeed": pricefeed
-        };
-
+  // Incrementally go trough all upkeep steps
+  const processUpkeep = async (upkeepStatus) => {
+    let newUpkeepstatus = upkeepStatus;
+    const method = upkeepStatusMapping[upkeepStatus];
+    cyan("Processing upkeep, status ", method);
+    while (upkeepStatus == newUpkeepstatus) {
+      await ihelp.functions[method]();
+      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
-    
-    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
-    const chainId = 43114;
-    
-    const daiAddresses = await getTokenAddresses('DAI', 'traderjoe');
-    const daiAddress = daiAddresses['token'];
-    dai = new ethers.Contract(daiAddress, externalContracts[chainId.toString()]['contracts']['DAI']['abi'], mainnetInfura);
-    
-    // drip the token interest
-    console.log('dripping...');
-    
-    const dripTx = await ihelp.drip();
-    console.log(dripTx['hash']);
-    await dripTx.wait();
 
-    // dump the tokens to the various pools
-    console.log('dumping...');
-    
-    const dumpTx = await ihelp.dump();
-    console.log(dumpTx['hash']);
-    await dumpTx.wait();
-    
-    console.log('dev claiming...', developmentPool);
-    const devTx1 = await ihelp.connect(developmentPoolSigner).getClaimableCharityInterest();
-    console.log('dev claimable interest:',devTx1.toString());
-    
-    // var options = {
-    //     nonce: 60
-    // }
-    
-    if (parseFloat(devTx1.toString()) > 0) {
-        
-        let devTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress,devTx1.toString());
-        console.log('dev approval:',devTx1Approve);
-        await devTx1Approve.wait();
-        
-        // chainlink oracle dynamic lookup of gas prices
-    
-        // var options = {
-        //     gasPrice: 30000000000,
-        //     gasLimit: 8000000,
-        //     //nonce:57
-        // }
-        
-        const devclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(developmentPool);
-        console.log('dev claim:',devclaimTx);
-        await devclaimTx.wait();
-        
+    green("New Upkeep status ", newUpkeepstatus.toNumber());
+
+    // Return when the upkeep status goes back to 0
+    if (newUpkeepstatus.toNumber() === 0) {
+      return;
     }
-    
-    console.log('stake claiming...', stakingPool);
-    const stakeTx1 = await ihelp.connect(stakingPoolSigner).getClaimableCharityInterest();
-    console.log('stake claimable interest:',stakeTx1.toString());
-    
-    if (parseFloat(stakeTx1.toString()) > 0) {
-            
-        let stakeTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress,stakeTx1.toString());
-        console.log('stake approval:',stakeTx1Approve);
-        await stakeTx1Approve.wait();
-    
-        const stakeclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(stakingPool);
-        console.log('stake claim:',stakeclaimTx);
-        await stakeclaimTx.wait();
-    
-    }
-   
-    const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
-    console.log(`end signer balance: ${fromBigNumber(balanceend)}`);
-    
-    const endbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
-    console.log(`end holding balance: ${fromBigNumber(endbalanceholding)}`);
-    
-    console.log(`signer cost:`,fromBigNumber(startbalance)-fromBigNumber(balanceend));
-    console.log(`holder cost:`,fromBigNumber(startbalanceholding)-fromBigNumber(endbalanceholding));
+    await processUpkeep(newUpkeepstatus);
+  };
 
-    console.log('\nUPKEEP COMPLETE.\n');
 
+  const upkeepStep = async () => {
+
+    let upkeepStatus = await ihelp.processingState().then(data => data.status);
+    await processUpkeep(upkeepStatus);
+    
+  };
+  
+  await upkeepStep()
+  
+  const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
+  console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
+  
+  // const endbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
+  // console.log(`end holding balance: ${fromBigNumber(endbalanceholding)}`);
+  
+  console.log(`signer cost:`,fromBigNumber(startbalance)-fromBigNumber(balanceend));
+  //console.log(`holder cost:`,fromBigNumber(startbalanceholding)-fromBigNumber(endbalanceholding));
+  
+  console.log('\nUPKEEP COMPLETE.\n');
+    
+  /*
+    const { Webhook } = require('discord-webhook-node');
+    const hook = new Webhook("");
+     
+    const IMAGE_URL = 'https://avalanche.ihelp.finance/assets/ihelp_icon.png';
+    hook.setUsername('iHelp Job Monitor');
+    hook.setAvatar(IMAGE_URL);
+     
+    hook.send("Upkeep Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Holder Cost: '+holderCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4)+'\n   Holder Balance: '+fromBigNumber(endbalanceholding).toFixed(4));
+
+  */
+    
 }
 
 upkeep();

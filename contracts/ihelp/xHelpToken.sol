@@ -11,16 +11,26 @@ import "hardhat/console.sol";
 
 contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
+    uint256 internal __rewardAwarded;
+
+    uint256 public rewardPerTokenStored;
+    uint256 public totalClaimed;
+
+    EnumerableSet.AddressSet private stakeholders;
+
+    mapping(address => uint256) internal claimableStakeholderReward;
+    mapping(address => uint256) public claimed;
+    mapping(address => uint256) public userRewardPerTokenPaid;
 
     iHelpTokenInterface public ihelpToken;
 
-    uint256 public processingState;
-    uint256 public __processingGasLimit;
+    modifier updateReward(address account) {
+        rewardPerTokenStored = rewardPerToken();
+        claimableStakeholderReward[account] = claimableRewardOf(account);
 
-    uint256 internal __rewardAwarded;
-    EnumerableSet.AddressSet private stakeholders;
-
-    mapping(address => uint256) public claimed;
+        userRewardPerTokenPaid[account] = rewardPerTokenStored;
+        _;
+    }
 
     function initialize(
         string memory _name,
@@ -34,20 +44,25 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __Ownable_init();
 
         ihelpToken = iHelpTokenInterface(_token);
-        __processingGasLimit = 300_000;
     }
 
-    function deposit(uint256 _pie) external {
-        require(_pie != 0, "Funding/deposit-zero");
+    function rewardPerToken() public view returns (uint256) {
+        uint256 _totalSupply = totalSupply();
+        if (_totalSupply == 0) {
+            return 0;
+        }
+        return rewardPerTokenStored;
+    }
 
-        stakeholders.add(msg.sender);
+    function deposit(uint256 _pie) external updateReward(msg.sender) {
+        require(_pie != 0, "Funding/deposit-zero");
+        require(ihelpToken.transferFrom(msg.sender, address(this), _pie), "could not transfer tokens");
 
         _mint(msg.sender, _pie);
-
-        require(ihelpToken.transferFrom(msg.sender, address(this), _pie), "could not transfer tokens");
+        stakeholders.add(msg.sender);
     }
 
-    function withdraw(uint256 requestedAmount) external {
+    function withdraw(uint256 requestedAmount) external updateReward(msg.sender) {
         require(requestedAmount != 0, "Funding/withdraw-zero");
 
         _burn(msg.sender, requestedAmount);
@@ -68,30 +83,17 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimableRewardOf(address _addr) public view returns (uint256) {
-        uint256 totalStaked = totalSupply();
-        console.log("totalStaked", totalStaked);
+        uint256 _balance = balanceOf(_addr);
+        if (_balance == 0) {
+            return claimableStakeholderReward[_addr];
+        }
 
-        uint256 totalReward = totalToReward();
-        console.log("totalReward", totalReward);
-        console.log("stakeholder", _addr);
-
-        uint256 helpStaked = balanceOf(_addr);
-        console.log("helpStaked", helpStaked);
-
-        uint256 rewardShare = helpStaked / totalStaked;
-        console.log("rewardShare", rewardShare);
-
-        uint256 reward = rewardShare * totalReward;
-        console.log("reward", reward);
-
-        uint256 claimedAmount = claimed[_addr];
-        console.log("claimed", reward);
-
-        return reward - claimedAmount;
+        return
+            claimableStakeholderReward[_addr] + (_balance * (rewardPerToken() - userRewardPerTokenPaid[_addr])) / 1e9;
     }
 
     function totalAwarded() public view returns (uint256) {
-        return totalToReward();
+        return __rewardAwarded;
     }
 
     function rewardToken() public view returns (IERC20) {
@@ -99,36 +101,56 @@ contract xHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function stakingPool() public view returns (address) {
-        return ihelpToken.getStakingPool();
-    }
-
-    function holdingPool() public view returns (address) {
-        return ihelpToken.getHoldingPool();
+        return ihelpToken.stakingPool();
     }
 
     function totalToReward() public view returns (uint256) {
-        return rewardToken().balanceOf(stakingPool());
+        uint256 leftToClaim =  __rewardAwarded - totalClaimed;
+        return rewardToken().balanceOf(address(this)) - leftToClaim;
     }
 
     function getStakeholders() public view returns (address[] memory) {
         return stakeholders.values();
     }
 
-    function claimReward() public {
+    function distributeRewards() public onlyOwner {
+        console.log("distributing rewards for stakers...");
+
+        uint256 totalStaked = totalSupply();
+        console.log("totalStaked", totalStaked);
+
+        uint256 totalReward = totalToReward();
+        console.log("totalReward", totalReward);
+
+        if (totalStaked > 0) {
+            rewardPerTokenStored += (totalReward * 1e9) / totalStaked;
+            __rewardAwarded += totalReward;
+        } else {
+            rewardPerTokenStored = 0;
+            rewardToken().transfer(msg.sender, totalReward);
+        }
+
+        console.log("rewardPerTokenStored", rewardPerTokenStored);
+    }
+ 
+    function claimReward() public updateReward(msg.sender) {
         uint256 claimAmount = claimableRewardOf(msg.sender);
-        console.log("claiming reward", msg.sender, claimAmount);
-        rewardToken().transfer(msg.sender, claimAmount);
+       _claim(claimAmount, msg.sender);
     }
 
-    function claimSpecificReward(uint256 amount) public {
-        uint256 claimAmount = claimableRewardOf(msg.sender);
+    function claimSpecificReward(uint256 amount) public updateReward(msg.sender) {
+       _claim(amount, msg.sender);
+    }
 
+    function _claim(uint256 amount, address account) internal {
+        uint256 claimAmount = claimableRewardOf(msg.sender);
         require(claimAmount >= amount, "not enough claimable balance for amount");
 
         console.log("claiming reward", msg.sender, amount);
 
-        claimed[msg.sender] += amount;
-
+        claimableStakeholderReward[msg.sender] -= amount;
+        claimed[account] += amount;
+        totalClaimed += amount;
         rewardToken().transfer(msg.sender, amount);
     }
 }

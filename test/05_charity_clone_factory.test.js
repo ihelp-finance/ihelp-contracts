@@ -35,8 +35,8 @@ describe('Charity Factory Deployment', function () {
         swapperMock = await smock.fake("Swapper", { address: swapperPool.address });
 
         this.accounts = await ethers.getSigners();
-        this.factory = await deploy('CharityPoolCloneFactory');
-
+        const CharityPoolCloneFactory = await ethers.getContractFactory('CharityPoolCloneFactory');
+        this.factory = await CharityPoolCloneFactory.deploy(charityPool.address);
     });
 
     it('should deploy a factory ', async function () {
@@ -44,30 +44,28 @@ describe('Charity Factory Deployment', function () {
     });
 
     it('should  deploy a charity ', async function () {
+        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
+        priceFeedProviderMock = await PriceFeedProvider.deploy();
+
         const tx1 = await this.factory.createCharityPool({
             charityName: "TestCharity",
             operatorAddress: operator.address,
-            holdingPoolAddress: holdingPool.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
-            charityTokenName: "XTC",
             lendingTokenAddress: cTokenMock.address,
             holdingTokenAddress: holdingMock.address,
-            priceFeedAddress: aggregator.address,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
-            stakingPoolAddress: stakingPool.address,
-            developmentPoolAddress: developmentPool.address
+            priceFeedProvider: priceFeedProviderMock.address,
+            wrappedNativeAddress: cTokenMock.address,
         }, { from: this.accounts[0].address });
 
-        const { gasUsed: createGasUsed, events } = await tx1.wait();
+        const { events } = await tx1.wait();
         const { address } = events.find(Boolean);
 
         console.log("Contract deployed at ", address);
         const { interface } = await ethers.getContractFactory('CharityPool');
         const charityPoolInstance = new ethers.Contract(address, interface, this.accounts[0]);
-
-
-        expect(await charityPoolInstance.stakingPool()).to.equal(stakingPool.address);
+        expect(await charityPoolInstance.name()).to.equal("TestCharity");
 
     });
 });

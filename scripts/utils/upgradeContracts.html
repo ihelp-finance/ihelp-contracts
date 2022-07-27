@@ -1,0 +1,160 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js" integrity="sha512-oMd9Re3VgJcXuZJn9DN6X7S7JUc7xLYZ2UyZ85Mm/xzaW3lwBr4fV2zjuu/n5jY/Of/2JOx35CTa6zvQNxb31Q==" crossorigin="anonymous" referrerpolicy="no-referrer">
+</script>
+
+<h2><span class="fromAccount"></span></h2>
+<h2><span class="toAccount"></span> (general)</h2>
+
+<div id="updateform" style="display:none">
+    <input id="arg1" placeholder="old implementation" />
+    <input id="arg2" placeholder="new implementation" />
+    <button class="updateButton">Update Contract</button>
+    <div id="result">
+
+    </div>
+    
+    <h2><span class="toAccountBeacon"></span> (charityPool beacon)</h2>
+    <input id="data" style="width:297px" placeholder="broadcast data" />
+    <button class="updateCharityButton">Update CharityPool Contract</button>
+    <div id="resultCharity">
+
+    </div>
+    <div id="charityVersion" style="display:none;margin-top:10px">
+        Charity Pool Version: <span id="charityVersionText"></span>
+    </div>
+    
+</div>
+
+<script type='text/javascript'>
+    async function init() {
+        
+        const testCharityVersion = true
+
+        // <button class="connectButton">Connect</button>
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('MetaMask is installed!');
+            console.log(window.ethereum)
+            window.web3 = new Web3(window.ethereum);
+            await window.ethereum.enable();
+
+            // fetch the abi
+            function httpGet(theUrl) {
+                var xmlHttp = new XMLHttpRequest();
+                xmlHttp.open("GET", theUrl, false); // false for synchronous request
+                xmlHttp.send(null);
+                return xmlHttp.responseText;
+            }
+
+            const content = await httpGet('https://dev.ihelp.finance/api/v1/data/contracts')
+            const contracts = JSON.parse(content)
+
+            const chainId = parseInt(window.ethereum.chainId).toString()
+            window.DefaultProxyAdmin = contracts[chainId][0]['contracts']['DefaultProxyAdmin']
+            window.CharityBeaconFactory = contracts[chainId][0]['contracts']['CharityBeaconFactory']
+            
+
+            console.log('DefaultProxyAdmin',window.DefaultProxyAdmin)
+            console.log('CharityBeaconFactory',window.CharityBeaconFactory)
+            
+            window.contract = new web3.eth.Contract(window.DefaultProxyAdmin.abi);
+            window.contractBeacon = new web3.eth.Contract(window.CharityBeaconFactory.abi);
+            
+            if (testCharityVersion == true) {
+                window.Charity1 = contracts[chainId][0]['contracts']['charityPool1']
+                console.log('Charity1',window.Charity1)
+                window.contractCharity1 = new web3.eth.Contract(window.Charity1.abi,window.Charity1.address);
+                
+                document.querySelector('#charityVersion').style.display = ''
+                
+                const version = await window.contractCharity1.methods.version().call()
+                document.querySelector('#charityVersionText').innerText = version;
+                
+            }
+
+            getAccount()
+
+        }
+    }
+    init()
+
+    const updateButton = document.querySelector('.updateButton');
+    const updateCharityButton = document.querySelector('.updateCharityButton');
+    const fromAccount = document.querySelector('.fromAccount');
+    const toAccount = document.querySelector('.toAccount');
+    const toAccountBeacon = document.querySelector('.toAccountBeacon');
+
+    updateButton.addEventListener('click', () => {
+        updateContract();
+    });
+    
+    updateCharityButton.addEventListener('click', () => {
+        updateCharityContract();
+    });
+
+
+    async function getAccount() {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        fromAccount.innerHTML = `from: ${account}`;
+        toAccount.innerHTML = `to: ${window.DefaultProxyAdmin.address}`;
+        toAccountBeacon.innerHTML = `to: ${window.CharityBeaconFactory.address}`;
+
+        document.querySelector('#updateform').style.display = ''
+
+    }
+
+    const updateContract = async() => {
+
+        const data = {
+            'arg1': document.querySelector('#arg1').value,
+            'arg2': document.querySelector('#arg2').value,
+        }
+
+        const tx = {
+            nonce: '0x00',
+            // gasPrice: '0x09184e72a000',
+            // gas: '0x2710',
+            from: window.ethereum.selectedAddress,
+            to: window.DefaultProxyAdmin.address,
+            value: "0x00", // this is the value in wei to send
+            data: window.contract.methods.upgrade(data.arg1, data.arg2).encodeABI()
+        }
+        console.log(tx)
+
+        const txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+        });
+
+        console.log({ txHash });
+
+        document.querySelector('#result').innerText = JSON.stringify(txHash)
+
+    }
+    
+    const updateCharityContract = async() => {
+
+        const tx = {
+            nonce: '0x00',
+            // gasPrice: '0x09184e72a000',
+            // gas: '0x2710',
+            from: window.ethereum.selectedAddress,
+            to: window.CharityBeaconFactory.address,
+            value: "0x00", // this is the value in wei to send
+            data: document.querySelector('#data').value
+        }
+        console.log(tx)
+
+        const txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+        });
+
+        console.log({ txHash });
+
+        document.querySelector('#resultCharity').innerText = JSON.stringify(txHash)
+
+    }
+    
+    
+    
+</script>

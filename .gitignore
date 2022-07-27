@@ -5,6 +5,7 @@ artifacts
 cache
 deployments
 node_modules
+charityAddresses.csv
 contractAddresses.csv
 package-lock.json
 tokens.json
@@ -17,3 +18,7 @@ coverage.json
 .DS_Store
 contracts/.DS_Store
 contracts/ihelp/ihelp-contracts.code-workspace
+TODO
+deployed-charities/localhost.json
+deployed-charities/hardhat.json
+.vscode/settings.json

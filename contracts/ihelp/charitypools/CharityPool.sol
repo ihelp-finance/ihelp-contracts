@@ -1,22 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.9;
-
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "./CharityPoolUtils.sol";
+
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../../utils/IERC20.sol";
 import "../../utils/ICErc20.sol";
+import "../../utils/IWrappedNative.sol";
 
 import "../iHelpTokenInterface.sol";
+import "./CharityPoolInterface.sol";
+
 import "../SwapperInterface.sol";
+import "../PriceFeedProviderInterface.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is OwnableUpgradeable {
+contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -25,14 +31,14 @@ contract CharityPool is OwnableUpgradeable {
      * @param sender The purchaser of the tickets
      * @param amount The size of the deposit
      */
-    event Deposited(address indexed sender, uint256 amount);
+    event Deposited(address indexed sender, address indexed cTokenAddress, uint256 amount);
 
     /**
      * Emitted when a user withdraws from the pool.
      * @param sender The user that is withdrawing from the pool
      * @param amount The amount that the user withdrew
      */
-    event Withdrawn(address indexed sender, uint256 amount);
+    event Withdrawn(address indexed sender, address indexed cTokenAddress, uint256 amount);
 
     /**
      * Emitted when a draw is rewarded.
@@ -41,43 +47,54 @@ contract CharityPool is OwnableUpgradeable {
      */
     event Rewarded(address indexed receiver, uint256 amount);
 
-    uint8 internal holdingDecimals;
-    uint256 public totalInterestEarned;
-    uint256 public totalInterestEarnedUSD;
-    uint256 public currentInterestEarned;
-    uint256 public lastTotalInterest;
-    uint256 public newTotalInterestEarned;
-    uint256 public newTotalInterestEarnedUSD;
-    uint256 public redeemableInterest;
-    uint256 public accountedBalance;
-    uint256 public accountedBalanceUSD;
-
-    address public operator;
-    address public charityWallet;
-    address public holdingPool;
-    address public swapperPool;
-    address public stakingPool;
-    address public developmentPool;
-    address public holdingToken;
-
-    string public name;
-    string public tokenname;
-
-    SwapperInterface internal swapper;
-    EnumerableSet.AddressSet private contributors;
-
-    mapping(address => uint256) public balances;
-    mapping(address => uint256) public balancesUSD;
+    /**
+     * Emitted when a draw is rewarded.
+     * @param sender The donation sender
+     * @param receiver The address of the reward receiver
+     * @param amount The amount of the win
+     */
+    event DirectDonation(address indexed sender, address indexed receiver, uint256 amount);
 
     /**
-     * The Compound cToken that this Pool is bound to.
+     * Emitted when an offchain claim is made.
+     * @param receiver The address of the reward receiver
+     * @param amount The amount of the win
      */
-    ICErc20 public cToken;
+    event OffChainClaim(address indexed receiver, uint256 amount);
+
+    uint8 internal holdingDecimals;
+    SwapperInterface internal swapper;
+    EnumerableSet.AddressSet private contributors;
+    mapping(address => CharityPoolUtils.DirectDonationsCounter) private _donationsRegistry;
+
+    string public name;
+    address public operator;
+    address public charityWallet;
+    address public swapperPool;
+    address public holdingToken;
+    uint256 public totalDonationsUSD;
+
+    mapping(address => mapping(address => uint256)) public balances;
+    mapping(address => mapping(address => uint256)) public donationBalances;
+
+    mapping(address => uint256) public accountedBalances;
+    mapping(address => uint256) public totalInterestEarned;
+    mapping(address => uint256) public currentInterestEarned;
+    mapping(address => uint256) public lastTotalInterest;
+    mapping(address => uint256) public newTotalInterestEarned;
+    mapping(address => uint256) public redeemableInterest;
+
+    IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
+    PriceFeedProviderInterface public priceFeedProvider;
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
+    }
+
+    function donationsRegistry(address _account) public view returns (CharityPoolUtils.DirectDonationsCounter memory) {
+        return _donationsRegistry[_account];
     }
 
     function _transferOperator(address newOperator) internal virtual {
@@ -96,95 +113,91 @@ contract CharityPool is OwnableUpgradeable {
 
     function postUpgrade() external onlyOperatorOrOwner {}
 
-    AggregatorV3Interface internal priceFeed;
-
-    function initialize(
-        string memory _name,
-        address _operator,
-        address _holdingPool,
-        address _charityWallet,
-        string memory _charityPoolCurrency,
-        address _cToken,
-        address _holdingToken,
-        address _priceFeed,
-        address _ihelpToken,
-        address _swapperPool,
-        address _stakingPool,
-        address _developmentPool
-    ) public initializer {
+    function initialize(CharityPoolUtils.CharityPoolConfiguration memory configuration) public initializer {
         __Ownable_init();
 
-        require(_cToken != address(0), "Funding/ctoken-zero");
-        require(_operator != address(0), "Funding/operator-zero");
+        require(configuration.operatorAddress != address(0), "Funding/operator-zero");
 
-        console.log("Initializing Charity Pool Contract:", _name);
+        ihelpToken = iHelpTokenInterface(configuration.ihelpAddress);
+        swapper = SwapperInterface(configuration.swapperAddress);
 
-        cToken = ICErc20(_cToken);
-        priceFeed = AggregatorV3Interface(_priceFeed);
-        ihelpToken = iHelpTokenInterface(_ihelpToken);
-        swapper = SwapperInterface(_swapperPool);
+        name = configuration.charityName;
 
-        name = _name;
-        tokenname = _charityPoolCurrency;
-
-        operator = _operator;
-        holdingPool = _holdingPool;
-        swapperPool = _swapperPool;
-        stakingPool = _stakingPool;
-        developmentPool = _developmentPool;
-        charityWallet = _charityWallet;
-        holdingToken = _holdingToken;
-        holdingDecimals = IERC20(holdingToken).decimals();
-
-        totalInterestEarned = 0;
-        totalInterestEarnedUSD = 0;
-        currentInterestEarned = 0;
-        newTotalInterestEarned = 0;
-        newTotalInterestEarnedUSD = 0;
-        lastTotalInterest = 0;
-        redeemableInterest = 0;
-
-        accountedBalance = 0;
-        accountedBalanceUSD = 0;
+        operator = configuration.operatorAddress;
+        swapperPool = configuration.swapperAddress;
+        charityWallet = configuration.charityWalletAddress;
+        holdingToken = configuration.holdingTokenAddress;
+        holdingDecimals = IERC20(configuration.holdingTokenAddress).decimals();
+        wrappedNative = IWrappedNative(configuration.wrappedNativeAddress);
+        priceFeedProvider = PriceFeedProviderInterface(configuration.priceFeedProvider);
     }
 
-    function deposit(uint256 _amount) public {
-        require(_amount > 0, "Funding/small-amount");
-        // Transfer the tokens into this contract
-        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
+    function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
+        require(_newAddress != charityWallet, "charity-wallet/invalid-addr");
+        //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
+        // since the next rewards will go to the new wallets.
+        charityWallet = _newAddress;
+    }
 
-        contributors.add(msg.sender);
+    function developmentPool() public view returns (address) {
+        return ihelpToken.developmentPool();
+    }
+
+    function stakingPool() public view returns (address) {
+        return ihelpToken.stakingPool();
+    }
+
+    /**
+     * Allows depositing native tokens to the charity contract
+     */
+    function depositNative(address _cTokenAddress) public payable {
+        require(msg.value > 0, "Native-Funding/small-amount");
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
+        wrappedNative.deposit{value: msg.value}();
+
         // Deposit the funds
-        _depositFrom(msg.sender, _amount);
+        _depositFrom(msg.sender, _cTokenAddress, msg.value);
 
-        emit Deposited(msg.sender, _amount);
+        emit Deposited(msg.sender, _cTokenAddress, msg.value);
     }
 
-    function sponsor(uint256 _amount) public {
+    /**
+     * Allows withdrawing native tokens to the charity contract
+     */
+    function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
+        require(_amount > 0, "Funding/small-amount");
+        require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
+
+        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
+        _withdraw(msg.sender, _cTokenAddress, _amount);
+        wrappedNative.withdraw(_amount);
+        payable(msg.sender).transfer(_amount);
+        emit Withdrawn(msg.sender, _cTokenAddress, _amount);
+    }
+
+    function depositTokens(address _cTokenAddress, uint256 _amount) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
-        require(token().transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
+        require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
 
-        // only push a new contributor if not already present
-        contributors.add(msg.sender);
+        // Deposit the funds
+        _depositFrom(msg.sender, _cTokenAddress, _amount);
 
-        _depositFrom(msg.sender, _amount);
-
-        emit Deposited(msg.sender, _amount);
+        emit Deposited(msg.sender, _cTokenAddress, _amount);
     }
 
     /**
      * @notice Withdraw the sender's entire balance back to them.
      */
-    function withdraw() public {
-        uint256 _balance = balances[msg.sender];
-        _withdraw(msg.sender, _balance);
-        emit Withdrawn(msg.sender, _balance);
-    }
-
-    function withdrawAmount(uint256 _amount) public {
-        _withdraw(msg.sender, _amount);
-        emit Withdrawn(msg.sender, _amount);
+    function withdrawTokens(address _cTokenAddress, uint256 _amount) public {
+        if (_amount == 0) {
+            _amount = balances[msg.sender][_cTokenAddress];
+        }
+        _withdraw(msg.sender, _cTokenAddress, _amount);
+        // Withdraw from Compound and transfer
+        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
+        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
+        emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
 
     /**
@@ -192,156 +205,259 @@ contract CharityPool is OwnableUpgradeable {
      * @param _spender The user who is depositing
      * @param _amount The amount they are depositing
      */
-    function _depositFrom(address _spender, uint256 _amount) internal {
+    function _depositFrom(
+        address _spender,
+        address _cTokenAddress,
+        uint256 _amount
+    ) internal {
         require(_amount != 0, "Funding/deposit-zero");
+        require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Native-Funding/invalid-ctoken");
         // Update the user's balance
-        balances[_spender] = balances[_spender] + _amount;
+        balances[_spender][_cTokenAddress] += _amount;
 
-        // Update the total of this contract
-        accountedBalance = accountedBalance + _amount;
+        // Update the total balance of cTokens of this contract
+        accountedBalances[_cTokenAddress] += _amount;
 
         // Deposit into Compound
-        require(token().approve(address(cToken), _amount), "Funding/approve");
-        require(cToken.mint(_amount) == 0, "Funding/supply");
+        require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
+        require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
+
+        contributors.add(_spender);
     }
 
     /**
      * @notice Transfers tokens from the cToken contract to the sender.  Updates the accounted balance.
      */
-    function _withdraw(address _sender, uint256 _amount) internal {
-        uint256 _balance = balances[_sender];
-
-        require(_amount <= _balance, "Funding/no-funds");
-
-        // Update the user's balance
-        if (_balance > _amount) {
-            balances[_sender] = _balance - _amount;
-        } else {
-            balances[_sender] = 0;
-        }
+    function _withdraw(
+        address _sender,
+        address _cTokenAddress,
+        uint256 _amount
+    ) internal {
+        require(_amount <= balances[_sender][_cTokenAddress], "Funding/no-funds");
+        balances[_sender][_cTokenAddress] -= _amount;
 
         // Update the total of this contract
-        if (accountedBalance > _amount) {
-            accountedBalance = accountedBalance - _amount;
+        if (accountedBalances[_cTokenAddress] > _amount) {
+            accountedBalances[_cTokenAddress] -= _amount;
         } else {
-            accountedBalance = 0;
+            accountedBalances[_cTokenAddress] = 0;
+            contributors.remove(_sender);
         }
-
-        // Withdraw from Compound and transfer
-        require(cToken.redeemUnderlying(_amount) == 0, "Funding/redeem");
-        require(token().transfer(_sender, _amount), "Funding/transfer");
     }
 
-    function directDonation(uint256 _amount) public {
-        console.log("directDonationAmount", _amount);
+    function directDonation(IERC20 _donationToken, uint256 _amount) public {
+        if (_amount == 0) {
+            return;
+        }
 
+        require(
+            priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)),
+            "Donation/invalid-currency"
+        );
+        require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
+        _directDonation(_donationToken, msg.sender, _amount);
+    }
+
+    function _directDonation(
+        IERC20 _donationToken,
+        address _account,
+        uint256 _amount
+    ) internal {
+        console.log("directDonationAmount", _amount);
         // transfer the tokens to the charity contract
         if (_amount > 0) {
-            address tokenaddress = address(token());
+            address tokenaddress = address(_donationToken);
+            console.log("holdingTokenAmount", tokenaddress, holdingToken);
 
+            uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
+
+            console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
+
+            // Add up the donation amount before the swap
+            _donationsRegistry[_account].totalContribUSD += holdingTokenAmount;
+
+            // keep track of donation balances
+            donationBalances[_account][address(_donationToken)] += _amount;
+
+            if (tokenaddress != holdingToken) {
+                console.log("Swapping");
+                uint256 minAmount = (holdingTokenAmount * 95) / 100;
+
+                // TODO: This should enable support for tokens that have fee on transfer
+                uint256 receivedAmount = _donationToken.balanceOf(address(this));
+
+                require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
+                console.log("Current Token Balance::", receivedAmount);
+                _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
+            }
+
+            (uint256 devFee, uint256 stakingFee, ) = ihelpToken.getFees();
             // 2.5% to developer pool as native currency of pool
-            uint256 developerFee = (_amount * 25) / 1000;
-            require(token().transferFrom(msg.sender, developmentPool, developerFee), "Funding/developer transfer");
+            uint256 developerFeeAmount = (_amount * devFee) / 1000;
 
             // 2.5% to staking pool as swapped dai
-            uint256 stakingFee = (_amount * 25) / 1000;
+            uint256 stakingFeeAmount = (_amount * stakingFee) / 1000;
 
-            if (tokenaddress == holdingToken) {
-                require(token().transferFrom(msg.sender, stakingPool, stakingFee), "Funding/staking transfer");
-            } else {
-                console.log("Swapping");
-                uint256 minAmount = (stakingFee * 50) / 100;
+            (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
 
-                require(token().transferFrom(msg.sender, address(this), stakingFee), "Funding/staking swap transfer");
-
-                require(token().approve(swapperPool, stakingFee), "Funding/staking swapper approve");
-                swapper.swap(tokenaddress, holdingToken, stakingFee, minAmount, stakingPool);
-            }
+            require(IERC20(holdingToken).transfer(_developmentPool, developerFeeAmount), "Funding/developer transfer");
+            require(IERC20(holdingToken).transfer(_stakingPool, stakingFeeAmount), "Funding/developer transfer");
 
             // 95% to charity as native currency of pool
-            uint256 charityDonation = _amount - developerFee - stakingFee;
+            uint256 charityDonation = _amount - developerFeeAmount - stakingFeeAmount;
 
-            // if charityWallet uses holdingPool (for off-chain transfers) then deposit the direction donation amount to this contract
+            // if charityWallet uses address(0) (for off-chain transfers) then deposit the direction donation amount to this contract
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
-            console.log(charityWallet, holdingPool);
+            console.log("Charity Wallet::", charityWallet);
 
-            if (charityWallet == holdingPool) {
-                console.log("direct to contract", address(this), charityDonation);
-                require(token().approve(address(this), charityDonation), "Funding/approve");
-                require(token().transferFrom(msg.sender, address(this), charityDonation), "Funding/t-fail");
-            } else {
+            if (charityWallet != address(0)) {
                 // deposit the charity share directly to the charities wallet address
-                require(token().approve(charityWallet, charityDonation), "Funding/approve");
-                require(token().transferFrom(msg.sender, charityWallet, charityDonation), "Funding/t-fail");
+                console.log("Charity Donation::", charityDonation);
+                console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
+                require(IERC20(holdingToken).transfer(charityWallet, charityDonation), "Funding/t-fail");
+            } else {
+                console.log("direct to contract", address(this), charityDonation);
             }
 
-            emit Rewarded(charityWallet, _amount);
+            // Update the donations statistcis for the contributor
+            _donationsRegistry[_account].totalDonations++;
+            _donationsRegistry[_account].contribAfterSwapUSD += _amount;
+            _donationsRegistry[_account].devContribUSD += developerFeeAmount;
+            _donationsRegistry[_account].stakeContribUSD += stakingFeeAmount;
+            _donationsRegistry[_account].charityDonationUSD += charityDonation;
+            totalDonationsUSD += _amount;
+
+            emit DirectDonation(_account, charityWallet, _amount);
         }
     }
 
-    function redeemInterest() public onlyHelpToken {
-        uint256 amount = redeemableInterest;
+    function redeemInterest(address _cTokenAddress) public onlyHelpToken {
+        _redeemInterest(_cTokenAddress);
+    }
 
+    /**
+     * Sends interest form the charity contract to their wallet
+     */
+    function claimInterest() external {
+        uint256 amount = IERC20(holdingToken).balanceOf(address(this));
+        console.log("CHARITY_POOL::CLAIM:::", amount);
+        if (amount == 0) {
+            return;
+        }
+        bool success = IERC20(holdingToken).transfer(charityWallet, amount);
+        require(success, "transfer failed");
+    }
+
+    /**
+     * Returns the claimbale intrest in holding tokens for this charity pool
+     */
+    function claimableInterest() public view returns (uint256) {
+        return IERC20(holdingToken).balanceOf(address(this));
+    }
+
+    function _redeemInterest(address _cTokenAddress) internal {
+        uint256 amount = redeemableInterest[_cTokenAddress];
+        ICErc20 cToken = ICErc20(_cTokenAddress);
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
             // redeem the yield
             cToken.redeemUnderlying(amount);
 
-            address tokenaddress = address(token());
+            // Get The underlying token for this cToken
+            IERC20 underlyingToken = getUnderlying(_cTokenAddress);
 
-            if (tokenaddress == holdingToken) {
-                require(token().transfer(holdingPool, amount), "Funding/transfer");
-            } else {
+            address tokenaddress = address(underlyingToken);
+            if (tokenaddress != holdingToken) {
                 console.log("\nSWAPPING", swapperPool, amount);
 
                 // ensure minimum of 50% redeemed
                 uint256 minAmount = (amount * 50) / 100;
-                // console.log( holdingToken, amount, minAmount, holdingPool);
 
-                require(token().approve(swapperPool, amount), "Funding/approve");
+                require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
-                swapper.swap(tokenaddress, holdingToken, amount, minAmount, holdingPool);
+                console.log("TOKEN::", tokenaddress, holdingToken);
+                amount = swapper.swap(tokenaddress, holdingToken, amount, minAmount, address(this));
             }
+            (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
+            uint256 devFeeShare = (amount * devFee) / 1000;
+            uint256 stakeFeeShare = (amount * stakeFee) / 1000;
+
+            console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
+            console.log("Dev and stake fees::", devFee, stakeFee);
+
+            (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
+            require(IERC20(holdingToken).transfer(_developmentPool, devFeeShare), "Funding/transfer");
+            require(IERC20(holdingToken).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
 
             // reset the lastinterestearned incrementer
-            currentInterestEarned = 0;
-            redeemableInterest = 0;
+            currentInterestEarned[_cTokenAddress] = 0;
+            redeemableInterest[_cTokenAddress] = 0;
+
+            // TODO: Ask matt do we have to reset the interest after claiming?
+            newTotalInterestEarned[_cTokenAddress] = 0;
 
             emit Rewarded(charityWallet, amount);
         }
     }
 
     /**
+        Claims the interest for charities that do not have an onchain wallet
+     */
+    function collectOffChainInterest(address _destAddr, address _depositCurrency) external onlyOperatorOrOwner {
+        uint256 amount = IERC20(holdingToken).balanceOf(address(this));
+        require(amount > 0, "OffChain/nothing-to-claim");
+
+        uint256 claimAmount = amount;
+        if (_depositCurrency == holdingToken) {
+            require(IERC20(_depositCurrency).transfer(_destAddr, amount), "Funding/transfer");
+        } else {
+            address[] memory swapPath = new address[](3);
+            swapPath[0] = holdingToken;
+
+            // Pass trough AVAX to make sure we have liquidity
+            swapPath[1] = swapper.nativeToken();
+            swapPath[2] = _depositCurrency;
+
+            uint256 minAmount = (amount * 50) / 100;
+
+            uint256 amountOut = swapper.swapByPath(swapPath, amount, minAmount, _destAddr);
+            claimAmount = amountOut;
+        }
+        // Emit the offchain claim event
+        emit OffChainClaim(_destAddr, claimAmount);
+    }
+
+    /**
      * @notice Returns the token underlying the cToken.
      * @return An ERC20 token address
      */
-    function token() public view returns (IERC20) {
-        return IERC20(cToken.underlying());
+    function getUnderlying(address cTokenAddress) public view returns (IERC20) {
+        return IERC20(ICErc20(cTokenAddress).underlying());
     }
 
     /**
      * @notice Returns a user's total balance.  This includes their sponsorships, fees, open deposits, and committed deposits.
-     * @param _addr The address of the user to check.
+     * @param _account The address of the user to check.
      * @return The user's current balance.
      */
-    function balanceOf(address _addr) public view returns (uint256) {
-        return balances[_addr];
+    function balanceOf(address _account, address _cTokenAddress) public view returns (uint256) {
+        return balances[_account][_cTokenAddress];
     }
 
     /**
      * @notice Returns the underlying balance of this contract in the cToken.
      * @return The cToken underlying balance for this contract.
      */
-    function balance() public view returns (uint256) {
-        return cToken.balanceOfUnderlying(address(this));
+    function balance(address _cTokenAddress) public view returns (uint256) {
+        return ICErc20(_cTokenAddress).balanceOfUnderlying(address(this));
     }
 
-    function interestEarned() public view returns (uint256) {
-        uint256 _balance = balance();
+    function interestEarned(address _cTokenAddress) public view returns (uint256) {
+        uint256 _balance = balance(_cTokenAddress);
 
-        if (_balance > accountedBalance) {
-            return _balance - accountedBalance;
+        if (_balance > accountedBalances[_cTokenAddress]) {
+            return _balance - accountedBalances[_cTokenAddress];
         } else {
             return 0;
         }
@@ -352,21 +468,21 @@ contract CharityPool is OwnableUpgradeable {
      * @param _blocks The number of block that interest accrued for
      * @return The total estimated interest as a 18 point fixed decimal.
      */
-    function estimatedInterestRate(uint256 _blocks) public view returns (uint256) {
-        return supplyRatePerBlock() * _blocks;
+    function estimatedInterestRate(uint256 _blocks, address _cTokenAddres) public view returns (uint256) {
+        return supplyRatePerBlock(_cTokenAddres) * _blocks;
     }
 
     /**
      * @notice Convenience function to return the supplyRatePerBlock value from the money market contract.
      * @return The cToken supply rate per block
      */
-    function supplyRatePerBlock() public view returns (uint256) {
-        return cToken.supplyRatePerBlock();
+    function supplyRatePerBlock(address _cTokenAddress) public view returns (uint256) {
+        return ICErc20(_cTokenAddress).supplyRatePerBlock();
     }
 
-    function getUnderlyingTokenPrice() public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        return uint256(price);
+    function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256, uint256) {
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
+        return priceFeedProvider.getUnderlyingTokenPrice(_cTokenAdddress);
     }
 
     function getContributors() public view returns (address[] memory) {
@@ -387,68 +503,145 @@ contract CharityPool is OwnableUpgradeable {
         }
     }
 
-    function convertToUsd(uint256 value) internal view returns (uint256) {
-        uint256 tokenPrice = getUnderlyingTokenPrice();
-        uint256 convertExchangeRateToWei = 100000000;
-        uint256 tokenPriceWei = tokenPrice.div(convertExchangeRateToWei);
-        uint256 valueUSD = value.mul(tokenPriceWei);
-        // calculate the total interest earned in USD - scale by the different in decimals from contract to dai
-        if (decimals() < holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, holdingDecimals - decimals());
-        } else if (decimals() > holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, decimals() - holdingDecimals);
+    function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
+        (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
+        uint256 valueUSD = _value * tokenPrice;
+        valueUSD = valueUSD / safepow(10, priceDecimals);
+        uint256 _decimals = decimals(_cTokenAddress);
+        if (_decimals < holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
+        } else if (_decimals > holdingDecimals) {
+            valueUSD = valueUSD * safepow(10, _decimals - holdingDecimals);
         }
         return valueUSD;
     }
 
-    function setStakingPool(address _pool) public onlyOperatorOrOwner {
-        require(_pool != address(0), "Pool cannot be null");
-        stakingPool = _pool;
+    // increment and return the total interest generated
+    function calculateTotalIncrementalInterest(address _cTokenAddress) public onlyHelpToken {
+        _calculateTotalIncrementalInterest(_cTokenAddress);
     }
 
-    // increment and return the total interest generated
-    function calculateTotalIncrementalInterest() public onlyHelpToken {
-        // get the overall new balance
-        console.log("");
-
+    function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
         // in charityPool currency
-        uint256 newEarned = interestEarned();
+        uint256 newEarned = interestEarned(_cTokenAddress);
 
         console.log("newEarned", newEarned);
-        console.log("currentInterestEarned", currentInterestEarned);
+        console.log("currentInterestEarned", currentInterestEarned[_cTokenAddress]);
 
-        // MAY HAVE TO TAKE INTO ACCOUNT THE ACTUAL CHANGE IN CONTRIBUTION BALANCE HERE
-
-        if (newEarned > currentInterestEarned) {
-            newTotalInterestEarned = newEarned - currentInterestEarned;
-            console.log("__newTotalInterestEarned", newTotalInterestEarned);
-            currentInterestEarned = newTotalInterestEarned;
+        if (newEarned > currentInterestEarned[_cTokenAddress]) {
+            newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];
+            console.log("__newTotalInterestEarned", newTotalInterestEarned[_cTokenAddress]);
+            currentInterestEarned[_cTokenAddress] = newTotalInterestEarned[_cTokenAddress];
 
             // keep track of the total interest earned as USD
-            totalInterestEarned = totalInterestEarned + newTotalInterestEarned;
-            console.log("totalInterestEarned", totalInterestEarned);
+            totalInterestEarned[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
+            console.log("totalInterestEarned", totalInterestEarned[_cTokenAddress]);
 
-            redeemableInterest = redeemableInterest + newTotalInterestEarned;
+            redeemableInterest[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
         } else {
-            newTotalInterestEarned = 0;
-        }
-
-        // set the new usd values
-        newTotalInterestEarnedUSD = convertToUsd(newTotalInterestEarned);
-        totalInterestEarnedUSD = convertToUsd(totalInterestEarned);
-        accountedBalanceUSD = convertToUsd(accountedBalance);
-
-        for (uint256 ii = 0; ii < contributors.length(); ii++) {
-            address contributor = contributors.at(ii);
-            balancesUSD[contributor] = convertToUsd(balances[contributor]);
+            newTotalInterestEarned[_cTokenAddress] = 0;
         }
     }
 
-    function decimals() public view returns (uint8) {
-        return token().decimals();
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function accountedBalanceUSD() public view returns (uint256) {
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, accountedBalances[cTokenAddress]);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function newTotalInterestEarnedUSD() public view returns (uint256) {
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += newCTokenTotalUSDInterest(cTokenAddress);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function totalInterestEarnedUSD() public view returns (uint256) {
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += cTokenTotalUSDInterest(cTokenAddress);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function calculateTotalInterestEarned() public view returns (uint256) {
+        uint256 result;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += totalInterestEarned[cTokenAddress];
+        }
+        return result;
+    }
+
+    function cTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
+        return convertToUsd(_cTokenAddress, totalInterestEarned[_cTokenAddress]);
+    }
+
+    function newCTokenTotalUSDInterest(address _cTokenAddress) public view returns (uint256) {
+        return convertToUsd(_cTokenAddress, newTotalInterestEarned[_cTokenAddress]);
+    }
+
+    function decimals(address _cTokenAddress) public view returns (uint8) {
+        return getUnderlying(_cTokenAddress).decimals();
+    }
+
+    function getAllDonationCurrencies() public view returns (PriceFeedProviderInterface.DonationCurrency[] memory) {
+        return priceFeedProvider.getAllDonationCurrencies();
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
-        return balancesUSD[_addr];
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
+        uint256 result;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
+        }
+        return result;
     }
+
+    function numberOfContributors() public view returns (uint256) {
+        return contributors.length();
+    }
+
+    function contributorAt(uint256 index) public view returns (address) {
+        return contributors.at(index);
+    }
+
+    receive() external payable {}
+
+    function directDonationNative() public payable {
+        uint256 amount = msg.value;
+        wrappedNative.deposit{value: amount}();
+        wrappedNative.approve(address(this), amount);
+        _directDonation(wrappedNative, msg.sender, amount);
+    }
+
+    function version() public pure virtual returns (uint256) {
+        return 1;
+    }
+
+    uint256[27] private __gap;
 }

@@ -172,6 +172,8 @@ const validate = async () => {
   usdc = await hardhat.ethers.getContractAt('ERC20MintableMock', usdcAddress, signer);
   cusdc = await hardhat.ethers.getContractAt('CTokenMock', cUsdcAddress, signer);
   swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
+
+  yellow("Configurating charity pools...");
   charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
   charityPool2 = await hardhat.ethers.getContractAt('CharityPool', charity2Address, signer);
   charityPool3 = await hardhat.ethers.getContractAt('CharityPool', charity3Address, signer);
@@ -237,9 +239,9 @@ const validate = async () => {
 
   const check = await csv().fromString(checkBody);
 
-  const ERROR_THRESHOLD = 0.01;
+  const ERROR_THRESHOLD = 0.05;
   const withinError = (value, actual, test) => {
-    let result;
+    let result, error;
     if (actual == 0) {
       if (value == 0) {
         result = true;
@@ -249,7 +251,7 @@ const validate = async () => {
       }
     }
     else {
-      const error = Math.abs((value - actual) / actual);
+      error = Math.abs((value - actual) / actual);
       if (error <= ERROR_THRESHOLD) {
         result = true;
       }
@@ -258,7 +260,7 @@ const validate = async () => {
       }
     }
     if (!result) {
-      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(value)} got ${chalk.red(actual)}`));
+      console.log(chalk.red(`Test failed for ${test}, expected ${chalk.green(actual)} got ${chalk.yellow(value)}, error margin ${chalk.yellow((error * 100).toFixed(4))}%`));
       throw new Error('Test failed');
     }
     return result;
@@ -287,13 +289,13 @@ const validate = async () => {
     }
     // console.log(result);
 
-    const c1contributionsTx = await charityPool1.accountedBalance();
+    const c1contributionsTx = await charityPool1.accountedBalances(cDaiAddress);
     const c1contributions = fromBigNumber(c1contributionsTx, daiDecimals);
 
-    const c2contributionsTx = await charityPool2.accountedBalance();
+    const c2contributionsTx = await charityPool2.accountedBalances(cUsdcAddress);
     const c2contributions = fromBigNumber(c2contributionsTx, usdcDecimals);
 
-    const c3contributionsTx = await charityPool3.accountedBalance();
+    const c3contributionsTx = await charityPool3.accountedBalances(cDaiAddress);
     const c3contributions = fromBigNumber(c3contributionsTx, daiDecimals);
 
     const phaseTx = await ihelp.tokenPhase();
@@ -321,13 +323,13 @@ const validate = async () => {
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
-    const c1walletTx = await ihelp.getClaimableCharityInterestOf(charity1Address);
+    const c1walletTx = await charityPool1.claimableInterest();
     const c1wallet = fromBigNumber(c1walletTx);
 
-    const c2walletTx = await ihelp.getClaimableCharityInterestOf(charity2Address);
+    const c2walletTx = await charityPool2.claimableInterest();
     const c2wallet = fromBigNumber(c2walletTx);
 
-    const c3walletTx = await ihelp.getClaimableCharityInterestOf(charity3Address);
+    const c3walletTx = await charityPool3.claimableInterest();
     const c3wallet = fromBigNumber(c3walletTx);
 
     const devpoolTx = await dai.balanceOf(developmentPool);
@@ -350,7 +352,6 @@ const validate = async () => {
 
     // const xhelpratioTx = await xhelp.exchangeRateCurrent();
     // const xhelpratio = fromBigNumber(xhelpratioTx);
-
     const charitypool = c1wallet + c2wallet + c3wallet;
 
     const totalinterest = c1interest + c2interest + c3interest;
@@ -411,6 +412,7 @@ const validate = async () => {
     // approve the staking pool address to send from xhelp contract
     let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
     await rewardApprove.wait();
+    await xhelp.distributeRewards();
   };
 
 
@@ -429,12 +431,7 @@ const validate = async () => {
     const method = upkeepStatusMapping[upkeepStatus];
     cyan("Processing upkeep, status ", method);
     while (upkeepStatus == newUpkeepstatus) {
-      if (method === 'dump') {
-        const perfectRedeemInterest = await ihelp.calculatePerfectRedeemInterest();
-        await ihelp.functions[method](perfectRedeemInterest);
-      } else {
-        await ihelp.functions[method]();
-      }
+      await ihelp.functions[method]();
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
 
@@ -452,37 +449,6 @@ const validate = async () => {
 
     let upkeepStatus = await ihelp.processingState().then(data => data.status);
     await processUpkeep(upkeepStatus);
-
-    // transfer the contributions to the end wallets
-    //console.log('dev claiming...', developmentPool);
-    const devTx1 = await ihelp.connect(developmentPoolSigner).getClaimableCharityInterest();
-    //console.log(devTx1.toString());
-
-    let devTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, devTx1.toString());
-    //console.log(devTx1Approve['hash']);
-    await devTx1Approve.wait();
-
-    var options = {
-      gasPrice: 21500000000,
-      gasLimit: 10000000,
-      //nonce:8
-    };
-
-    const devclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(developmentPool, options);
-    //console.log(devclaimTx['hash']);
-    await devclaimTx.wait();
-
-    //console.log('stake claiming...', stakingPool);
-    const stakeTx1 = await ihelp.connect(stakingPoolSigner).getClaimableCharityInterest();
-    //console.log(stakeTx1.toString());
-
-    let stakeTx1Approve = await dai.connect(holdingPoolSigner).approve(ihelpAddress, stakeTx1.toString());
-    //console.log(stakeTx1Approve['hash']);
-    await stakeTx1Approve.wait();
-
-    const stakeclaimTx = await ihelp.connect(holdingPoolSigner).claimInterest(stakingPool, options);
-    //console.log(stakeclaimTx['hash']);
-    await stakeclaimTx.wait();
 
     /*
       // run the reward distribution script
@@ -577,17 +543,17 @@ const validate = async () => {
   INPUT = 1;
   console.log('\n*** INPUT', INPUT, '***');
 
+  yellow("Here");
   // make a deposit
   const approvalTx1u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('100'));
   await approvalTx1u1.wait();
-  const sponsorTx1u1 = await charityPool1.connect(userSigner1).sponsor(web3.utils.toWei('100'));
+  const sponsorTx1u1 = await charityPool1.connect(userSigner1).depositTokens(cDaiAddress, web3.utils.toWei('100'));
   await sponsorTx1u1.wait();
 
   const approvalTx1u2 = await dai.connect(userSigner2).approve(charityPool1.address, web3.utils.toWei('2500'));
   await approvalTx1u2.wait();
-  const sponsorTx1u2 = await charityPool1.connect(userSigner2).sponsor(web3.utils.toWei('2500'));
+  const sponsorTx1u2 = await charityPool1.connect(userSigner2).depositTokens(cDaiAddress, web3.utils.toWei('2500'));
   await sponsorTx1u2.wait();
-
   await getOutputs(INPUT);
 
   INPUT = 2;
@@ -596,19 +562,20 @@ const validate = async () => {
   // make a deposit for user 1
   const approvalTx2u1 = await usdc.connect(userSigner1).approve(charityPool2.address, ethers.utils.parseUnits('1000', usdcDecimals));
   await approvalTx2u1.wait();
-  const sponsorTx2u1 = await charityPool2.connect(userSigner1).sponsor(ethers.utils.parseUnits('1000', usdcDecimals));
+  const sponsorTx2u1 = await charityPool2.connect(userSigner1).depositTokens(cUsdcAddress, ethers.utils.parseUnits('1000', usdcDecimals));
   await sponsorTx2u1.wait();
 
   const approval2Tx2u1 = await dai.connect(userSigner1).approve(charityPool3.address, web3.utils.toWei('1500'));
   await approval2Tx2u1.wait();
-  const sponsor2Tx2u1 = await charityPool3.connect(userSigner1).sponsor(web3.utils.toWei('1500'));
+  const sponsor2Tx2u1 = await charityPool3.connect(userSigner1).depositTokens(cDaiAddress, web3.utils.toWei('1500'));
   await sponsor2Tx2u1.wait();
 
   // make a deposit for user 2
   const approvalTx2u2 = await usdc.connect(userSigner2).approve(charityPool2.address, ethers.utils.parseUnits('1500', usdcDecimals));
   await approvalTx2u2.wait();
-  const sponsorTx2u2 = await charityPool2.connect(userSigner2).sponsor(ethers.utils.parseUnits('1500', usdcDecimals));
+  const sponsorTx2u2 = await charityPool2.connect(userSigner2).depositTokens(cUsdcAddress, ethers.utils.parseUnits('1500', usdcDecimals));
   await sponsorTx2u2.wait();
+
 
   await getOutputs(INPUT);
 
@@ -642,6 +609,8 @@ const validate = async () => {
   await stakeTx4u1.wait();
 
   await rewardStep();
+
+  yellow("Getting outputs ");
 
   await getOutputs(INPUT);
 
@@ -697,10 +666,10 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw71Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
+  const withdraw71Txu1 = await charityPool2.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw71Txu1.wait();
 
-  const withdraw72Txu1 = await charityPool3.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', daiDecimals));
+  const withdraw72Txu1 = await charityPool3.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', daiDecimals));
   await withdraw72Txu1.wait();
 
   //await upkeepStep();
@@ -834,7 +803,7 @@ const validate = async () => {
   // make a deposit
   const approvalTx17u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('1500'));
   await approvalTx17u1.wait();
-  const sponsorTx17u1 = await charityPool1.connect(userSigner1).sponsor(web3.utils.toWei('1500'));
+  const sponsorTx17u1 = await charityPool1.connect(userSigner1).depositTokens(web3.utils.toWei('1500'));
   await sponsorTx17u1.wait();
 
   await getOutputs(INPUT);
@@ -896,7 +865,7 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw22Txu2 = await charityPool1.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('2500', daiDecimals));
+  const withdraw22Txu2 = await charityPool1.connect(userSigner2).withdrawTokens(ethers.utils.parseUnits('2500', daiDecimals));
   await withdraw22Txu2.wait();
 
   //await upkeepStep();
@@ -926,23 +895,23 @@ const validate = async () => {
   // make a deposit
   const approvalTx24u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('10000'));
   await approvalTx24u1.wait();
-  const sponsorTx24u1 = await charityPool1.connect(userSigner1).sponsor(web3.utils.toWei('10000'));
+  const sponsorTx24u1 = await charityPool1.connect(userSigner1).depositTokens(web3.utils.toWei('10000'));
   await sponsorTx24u1.wait();
 
   const approvalTx241u1 = await dai.connect(userSigner1).approve(charityPool3.address, web3.utils.toWei('5000'));
   await approvalTx241u1.wait();
-  const sponsorTx241u1 = await charityPool3.connect(userSigner1).sponsor(web3.utils.toWei('5000'));
+  const sponsorTx241u1 = await charityPool3.connect(userSigner1).depositTokens(web3.utils.toWei('5000'));
   await sponsorTx241u1.wait();
 
   const approvalTx24u2 = await dai.connect(userSigner2).approve(charityPool1.address, web3.utils.toWei('5000'));
   await approvalTx24u2.wait();
-  const sponsorTx24u2 = await charityPool1.connect(userSigner2).sponsor(web3.utils.toWei('5000'));
+  const sponsorTx24u2 = await charityPool1.connect(userSigner2).depositTokens(web3.utils.toWei('5000'));
   await sponsorTx24u2.wait();
 
   // make a deposit for user 2
   const approvalTx241u2 = await usdc.connect(userSigner2).approve(charityPool2.address, ethers.utils.parseUnits('7500', usdcDecimals));
   await approvalTx241u2.wait();
-  const sponsorTx241u2 = await charityPool2.connect(userSigner2).sponsor(ethers.utils.parseUnits('7500', usdcDecimals));
+  const sponsorTx241u2 = await charityPool2.connect(userSigner2).depositTokens(ethers.utils.parseUnits('7500', usdcDecimals));
   await sponsorTx241u2.wait();
 
   await getOutputs(INPUT);
@@ -1020,10 +989,10 @@ const validate = async () => {
   console.log('\n*** INPUT', INPUT, '***');
 
   // withdraw from the pools
-  const withdraw291Txu1 = await charityPool2.connect(userSigner1).withdrawAmount(ethers.utils.parseUnits('500', usdcDecimals));
+  const withdraw291Txu1 = await charityPool2.connect(userSigner1).withdrawTokens(ethers.utils.parseUnits('500', usdcDecimals));
   await withdraw291Txu1.wait();
 
-  const withdraw291Txu2 = await charityPool2.connect(userSigner2).withdrawAmount(ethers.utils.parseUnits('9000', usdcDecimals));
+  const withdraw291Txu2 = await charityPool2.connect(userSigner2).withdrawTokens(ethers.utils.parseUnits('9000', usdcDecimals));
   await withdraw291Txu2.wait();
 
   // stake the HELP tokens to xHELP

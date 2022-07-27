@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for ihelp/PriceFeedProvider.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">ihelp/</a> PriceFeedProvider.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">94.44% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>34/36</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">94.44% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>17/18</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">84.62% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>11/13</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">94.59% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>35/37</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">102×</span>
+<span class="cline-any cline-yes">102×</span>
+<span class="cline-any cline-yes">152×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">168×</span>
+<span class="cline-any cline-yes">167×</span>
+<span class="cline-any cline-yes">166×</span>
+<span class="cline-any cline-yes">165×</span>
+<span class="cline-any cline-yes">164×</span>
+<span class="cline-any cline-yes">164×</span>
+<span class="cline-any cline-yes">164×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">192×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">167×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">124×</span>
+<span class="cline-any cline-yes">124×</span>
+<span class="cline-any cline-yes">239×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">124×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: GPL-3.0
+&nbsp;
+pragma solidity ^0.8.9;
+&nbsp;
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../utils/IERC20.sol";
+&nbsp;
+contract PriceFeedProvider is OwnableUpgradeable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+&nbsp;
+    struct DonationCurrency {
+        string provider;
+        string currency;
+        address underlyingToken;
+        address lendingAddress;
+        address priceFeed;
+    }
+&nbsp;
+    mapping(address =&gt; DonationCurrency) private _donationCurrencies;
+    mapping(address =&gt; bool) public allowedDirectDonationCurrencies;
+    EnumerableSet.AddressSet private _donationCurrencyMapping;
+&nbsp;
+    /**
+     * Initialzie the contract with a set of donation currencies
+     */
+    function initialize(DonationCurrency[] memory _initialDonationCurrencies) public initializer {
+        __Ownable_init();
+        for (uint256 i = 0; i &lt; _initialDonationCurrencies.length; i++) {
+            _addDonationCurrency(_initialDonationCurrencies[i]);
+        }
+    }
+&nbsp;
+    /**
+     * Get the total number of donation currencies
+     */
+<span class="fstat-no" title="function not covered" >    function numberOfDonationCurrencies() public view returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >        return _donationCurrencyMapping.length();</span>
+    }
+&nbsp;
+    /**
+     * Get the donation currency at a speciffic index
+     */
+<span class="fstat-no" title="function not covered" >    function getDonationCurrencyAt(uint256 index) public view returns (DonationCurrency memory) {</span>
+<span class="cstat-no" title="statement not covered" >        return getDonationCurrency(_donationCurrencyMapping.at(index));</span>
+    }
+&nbsp;
+    /**
+     * Returns the underlying token price and the decimal number of the price value
+     */
+    function getUnderlyingTokenPrice(address _lendingAddress) public view virtual returns (uint256, uint256) {
+        DonationCurrency memory currency = getDonationCurrency(_lendingAddress);
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(currency.priceFeed);
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+        uint256 decimals = uint256(priceFeed.decimals());
+        return (uint256(price), decimals);
+    }
+&nbsp;
+    function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
+        _addDonationCurrency(_donationCurrency);
+    }
+&nbsp;
+    function _addDonationCurrency(DonationCurrency memory _donationCurrency) internal {
+        require(_donationCurrency.lendingAddress != address(0), "price-feed/invalid-lending");
+        require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
+        require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
+        require(!hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/already-exists");
+        _donationCurrencyMapping.add(_donationCurrency.lendingAddress);
+        _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
+        _setDirectDonationCurrency(_donationCurrency.underlyingToken, true);
+    }
+&nbsp;
+    function updateDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
+        require(_donationCurrency.lendingAddress != address(0), "price-feed/invalid-lending");
+        require(_donationCurrency.underlyingToken != address(0), "price-feed/invalid-underlying");
+        require(_donationCurrency.priceFeed != address(0), "price-feed/invalid-price-feed");
+        require(hasDonationCurrency(_donationCurrency.lendingAddress), "price-feed/not-found");
+        setDirectDonationCurrency(_donationCurrencies[_donationCurrency.lendingAddress].underlyingToken, false);
+        _donationCurrencies[_donationCurrency.lendingAddress] = _donationCurrency;
+        setDirectDonationCurrency(_donationCurrency.underlyingToken, true);
+    }
+&nbsp;
+    function removeDonationCurrency(address _lendingAddress) public onlyOwner {
+        //TODO: !IMPORTANT. Make sure to redeem the intereset corresponding to this donation currency in
+        // all the charity pools before the token is removed
+        _donationCurrencyMapping.remove(_lendingAddress);
+        _setDirectDonationCurrency(_donationCurrencies[_lendingAddress].underlyingToken, false);
+        delete _donationCurrencies[_lendingAddress];
+    }
+&nbsp;
+    function getDonationCurrency(address _lendingAddress) public view returns (DonationCurrency memory) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(_donationCurrencyMapping.contains(_lendingAddress), "price-feed/currency-not-found");
+        return _donationCurrencies[_lendingAddress];
+    }
+&nbsp;
+    function hasDonationCurrency(address _lendingAddress) public view returns (bool) {
+        return _donationCurrencyMapping.contains(_lendingAddress);
+    }
+&nbsp;
+    function setDirectDonationCurrency(address _currencyAddress, bool status) public onlyOwner {
+        _setDirectDonationCurrency(_currencyAddress, status);
+    }
+&nbsp;
+    function _setDirectDonationCurrency(address _currencyAddress, bool status) internal {
+        allowedDirectDonationCurrencies[_currencyAddress] = status;
+    }
+&nbsp;
+    function getAllDonationCurrencies() public view returns (DonationCurrency[] memory) {
+        DonationCurrency[] memory result = new DonationCurrency[](_donationCurrencyMapping.length());
+        for (uint256 i = 0; i &lt; _donationCurrencyMapping.length(); i++) {
+            result[i] = _donationCurrencies[_donationCurrencyMapping.at(i)];
+        }
+        return result;
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Thu Jul 14 2022 10:40:04 GMT+0800 (Central Indonesia Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

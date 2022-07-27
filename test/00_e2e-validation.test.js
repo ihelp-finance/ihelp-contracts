@@ -21,23 +21,19 @@ function os_func() {
 var os = new os_func();
 
 //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-//await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
 
 describe("End TO End", function () {
-
-
     beforeEach(async function () {
+        await os.execCommand('rm -rf ./deployments/localhost');
+        await os.execCommand('rm -rf ./deployed-charities/hardhat.json');
 
-        await run("deploy");
-        // await os.execCommand('hh deploy --network hardhat');
+        await run("deploy", { "reset": true });
     });
-
-
 
     it("It should pass end to end test", async function () {
         const result = await validate();
         expect(result).to.equal(true);
-    });
+    }).timeout(400000);
 
 
 });
