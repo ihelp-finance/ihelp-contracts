@@ -16,7 +16,14 @@ const ether = require('@openzeppelin/test-helpers/src/ether');
 module.exports.deployCharityPoolToNetwork = async ({
     charityName, operatorAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, wrappedNativeAddress, priceFeedProvider
 }, network, factoryContractName = "CharityBeaconFactory") => {
-    const FILE_PATH = path.join('deployed-charities', `${network}.json`);
+    
+    const FILE_DIR = 'deployed-charities'
+    
+    if (!fs.existsSync(FILE_DIR)){
+        fs.mkdirSync(FILE_DIR);
+    }
+    
+    const FILE_PATH = path.join(FILE_DIR, `${network}.json`);
 
     let deployedCharities = [];
 

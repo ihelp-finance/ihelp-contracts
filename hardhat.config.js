@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+require('dotenv').config({ path: path.resolve(__dirname, '../env/.env') })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -11,12 +11,10 @@ require('@nomiclabs/hardhat-ethers');
 require("solidity-coverage");
 require("hardhat-gas-reporter");
 require('hardhat-contract-sizer');
-
 require("hardhat-deploy");
-
 require("@eth-optimism/hardhat-ovm");
-
 require('hardhat-preprocessor');
+
 const { removeConsoleLog } = require('hardhat-preprocessor');
 const { parseEther } = require('ethers/lib/utils');
 
@@ -24,10 +22,12 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
 //const defaultNetwork = "fuji";
 //const defaultNetwork = "mainnet";
+//const defaultNetwork = "avalance";
 //const defaultNetwork = "rinkeby";
-const defaultNetwork = "localhost";
 
-let forkingData = { url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW' };
+const defaultNetwork = process.env.NETWORK || "localhost";
+
+let forkingData = null;
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
@@ -45,14 +45,19 @@ if (defaultNetwork == 'fuji') {
     url: 'https://api.avax-test.network/ext/bc/C/rpc'
   };
 }
-else if (defaultNetwork == 'mainnet') {
+else if (defaultNetwork == 'avalanche') {
   forkingData = {
     url: 'https://api.avax.network/ext/bc/C/rpc'
   };
 }
+else if (defaultNetwork == 'rinkeby') {
+  forkingData = {
+    url: process.env.RINKEBY_RPC
+  };
+}
 else if (defaultNetwork == 'localhost') {
   forkingData = {
-    url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW'
+    url: process.env.RINKEBY_RPC
   };
 }
 
@@ -76,7 +81,7 @@ const stakingPoolPrivateKey = process.env.STAKINGPOOL_PRIVATE_KEY;
 const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
 // const proxyAdminPrivateKey = process.env.PROXYADMIN_PRIVATE_KEY;
 const reportGas = process.env.REPORT_GAS;
-const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER || "0x00bE248f907B25cb10a6dad52051e3427e0ba037";
+const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER;
 
 // gnosis-safe
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
@@ -94,7 +99,7 @@ module.exports = {
       }
     },
     fuji: {
-      url: 'https://api.avax-test.network/ext/bc/C/rpc',
+      url: forkingData['url'],
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: {
@@ -102,7 +107,7 @@ module.exports = {
       },
     },
     mainnet: {
-      url: 'https://api.avax.network/ext/bc/C/rpc',
+      url: forkingData['url'],
       gasPrice: 225000000000,
       chainId: 43114,
       accounts: {
@@ -114,7 +119,7 @@ module.exports = {
       forking: forkingData
     },
     rinkeby: {
-      url: 'https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW',
+      url: forkingData['url'],
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -151,10 +156,7 @@ module.exports = {
       default: 2,
     },
     proxyAdmin: {
-      default: 3,
-      //TODO: multi sign address here 
-      4: proxyAdminOwner,
-      'localhost': "0x8D87FcE1394ad41d4149f210AB259fa30e4f731e", // 0x346abB57CfB43aD3Bb8210E3DD1dB12353160A0b"
+      default: proxyAdminOwner,
     },
     charity1wallet: {
       default: 4,

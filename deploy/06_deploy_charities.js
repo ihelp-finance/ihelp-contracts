@@ -9,16 +9,6 @@ const axios = require('axios');
 const csv = require('csvtojson');
 const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypools/CharityPool.sol/CharityPool.json');
 
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const csvWriter = createCsvWriter({
-  path: 'charityAddresses.csv',
-  header: [
-    { id: 'name', title: 'Contract' },
-    { id: 'address', title: 'Address' },
-  ],
-  append: false
-});
-
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
@@ -181,8 +171,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         yellow(`Number of Registered Charities:${Big(number).toFixed(0)}`);
 
         // write the key addresses to a csv file
-        return csvWriter.writeRecords(contractAddresses).then(() => { });
-
+        return true
       }
     };
 
