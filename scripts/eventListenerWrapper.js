@@ -3,7 +3,7 @@ const { spawn } = require('child_process');
 const path = require('path')
 
 // we run the wrapper with a repeated timeout to account for unreliable websocket connections on event listeners
-const timeout = '60s'
+const timeout = '300s'
 
 const runWrapper = () => {
     

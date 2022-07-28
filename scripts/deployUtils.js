@@ -17,13 +17,13 @@ module.exports.deployCharityPoolToNetwork = async ({
     charityName, operatorAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, wrappedNativeAddress, priceFeedProvider
 }, network, factoryContractName = "CharityBeaconFactory") => {
     
-    const FILE_DIR = 'deployed-charities'
+    const FILE_DIR = 'build'
     
     if (!fs.existsSync(FILE_DIR)){
         fs.mkdirSync(FILE_DIR);
     }
     
-    const FILE_PATH = path.join(FILE_DIR, `${network}.json`);
+    const FILE_PATH = path.join(FILE_DIR, `${network}_charities.json`);
 
     let deployedCharities = [];
 
@@ -34,7 +34,7 @@ module.exports.deployCharityPoolToNetwork = async ({
 
     const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
     if (alreadyExists) {
-        this.yellow(`Chairty ${charityName} was already deployed, skipping...`);
+        this.yellow(`Charity ${charityName} was already deployed, skipping...`);
         return;
     }
 
@@ -205,7 +205,7 @@ module.exports.getSwapAddresses = async (dex, chainId) => {
 };
 
 module.exports.getNativeWrapper = async (chainId) => {
-    const hardhatContracts = require('../build/hardhat_contracts');
+    const hardhatContracts = require(`../build/hardhat_contracts`);
     return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
 }
 

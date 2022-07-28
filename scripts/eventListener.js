@@ -1,3 +1,4 @@
+
 const hardhat = require("hardhat");
 const Big = require('big.js');
 const ethers = require('ethers')
@@ -5,7 +6,7 @@ const ethers = require('ethers')
 const Web3 = require('web3');
 
 const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') })
+require('dotenv').config({ path: path.resolve(__dirname, '../env/.env') })
 
 const db = require('../../ihelp-app/config/db.js');
 
@@ -27,7 +28,7 @@ const runListener = async() => {
     const ihelpContract = await hardhat.deployments.get('iHelp');
     const nodeUrl = hardhat.network.config.url;
 
-    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'ws://')
+    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://')
 
     // console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
 
@@ -79,7 +80,7 @@ const runListener = async() => {
     eventFilters.map((filter) => {
 
         let options = {
-            fromBlock: currentBlock['number'] - 30,
+            fromBlock: currentBlock['number'] - 5,
             address: [],
             topics: [filter['topic']]
         };
@@ -98,14 +99,15 @@ const runListener = async() => {
 
         // subscription.on('changed', changed => console.log('changed',filter['name'],changed))
         subscription.on('error', err => { console.log('err', filter['name'], err) })
-        //subscription.on('connected', nr => console.log('connected', filter['name'], nr))
+        // subscription.on('connected', nr => console.log('connected', filter['name'], nr))
 
     })
 
 }
 
 const handleEvent = async(id, event) => {
-    //console.log(event);
+    
+    // console.log(event);
 
     // keep single event table
     const sEvent = {}
@@ -117,7 +119,7 @@ const handleEvent = async(id, event) => {
         const existingEntry = await db.Event.findOne({
             where: { id: sEvent['id'] }
         })
-
+        
         if (existingEntry == null) {
 
             sEvent['name'] = event['name']

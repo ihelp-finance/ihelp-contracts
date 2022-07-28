@@ -10,10 +10,6 @@ const ethers = require('ethers')
 
 const db = require('../../ihelp-app/config/db.js');
 
-const IUniswapV2Factory = require("@uniswap/v2-core/build/IUniswapV2Factory.json");
-const IUniswapV2Pair = require("@uniswap/v2-core/build/IUniswapV2Pair.json");
-const IUniswapV2Router02 = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json");
-
 //const { assert, use, expect } = require("chai");
 
 let userAccount, userSigner;
@@ -148,52 +144,18 @@ const upkeep = async() => {
 
     console.log('\nREWARD DISTRIBUTION COMPLETE.\n');
     
-    process.exit(0)
-    
-    
-    // const { Webhook } = require('discord-webhook-node');
-    // const hook = new Webhook("");
-     
-    // const IMAGE_URL = 'https://avalanche.ihelp.finance/assets/ihelp_icon.png';
-    // hook.setUsername('iHelp Job Monitor');
-    // hook.setAvatar(IMAGE_URL);
-     
-    // hook.send("Reward Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Staking Cost: '+stakerCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4)+'\n   Staker Balance: '+fromBigNumber(endbalancestaking).toFixed(4) +'\nNewly Awarded:' + (parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6));
-
-
-    /*
-    let stakingPoolBalance = await dai.connect(stakingPoolSigner).balanceOf(stakingPool);
-    console.log('stakingPoolDai', fromBigNumber(stakingPoolBalance));
-    
-    const currentBalanceHoldingBefore = await ihelp.balanceOf(xhelpAddress);
-    console.log('help before:', fromBigNumber(currentBalanceHoldingBefore));
-    
-    if (fromBigNumber(stakingPoolBalance) > 0) {
-
-        const minReward = Big(stakingPoolBalance).mul(0.01).toFixed(0);
-        const stakeMe = stakingPoolBalance.toString();
-        
-        let swapApprove = await dai.connect(stakingPoolSigner).approve(swapperAddress, stakeMe);
-        await swapApprove.wait();
-        
-        var options = {
-            gasPrice: 21000000000,
-            gasLimit: 10000000,
-            //nonce:8
-        }
-            
-        // swap dai for help and transfer to the xhelp contract to increase the exchange rate
-        let swapme = await swapper.connect(stakingPoolSigner).swap(daiAddress, ihelpAddress, stakeMe, minReward, xhelpAddress, options);
-        //console.log(swapme);
-        await swapme.wait();
-        
-        const currentBalanceHoldingAfter = await ihelp.balanceOf(xhelpAddress);
-        console.log('help after:', fromBigNumber(currentBalanceHoldingAfter));
-
+    if (process.env.DISCORD_WEBOOK != undefined && process.env.DISCORD_WEBOOK != '') {
+      const { Webhook } = require('discord-webhook-node');
+      const hook = new Webhook(process.env.DISCORD_WEBOOK);
+       
+      const IMAGE_URL = 'https://ihelp.finance/assets/ihelp_icon.png';
+      hook.setUsername('iHelp Job Monitor');
+      hook.setAvatar(IMAGE_URL);
+       
+      await hook.send("Reward Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4) +'\n   Newly Awarded:' + newlyAwarded.toFixed(6));
     }
-    */
-
-    
+      
+    process.exit(0)
 
 }
 

@@ -161,23 +161,25 @@ const upkeep = async() => {
   // const endbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
   // console.log(`end holding balance: ${fromBigNumber(endbalanceholding)}`);
   
-  console.log(`signer cost:`,fromBigNumber(startbalance)-fromBigNumber(balanceend));
-  //console.log(`holder cost:`,fromBigNumber(startbalanceholding)-fromBigNumber(endbalanceholding));
+  const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);
+
+  console.log(`signer cost:`,signerCost);
   
   console.log('\nUPKEEP COMPLETE.\n');
-    
-  /*
+  
+  if (process.env.DISCORD_WEBOOK != undefined && process.env.DISCORD_WEBOOK != '') {
     const { Webhook } = require('discord-webhook-node');
-    const hook = new Webhook("");
+    const hook = new Webhook(process.env.DISCORD_WEBOOK);
      
-    const IMAGE_URL = 'https://avalanche.ihelp.finance/assets/ihelp_icon.png';
+    const IMAGE_URL = 'https://ihelp.finance/assets/ihelp_icon.png';
     hook.setUsername('iHelp Job Monitor');
     hook.setAvatar(IMAGE_URL);
      
-    hook.send("Upkeep Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Holder Cost: '+holderCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4)+'\n   Holder Balance: '+fromBigNumber(endbalanceholding).toFixed(4));
-
-  */
-    
+    await hook.send("Upkeep Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4));
+  }
+  
+  process.exit(0)
+  
 }
 
 upkeep();

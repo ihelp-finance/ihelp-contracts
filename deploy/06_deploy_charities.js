@@ -46,7 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
   
   // set this value to false to actually deploy a contract for reach charity pool
-  const deployTestCharities = false;
+  const deployTestCharities = process.env.TEST_CHARITIES || 'true';
   const charitiesToDeloy = 'all';
 
   dim(`deployer: ${deployer}`);
@@ -112,7 +112,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     yellow('   deployed:', contractName, charityResult.address);
   };
 
-  if (isTestEnvironment == true && deployTestCharities == true) {
+  if (isTestEnvironment == true && deployTestCharities == 'true') {
     
     await deployCharityPool('charityPool1', 'Charity Pool 1', ethersLib.constants.AddressZero);
     await deployCharityPool('charityPool2', 'Charity Pool 2', ethersLib.constants.AddressZero);

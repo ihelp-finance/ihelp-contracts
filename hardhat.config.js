@@ -20,11 +20,6 @@ const { parseEther } = require('ethers/lib/utils');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
-//const defaultNetwork = "fuji";
-//const defaultNetwork = "mainnet";
-//const defaultNetwork = "avalance";
-//const defaultNetwork = "rinkeby";
-
 const defaultNetwork = process.env.NETWORK || "localhost";
 
 let forkingData = null;
@@ -96,7 +91,11 @@ module.exports = {
       forking: forkingData,
       accounts: {
         accountBalance: parseEther("1000000")
-      }
+      },
+      mining: {
+        auto: true
+      },
+      loggingEnabled:true
     },
     fuji: {
       url: forkingData['url'],
@@ -115,8 +114,12 @@ module.exports = {
       },
     },
     localhost: {
-      url: "http://localhost:7545",
-      forking: forkingData
+      url: process.env.LOCALHOST_RPC || "http://localhost:7545",
+      forking: forkingData,
+      loggingEnabled:true,
+      mining: {
+        auto: true
+      }
     },
     rinkeby: {
       url: forkingData['url'],

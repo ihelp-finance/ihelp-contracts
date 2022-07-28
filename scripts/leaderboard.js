@@ -2,7 +2,6 @@ const hardhat = require("hardhat");
 const Big = require('big.js');
 const Web3 = require('web3');
 const web3 = new Web3('http://127.0.0.1:7545');
-const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
@@ -11,7 +10,7 @@ const axios = require('axios')
 const db = require('../../ihelp-app/config/db.js');
 
 const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') })
+require('dotenv').config({ path: path.resolve(__dirname, '../env/.env') })
 
 let signer;
 let analytics;
@@ -82,7 +81,7 @@ const chainName = (chainId) => {
 }
 
 const upkeep = async() => {
-
+    
     const { deploy } = hardhat.deployments;
 
     let {
@@ -132,7 +131,7 @@ const upkeep = async() => {
         
         seq = seq.then(function() {
           //console.log(c)
-            return analytics.getContributorsPerCharity(c['charityAddress'],0,100).then(function(result) {
+            return analytics.getContributorsPerCharity(c['charityAddress'],0,1000).then(function(result) {
                 results.push(result);
             }).catch((e)=>{})
         });
@@ -140,17 +139,41 @@ const upkeep = async() => {
     })
     
     await seq.then(async function() {
-      
+        
+        const donationArray = {}
+        
         if (results.length > 0) {
-          results[0].map((c)=>{
-              leaderboard['helpers'].push({
-                  'address': c['contributorAddress'],
-                  'name': nicknameHash[c['contributorAddress']],
-                  'contributions': parseFloat(ethers.utils.formatUnits(c['totalContributions'],18)),
-                  'donations': parseFloat(ethers.utils.formatUnits(c['totalDonations'],18)),
-                  'interests': parseFloat(ethers.utils.formatUnits(c['totalInterestGenerated'],18))
+            
+          results.map((d)=>{
+              d.map((c)=>{
+                
+                    if (Object.keys(donationArray).indexOf(c['contributorAddress']) > -1 ) {
+                        donationArray[c['contributorAddress']]['contributions'] += parseFloat(ethers.utils.formatUnits(c['totalContributions'],18));
+                        donationArray[c['contributorAddress']]['donations'] += parseFloat(ethers.utils.formatUnits(c['totalDonations'],18));
+                        donationArray[c['contributorAddress']]['interests'] += parseFloat(ethers.utils.formatUnits(c['totalInterestGenerated'],18));
+                    }
+                    else {
+                        donationArray[c['contributorAddress']] = {
+                            contributions:0,
+                            donations:0,
+                            interests:0,
+                            address: c['contributorAddress']
+                        }
+                        donationArray[c['contributorAddress']]['contributions'] += parseFloat(ethers.utils.formatUnits(c['totalContributions'],18));
+                        donationArray[c['contributorAddress']]['donations'] += parseFloat(ethers.utils.formatUnits(c['totalDonations'],18));
+                        donationArray[c['contributorAddress']]['interests'] += parseFloat(ethers.utils.formatUnits(c['totalInterestGenerated'],18));
+                    }
+                  
               })
           })
+          
+          Object.keys(donationArray).map((c)=>{
+              donationArray[c]['name'] = nicknameHash[donationArray[c]['address']]
+              leaderboard['helpers'].push(donationArray[c])
+          })
+          
+          console.log(leaderboard['helpers'])
+
         }
         
     });
