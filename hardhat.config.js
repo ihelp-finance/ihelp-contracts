@@ -47,18 +47,18 @@ else if (defaultNetwork == 'avalanche') {
 }
 else if (defaultNetwork == 'kovan') {
   forkingData = {
-    url: `https://kovan.infura.io/v3/${process.env.INFURA_ID}`
+    url: `https://kovan.infura.io/v3/${process.env.REACT_APP_INFURA_ID}`
   };
 }
 else if (defaultNetwork == 'rinkeby') {
   forkingData = {
-    url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_ID}`
+    url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_ID}`
   };
 }
 else if (defaultNetwork == 'localhost') {
   forkingData = {
-    //url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_ID}`
-    url: `https://kovan.infura.io/v3/${process.env.INFURA_ID}`
+    //url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_ID}`
+    url: `https://kovan.infura.io/v3/${process.env.REACT_APP_INFURA_ID}`
   };
 }
 
