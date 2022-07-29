@@ -306,8 +306,7 @@ describe("Analytics", function () {
                 charityPool1.totalInterestEarnedUSD.returns(20);
                 charityPool2.totalInterestEarnedUSD.returns(30);
 
-                charityPool1.numberOfContributors.returns(12);
-                charityPool2.numberOfContributors.returns(8);
+                iHelp.numberOfContributors.returns(20);
 
                 const result = await analytics.generalStats(iHelp.address, 0, 0);
 

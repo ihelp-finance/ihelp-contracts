@@ -223,6 +223,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
 
         contributors.add(_spender);
+        ihelpToken.notifyBalanceUpdate(_spender, _amount, true);
     }
 
     /**
@@ -235,12 +236,16 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     ) internal {
         require(_amount <= balances[_sender][_cTokenAddress], "Funding/no-funds");
         balances[_sender][_cTokenAddress] -= _amount;
-
+        ihelpToken.notifyBalanceUpdate(_sender, _amount, false);
         // Update the total of this contract
         if (accountedBalances[_cTokenAddress] > _amount) {
             accountedBalances[_cTokenAddress] -= _amount;
         } else {
             accountedBalances[_cTokenAddress] = 0;
+        }
+        
+        uint256 cumulativeBalance = cummulativeBalanceOf(_sender) ;
+        if(cumulativeBalance == 0 ){
             contributors.remove(_sender);
         }
     }
@@ -443,6 +448,22 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function balanceOf(address _account, address _cTokenAddress) public view returns (uint256) {
         return balances[_account][_cTokenAddress];
+    }
+
+    /**
+     * @notice Returns the users cumulative balance, if this value is 0 he will be removed from the contibutor list.
+     * @param _account The address of the user to check.
+     * @return The user's current balance.
+     */
+    function cummulativeBalanceOf(address _account) internal view returns (uint256) {
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
+        uint256 result;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += balances[_account][cTokenAddress];
+        }
+        return result;
     }
 
     /**

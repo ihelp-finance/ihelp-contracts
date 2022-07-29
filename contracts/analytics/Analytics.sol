@@ -252,11 +252,11 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
         AnalyticsUtils.GeneralStats memory result;
         result.totalCharities = _limit;
+        result.totalHelpers += _iHelp.numberOfContributors();
         for (uint256 index = _offset; index < _limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result.totalValueLocked += charity.accountedBalanceUSD();
             result.totalInterestGenerated += charity.totalInterestEarnedUSD();
-            result.totalHelpers += charity.numberOfContributors();
         }
         return result;
     }

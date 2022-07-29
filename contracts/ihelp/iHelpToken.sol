@@ -20,6 +20,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     
     EnumerableSet.AddressSet private charityPoolList;
+    EnumerableSet.AddressSet private uniqueContributors;
+
+    // number that represents the cumulated contributions for a given contributor, 
+    // if this number reaches 0, the contributor will be removed from the uniqueContributors list
+    mapping(address => uint256) public _contributionsSum;
 
     /** Keep track of the current processing state
 
@@ -177,6 +182,36 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         _mint(_developmentPool, premineTokens * 1e18);
 
         __processingGasLimit = 300_000 * 1e9;
+    }
+
+
+    function notifyBalanceUpdate(address _account, uint256 _amount, bool _increased) public  {
+        require(hasCharity(msg.sender), 'iHelp/not-alloweds');
+        if(_increased) {
+            _contributionsSum[_account] += _amount;
+            uniqueContributors.add(_account);
+        } else {
+            if(_contributionsSum[_account] > _amount) {
+                _contributionsSum[_account] -= _amount;
+            } else {
+                 _contributionsSum[_account] = 0;
+                uniqueContributors.remove(_account);
+            }
+        }
+    }
+
+    /**
+     * Returns the total number of unique contributrs across all charities
+     */
+    function numberOfContributors() public view returns (uint256) {
+        return uniqueContributors.length();
+    }
+
+    /**
+    * Returns the contributor address 
+    */
+    function contributorAt(uint256 _index) public view returns(address) {
+        return uniqueContributors.at(_index);
     }
 
     function tokenPhase() public view returns (uint256) {
