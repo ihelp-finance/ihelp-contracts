@@ -138,6 +138,7 @@ describe("Charity Pool", function () {
         it("Should add address to contributors", async function () {
             await charityPool.depositTokens(cTokenMock.address, 15);
             expect(await charityPool.getContributors()).to.have.members([owner.address]);
+            expect(await charityPool.numberOfContributors()).to.equal(1);
         });
 
         it("Should increase contributor's balance", async function () {
@@ -213,6 +214,7 @@ describe("Charity Pool", function () {
             await charityPool.withdrawTokens(cTokenMock.address, 0);
             expect(await charityPool.balanceOf(owner.address, cTokenMock.address)).to.equal(0);
             expect(await charityPool.balance(cTokenMock.address)).to.equal(0);
+            expect(await charityPool.numberOfContributors()).to.equal(0);
         });
 
         it("Should emit withdrawn event", async function () {

@@ -42,7 +42,6 @@ describe("iHelp", function () {
             "iHelp",
             "IHLP",
             operator.address,
-            stakingPool.address,
             developmentPool.address,
             cTokenUnderlyingMock.address,
             priceFeedProvider.address
@@ -456,7 +455,7 @@ describe("iHelp", function () {
 
                 const contributionTokens1 = userSharePool1 * newInterestUS;
                 const contributionTokens2 = userSharePool2 * newInterestUS;
-                
+
                 const tokenClaims1 = userSharePool1 * poolTokens1;
                 const tokenClaims2 = userSharePool2 * poolTokens2;
 
@@ -669,7 +668,6 @@ describe("iHelp", function () {
         });
     });
 
-
     describe("Getters", function () {
         it("Should return the totalCirculating", async function () {
             await iHelp.setVariable("__totalCirculating", 2);
@@ -734,6 +732,22 @@ describe("iHelp", function () {
         });
     });
 
+    describe("Contributor counter", function () {
+        it('should increase the number of contributors', async function ()  {
+            await iHelp.registerCharityPool(owner.address);
+            console.log(await iHelp.hasCharity(owner.address));
+            await iHelp.notifyBalanceUpdate(owner.address, 200, true);
+            expect(await iHelp.numberOfContributors()).to.equal(1); 
+        })
+
+        it('should dencrease the number of contributors', async function ()  {  
+            await iHelp.registerCharityPool(owner.address);
+            await iHelp.notifyBalanceUpdate(owner.address, 200, true);
+            await iHelp.notifyBalanceUpdate(owner.address, 200, false);
+            expect(await iHelp.numberOfContributors()).to.equal(0); 
+
+        })
+    })
 
 });
 
