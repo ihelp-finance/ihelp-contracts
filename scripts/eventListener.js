@@ -28,7 +28,7 @@ const runListener = async() => {
     const ihelpContract = await hardhat.deployments.get('iHelp');
     const nodeUrl = hardhat.network.config.url;
 
-    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://')
+    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://').replace('.infura.io/','.infura.io/ws/')
 
     // console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
 
@@ -89,7 +89,7 @@ const runListener = async() => {
 
         subscription.on('data', log => {
 
-            //console.log(log)
+            // console.log(log)
 
             const event = filter['iface'].parseLog(log)
 
