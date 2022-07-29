@@ -46,11 +46,17 @@ module.exports = async ({ getNamedAccounts, deployments, execute }) => {
   green('xHelp Proxy:', xhelpAddress);
   green('xHelp Implementation:', xhelpResult.implementation);
 
-  green('Updating iHelp staking pool...');
   const signer = await ethers.provider.getSigner(deployer);
   const ihelp = await ethers.getContractAt('iHelpToken', ihelpToken.address, signer);
-  await ihelp.setStakingPool(xhelpAddress);
-  green('Staking pool was set to :', xhelpAddress);
+  
+  const currentStakingPool = await ihelp.stakingPool();
+
+  if (currentStakingPool.toString() != xhelpAddress.toString()) {
+    green('Updating iHelp staking pool...');
+    await ihelp.setStakingPool(xhelpAddress);
+    green('Staking pool was set to :', xhelpAddress);
+  }
+ 
 };
 
 module.exports.tags = ['xHelp'];

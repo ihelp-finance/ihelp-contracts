@@ -35,7 +35,9 @@ module.exports.deployCharityPoolToNetwork = async ({
     const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
     if (alreadyExists) {
         this.yellow(`Charity ${charityName} was already deployed, skipping...`);
-        return;
+        const result = JSON.parse(JSON.stringify(alreadyExists));
+        result['exists'] = true;
+        return result
     }
 
     const factoryDeployment = await deployments.get(factoryContractName);
@@ -57,7 +59,8 @@ module.exports.deployCharityPoolToNetwork = async ({
 
     deployedCharities.push({
         charityName,
-        address: charityResult.address
+        address: charityResult.address,
+        exists: false
     });
 
     console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network);

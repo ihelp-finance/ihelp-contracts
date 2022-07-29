@@ -19,7 +19,7 @@ let userAccount, userSigner;
 let signer;
 let xhelp, ihelp, dai, cdai, swapper;
 
-module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
+module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
 
   let {
     deployer,
@@ -41,10 +41,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  
+
   // set this value to false to actually deploy a contract for reach charity pool
   const deployTestCharities = process.env.TEST_CHARITIES || 'true';
-  const charitiesToDeloy = '1'; // 'all';
+  const charitiesToDeloy = 'all';
 
   dim(`deployer: ${deployer}`);
   dim(`chainId: ${chainId}`);
@@ -85,8 +85,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   console.log("Holding Token", "DAI", chainId, holdingtokenAddress);
 
   const deployedCharities = [];
+  const allCharities = [];
 
-  const deployCharityPool = async (contractName, charityName, charityWalletAddress) => {
+  const deployCharityPool = async(contractName, charityName, charityWalletAddress) => {
 
     const nativeWrapper = getNativeWrapper(chainId);
     const charityResult = await deployCharityPoolToNetwork({
@@ -100,9 +101,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       wrappedNativeAddress: nativeWrapper
     }, network.name);
 
-    if(!charityResult) {
+    allCharities.push([contractName, charityResult])
+
+    if (charityResult['exists'] == true) {
       return;
     }
+
     deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
     deployedCharities.push([contractName, charityResult]);
 
@@ -110,7 +114,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   };
 
   if (isTestEnvironment == true && deployTestCharities == 'true') {
-    
+
     await deployCharityPool('charityPool1', 'Charity Pool 1', ethersLib.constants.AddressZero);
     await deployCharityPool('charityPool2', 'Charity Pool 2', ethersLib.constants.AddressZero);
     await deployCharityPool('charityPool3', 'Charity Pool 3', ethersLib.constants.AddressZero);
@@ -133,18 +137,19 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     const response = await axios.get(url);
     const result = response.data;
     const charityJson = await csv().fromString(result);
-    
+
     // RUN ALL THE CHARITIES
     const charityJsonRun = charityJson;
 
-    const deployCharity = async (ci) => {
+    const deployCharity = async(ci) => {
+
       const c = charityJsonRun[ci];
 
       console.log(c['Organization Name']);
 
       // assume all the charity pools start with no charity wallet defined (can update this on a case by case basis later)
       await deployCharityPool(`${c['Organization Name']}`, c['Organization Name'], ethersLib.constants.AddressZero);
-      if (ci < charityJsonRun.length - 1 && ( ci < parseInt(charitiesToDeloy)-1 || charitiesToDeloy == 'all')) {
+      if (ci < charityJsonRun.length - 1 && (ci < parseInt(charitiesToDeloy) - 1 || charitiesToDeloy == 'all')) {
         await deployCharity(ci + 1);
       }
       else {
@@ -152,15 +157,54 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         const contractAddresses = [];
         deployedCharities.map((d) => { contractAddresses.push({ name: d[0], address: d[1].address }); });
 
-        console.log('\ndeployedCharities:',deployedCharities.length);
+        console.log('\ndeployedCharities:', deployedCharities.length);
         console.log('');
 
         console.log('registering deployed charities with the ihelp protocol...');
 
-        for (let i = 0; i < deployedCharities.length; i++) {
+        const forceRegisterMissingCharities = true;
+
+        function delay(t, val) {
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              resolve(val);
+            }, t);
+          });
+        }
+
+        if (forceRegisterMissingCharities == true) {
+
+          const currentCharities = await ihelp.getCharities()
+
+          for (let i = 0; i < allCharities.length; i++) {
+
+            if (currentCharities.indexOf(allCharities[i][1].address) == -1) {
+              cyan(`   ${i + 1}/${allCharities.length} - registering: ${allCharities[i][0]}`);
+              
+              // add a delay if not on a local chain to throttle requests
+              console.log(network.name)
+              if (network.name != 'localhost') {
+                await delay(2000);
+              }
+              await ihelp.registerCharityPool(allCharities[i][1].address);
+            }
+
+          }
+
+        }
+        else {
+
+          for (let i = 0; i < deployedCharities.length; i++) {
 
             cyan(`   ${i + 1}/${deployedCharities.length} - registering: ${deployedCharities[i][0]}`);
+            
+            // add a delay if not on a local chain to throttle requests
+            if (network.name != 'localhost') {
+              await delay(2000);
+            }
             await ihelp.registerCharityPool(deployedCharities[i][1].address);
+
+          }
 
         }
 
@@ -181,4 +225,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 };
 
 module.exports.tags = ["charityDeployment"];
-module.exports.dependencies = ['FactoryDeployments',];
+module.exports.dependencies = ['FactoryDeployments', ];
