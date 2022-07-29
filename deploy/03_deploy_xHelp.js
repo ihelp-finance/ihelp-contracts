@@ -46,7 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments, execute }) => {
   green('xHelp Proxy:', xhelpAddress);
   green('xHelp Implementation:', xhelpResult.implementation);
 
-  green('Updatding iHelp staking pool...');
+  green('Updating iHelp staking pool...');
   const signer = await ethers.provider.getSigner(deployer);
   const ihelp = await ethers.getContractAt('iHelpToken', ihelpToken.address, signer);
   await ihelp.setStakingPool(xhelpAddress);

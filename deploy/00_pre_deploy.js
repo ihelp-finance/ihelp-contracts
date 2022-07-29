@@ -17,10 +17,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-
-  console.log(chainId);
-
-  const deployMockTokens = true;
+  
+  const deployMockTokens = process.env.TEST_TOKENS || 'true';
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
 
   const signer = await ethers.provider.getSigner(deployer);
@@ -38,7 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   let cEthResult = null;
   let wethResult = null;
 
-  if (isTestEnvironment && deployMockTokens) {
+  if (isTestEnvironment && deployMockTokens == 'true') {
     dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     dim("Protocol Contracts - Deploy Script For Mocks");
     dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");

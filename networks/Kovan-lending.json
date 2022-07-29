@@ -1,0 +1,29 @@
+{
+  "compound": {
+    "DAI": {
+      "underlyingToken": "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa",
+      "lendingAddress": "0xf0d0eb522cfa50b716b3b1604c4f0fa6f04376ad",
+      "priceFeed": "0x777A68032a88E5A84678A77Af2CD65A7b3c0775a"
+    },
+    "USDC": {
+      "underlyingToken": "0xb7a4F3E9097C08dA09517b5aB877F7a917224ede",
+      "lendingAddress": "0x4a92E71227D294F041BD82dd8f78591B75140d63",
+      "priceFeed": "0x9211c6b3BF41A10F78539810Cf5c64e1BB78Ec60"
+    },
+    "USDT": {
+      "underlyingToken": "0x07de306FF27a2B630B1141956844eB1552B956B5",
+      "lendingAddress": "0x3f0A0EA2f86baE6362CF9799B523BA06647Da018",
+      "priceFeed": "0x2ca5A90D34cA333661083F89D831f757A9A50148"
+    },
+    "BAT": {
+      "underlyingToken": "0x482dC9bB08111CB875109B075A40881E48aE02Cd",
+      "lendingAddress": "0x4a77fAeE9650b09849Ff459eA1476eaB01606C7a",
+      "priceFeed": "0x8e67A0CFfbbF6A346ce87DFe06daE2dc782b3219"
+    },
+    "ZRX": {
+      "underlyingToken": "0x162c44e53097e7B5aaE939b297ffFD6Bf90D1EE3",
+      "lendingAddress": "0xAf45ae737514C8427D373D50Cd979a242eC59e5a",
+      "priceFeed": "0x24D6B177CF20166cd8F55CaaFe1c745B44F6c203"
+    }
+  }
+}

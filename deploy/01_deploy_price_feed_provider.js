@@ -20,7 +20,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   if (isTestEnvironment) {
     lendingTokenDetails = [await getTokenAddresses('DAI', 'compound', chainId), await getTokenAddresses('USDC', 'compound',chainId), await getTokenAddresses('WETH', 'compound',chainId)]
   } else {
-    //TODO: Add define the intial lending tokens that will be used in production
+    
+    lendingTokenDetails = [
+      await getTokenAddresses('DAI', 'compound', chainId), 
+      await getTokenAddresses('USDC', 'compound',chainId), 
+      await getTokenAddresses('USDT', 'compound',chainId),
+      await getTokenAddresses('BAT', 'compound',chainId),
+      await getTokenAddresses('ZRX', 'compound',chainId),
+    ]
+    
   }
 
   lendingTokenDetails = lendingTokenDetails.map(item => ({

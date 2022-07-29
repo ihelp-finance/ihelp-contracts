@@ -20,7 +20,7 @@ const { parseEther } = require('ethers/lib/utils');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
-const defaultNetwork = process.env.NETWORK || "localhost";
+const defaultNetwork = process.env.REACT_APP_NETWORK || "localhost";
 
 let forkingData = null;
 
@@ -45,14 +45,20 @@ else if (defaultNetwork == 'avalanche') {
     url: 'https://api.avax.network/ext/bc/C/rpc'
   };
 }
+else if (defaultNetwork == 'kovan') {
+  forkingData = {
+    url: `https://kovan.infura.io/v3/${process.env.INFURA_ID}`
+  };
+}
 else if (defaultNetwork == 'rinkeby') {
   forkingData = {
-    url: process.env.RINKEBY_RPC
+    url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_ID}`
   };
 }
 else if (defaultNetwork == 'localhost') {
   forkingData = {
-    url: process.env.RINKEBY_RPC
+    //url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_ID}`
+    url: `https://kovan.infura.io/v3/${process.env.INFURA_ID}`
   };
 }
 
@@ -61,24 +67,21 @@ function mnemonic() {
     return fs.readFileSync("./mnemonic.txt").toString().trim();
   }
   catch (e) {
-    if (defaultNetwork !== "localhost") {
-      console.log(
-        "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
-      );
-    }
+    // if (defaultNetwork !== "localhost") {
+    //   console.log(
+    //     "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
+    //   );
+    // }
   }
   return "";
 }
 
-// signer accounts specifically for avalanche network
+// signer accounts keys for transactions
 const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
-const stakingPoolPrivateKey = process.env.STAKINGPOOL_PRIVATE_KEY;
-const holdingPoolPrivateKey = process.env.HOLDINGPOOL_PRIVATE_KEY;
-// const proxyAdminPrivateKey = process.env.PROXYADMIN_PRIVATE_KEY;
 const reportGas = process.env.REPORT_GAS;
-const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER;
 
 // gnosis-safe
+const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER;
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
 
 module.exports = {
@@ -101,17 +104,17 @@ module.exports = {
       url: forkingData['url'],
       gasPrice: 225000000000,
       chainId: 43113,
-      accounts: {
-        mnemonic: mnemonic(),
-      },
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ]
     },
-    mainnet: {
+    avalanche: {
       url: forkingData['url'],
       gasPrice: 225000000000,
       chainId: 43114,
-      accounts: {
-        mnemonic: mnemonic(),
-      },
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ]
     },
     localhost: {
       url: process.env.LOCALHOST_RPC || "http://localhost:7545",
@@ -128,6 +131,14 @@ module.exports = {
       },
       gasPrice: 21500000000,
       gasLimit: 10000000,
+    },
+    kovan: {
+      url: forkingData['url'],
+      chainId: 42,
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ],
+      // gasPrice: 225000000000
     }
   },
   solidity: {
@@ -145,42 +156,37 @@ module.exports = {
     }
   },
   namedAccounts: {
-    developmentPool: {
-      default: 11,
-      43114: developmentPoolAddress // gnosis-safe multi-sig
+    proxyAdmin: {
+      default: proxyAdminOwner,
     },
     deployer: {
       default: 0,
     },
-    stakingPool: {
+    developmentPool: {
       default: 1,
-    },
-    holdingPool: {
-      default: 2,
-    },
-    proxyAdmin: {
-      default: proxyAdminOwner,
+      43114: developmentPoolAddress, // gnosis-safe multi-sig
+      42: developmentPoolAddress,
     },
     charity1wallet: {
-      default: 4,
+      default: 2,
     },
     charity2wallet: {
-      default: 5,
+      default: 3,
     },
     charity3wallet: {
-      default: 6
+      default: 4
     },
     charity4wallet: {
-      default: 7
+      default: 5
     },
     userAccount: {
-      default: 8
+      default: 6
     },
     userAccount1: {
-      default: 9
+      default: 7
     },
     userAccount2: {
-      default: 10
+      default: 8
     }
   },
   gasReporter: {

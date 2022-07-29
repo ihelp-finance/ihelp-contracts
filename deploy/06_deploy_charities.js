@@ -32,9 +32,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     charity3wallet
   } = await getNamedAccounts();
 
-  const deployMockTokens = true;
-  const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
-
   const signer = await ethers.provider.getSigner(deployer);
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -47,7 +44,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   
   // set this value to false to actually deploy a contract for reach charity pool
   const deployTestCharities = process.env.TEST_CHARITIES || 'true';
-  const charitiesToDeloy = 'all';
+  const charitiesToDeloy = '1'; // 'all';
 
   dim(`deployer: ${deployer}`);
   dim(`chainId: ${chainId}`);

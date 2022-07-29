@@ -36,9 +36,7 @@ async function getPair(swapv2Factory, signer, token1Address, token2Address) {
 module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) => {
   let {
     deployer,
-    stakingPool,
     developmentPool,
-    holdingPool,
     proxyAdmin
   } = await getNamedAccounts();
 
@@ -48,10 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-  console.log(chainId);
-
-  const deployMockTokens = true;
-  const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
+  const deployMockTokens = process.env.TEST_TOKENS || 'true';
 
   const signer = await ethers.provider.getSigner(deployer);
 
@@ -92,8 +87,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
   const swapv2Factory = new ethers.Contract(swapv2FactoryAddress, IUniswapV2Factory['abi'], mainnetInfura);
   const swapv2Router = new ethers.Contract(swapv2RouterAddress, IUniswapV2Router02['abi'], mainnetInfura);
 
-  const userSigner = await ethers.provider.getSigner(stakingPool);
-  const userAccount = stakingPool;
+  const userSigner = signer;
+  const userAccount = deployer;
 
   // activate the LP 
 
@@ -260,7 +255,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
 
   // await activateLiquidityPool('HELP', 'DAI', '125000', '150000', 'aave', 'traderjoe');
 
-  if (isTestEnvironment && deployMockTokens) {
+  if (isTestEnvironment && deployMockTokens == 'true') {
 
     yellow('\nActivating liquidity pools for test environment...');
 
@@ -297,26 +292,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
 
   console.log('');
   green('Signer Address:', signer._address);
-  // green('DAI Address:', daiAddress);
-  // green('cDAI Address:', cDaiAddress);
-  // green('USDC Address:', usdcAddress);
-  // green('cUSDC Address:', cUsdcAddress);
-  // green('WETH Address:', wethAddress);
-  // green('cETH Address:', cEthAddress);
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
-  // green('CharityPool 1 Address:', charity1Address);
-  // green('CharityPool 2 Address:', charity2Address);
-  // green('CharityPool 3 Address:', charity3Address);
   green('Analytics Address:', analyticsAddress);
-  // green('CharityPool 1 Address:', charity1Address);
-  // green('CharityPool 2 Address:', charity2Address);
-  // green('CharityPool 3 Address:', charity3Address);
-  // green('CharityPool 4 Address:', charity4Address);
   green('Development Pool Address:', developmentPool);
-  green('Staking Pool Address:', stakingPool);
-  green('Holding Pool Address:', holdingPool);
   green('');
 
   const contractAddresses = [
@@ -326,8 +306,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers }) =
     { name: 'Swapper', address: swapperAddress },
     { name: 'Analytics', address: analyticsAddress },
     { name: 'Development Pool', address: developmentPool },
-    { name: 'Staking Pool', address: stakingPool },
-    { name: 'Holding Pool', address: holdingPool },
   ];
 
   // write the key addresses to a csv file
