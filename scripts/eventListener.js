@@ -6,7 +6,7 @@ const ethers = require('ethers')
 const Web3 = require('web3');
 
 const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../env/.env') })
+require('dotenv').config({ path: path.resolve(__dirname, '../../env/.env') })
 
 const db = require('../../ihelp-app/config/db.js');
 
