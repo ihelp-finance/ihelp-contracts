@@ -94,7 +94,7 @@ const upkeep = async() => {
     const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
     xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
 
-    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
+    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.REACT_APP_RPC_URL);
     const chainId = 43114;
 
     console.log('\nSTARTING DATA COLLECTION...\n');

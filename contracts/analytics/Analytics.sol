@@ -399,7 +399,8 @@ contract Analytics is IAnalytics {
             result[index] = AnalyticsUtils.UserCharityTokenContributions({
                 tokenAddress: currencies[index].lendingAddress,
                 currency: currencies[index].currency,
-                totalContributions: contributionUSD
+                totalContributions: contribution,
+                totalContributionsUSD: contributionUSD
             });
         }
         return result;
@@ -429,7 +430,8 @@ contract Analytics is IAnalytics {
             result[index] = AnalyticsUtils.UserCharityTokenContributions({
                 tokenAddress: currencies[index].lendingAddress,
                 currency: currencies[index].currency,
-                totalContributions: contributionUSD
+                totalContributions: contribution,
+                totalContributionsUSD: contributionUSD
             });
         }
         return result;

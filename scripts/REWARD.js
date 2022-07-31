@@ -103,9 +103,8 @@ const upkeep = async() => {
 
     let dai,cdai,usdc,cusdc;
 
-    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
-    const chainId = 43114;
-    
+    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.REACT_APP_RPC_URL);
+
     const stakepool1Tx = await xhelp.totalAwarded();
     const stakepool1 = fromBigNumber(stakepool1Tx);
     console.log('\nStart Awarded:',stakepool1)

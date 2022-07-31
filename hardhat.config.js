@@ -22,8 +22,6 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
 const defaultNetwork = process.env.REACT_APP_NETWORK || "localhost";
 
-let forkingData = null;
-
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
 let removeLogStatements = false;
@@ -35,32 +33,9 @@ if (removeLogStatements) {
   };
 }
 
-if (defaultNetwork == 'fuji') {
-  forkingData = {
-    url: 'https://api.avax-test.network/ext/bc/C/rpc'
-  };
-}
-else if (defaultNetwork == 'avalanche') {
-  forkingData = {
-    url: 'https://api.avax.network/ext/bc/C/rpc'
-  };
-}
-else if (defaultNetwork == 'kovan') {
-  forkingData = {
-    url: `https://kovan.infura.io/v3/${process.env.REACT_APP_INFURA_ID}`
-  };
-}
-else if (defaultNetwork == 'rinkeby') {
-  forkingData = {
-    url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_ID}`
-  };
-}
-else if (defaultNetwork == 'localhost') {
-  forkingData = {
-    //url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.REACT_APP_ALCHEMY_ID}`
-    url: `https://kovan.infura.io/v3/${process.env.REACT_APP_INFURA_ID}`
-  };
-}
+const forkingData = {
+  url: process.env.REACT_APP_RPC_URL
+};
 
 function mnemonic() {
   try {
@@ -117,7 +92,7 @@ module.exports = {
       ]
     },
     localhost: {
-      url: process.env.LOCALHOST_RPC || "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL || "http://localhost:7545",
       forking: forkingData,
       loggingEnabled:true,
       mining: {

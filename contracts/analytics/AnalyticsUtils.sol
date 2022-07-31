@@ -64,6 +64,7 @@ library AnalyticsUtils {
         address tokenAddress;
         string currency;
         uint256 totalContributions;
+        uint256 totalContributionsUSD;
     }
 
     struct CharityBalanceInfo {

@@ -87,6 +87,10 @@ const upkeep = async() => {
     let {
         deployer
     } = await hardhat.getNamedAccounts();
+    
+    // const currentBlock = await hardhat.ethers.provider.getBlock('latest')
+    // console.log(currentBlock['number'])
+    // process.exit(0)
 
     signer = await hardhat.ethers.provider.getSigner(deployer);
 
