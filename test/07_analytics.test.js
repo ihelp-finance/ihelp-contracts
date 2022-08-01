@@ -398,6 +398,9 @@ describe("Analytics", function () {
                 charityPool1.totalDonationsUSD.returns(5);
                 charityPool2.totalDonationsUSD.returns(15);
 
+                charityPool1.totalInterestEarnedUSD.returns(5);
+                charityPool2.totalInterestEarnedUSD.returns(15);
+
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
 
@@ -406,11 +409,13 @@ describe("Analytics", function () {
                 expect(result1.charityAddress).to.equal(charityPool1.address);
                 expect(result1.totalContributions).to.equal(200);
                 expect(result1.totalDonations).to.equal(5);
+                expect(result1.totalInterestGenerated).to.equal(5);
 
                 expect(result2.charityName).to.equal("Charity2");
                 expect(result2.charityAddress).to.equal(charityPool2.address);
                 expect(result2.totalContributions).to.equal(300);
                 expect(result2.totalDonations).to.equal(15);
+                expect(result1.totalInterestGenerated).to.equal(5);
             })
 
             describe('Total user contributions in a given charity', () => {

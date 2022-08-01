@@ -33,7 +33,6 @@ describe("xHelp", function () {
             "IHLP",
             owner.address,
             addr1.address,
-            addr1.address,
             mockContract.address,
             addrs[7].address
         );

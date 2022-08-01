@@ -12,24 +12,18 @@ const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypoo
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolToNetwork, dim, yellow, chainName, fromBigNumber, cyan, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
+const { deployCharityPoolsToNetwork, dim, yellow, chainName, fromBigNumber, cyan, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
 let signer;
 let xhelp, ihelp, dai, cdai, swapper;
 
-module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
+module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
 
   let {
     deployer,
-    stakingPool,
-    developmentPool,
-    holdingPool,
-    userAccount,
-    charity1wallet,
-    charity2wallet,
-    charity3wallet
+    userAccount
   } = await getNamedAccounts();
 
   const signer = await ethers.provider.getSigner(deployer);
@@ -87,37 +81,50 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   const deployedCharities = [];
   const allCharities = [];
 
-  const deployCharityPool = async(contractName, charityName, charityWalletAddress) => {
+  const deployCharityPools = async (configurations) => {
+    const pools = [];
+    const nativeWrapper = await getNativeWrapper(chainId);
 
-    const nativeWrapper = getNativeWrapper(chainId);
-    const charityResult = await deployCharityPoolToNetwork({
-      charityName: charityName,
-      operatorAddress: signer._address,
-      charityWalletAddress: charityWalletAddress,
-      holdingTokenAddress: holdingtokenAddress,
-      ihelpAddress: ihelpAddress,
-      swapperAddress: swapperAddress,
-      priceFeedProvider: priceFeedProviderAddresss,
-      wrappedNativeAddress: nativeWrapper
-    }, network.name);
-
-    allCharities.push([contractName, charityResult])
-
-    if (charityResult['exists'] == true) {
-      return;
+    for (const config of configurations) {
+      const { charityName, charityWalletAddress } = config;
+      pools.push({
+        charityName,
+        operatorAddress: signer._address,
+        charityWalletAddress: charityWalletAddress,
+        holdingTokenAddress: holdingtokenAddress,
+        ihelpAddress: ihelpAddress,
+        swapperAddress: swapperAddress,
+        priceFeedProvider: priceFeedProviderAddresss,
+        wrappedNativeAddress: nativeWrapper
+      })
     }
 
-    deployments.save(contractName, { abi: CharityPoolAbi, address: charityResult.address });
-    deployedCharities.push([contractName, charityResult]);
+    const charityResult = await deployCharityPoolsToNetwork(pools, network.name);
+    for (const result of charityResult) {
+      const { contractName } = configurations.find(config => config.charityName === result.charityName)
 
-    yellow('   deployed:', contractName, charityResult.address);
+      const isInAllCharities = allCharities.indexOf(item => item.contractName === contractName);
+      if (!isInAllCharities) {
+        allCharities.push([contractName, result])
+      }
+
+      if (result['exists'] === true) {
+        continue;
+      }
+      deployments.save(contractName, { abi: CharityPoolAbi, address: result.address });
+      deployedCharities.push([contractName, result]);
+      yellow('   deployed:', contractName, result.address);
+    }
+
   };
 
   if (isTestEnvironment == true && deployTestCharities == 'true') {
 
-    await deployCharityPool('charityPool1', 'Charity Pool 1', ethersLib.constants.AddressZero);
-    await deployCharityPool('charityPool2', 'Charity Pool 2', ethersLib.constants.AddressZero);
-    await deployCharityPool('charityPool3', 'Charity Pool 3', ethersLib.constants.AddressZero);
+    await deployCharityPools([
+      { contractName: 'charityPool1', charityName: 'Charity Pool 1', charityWalletAddress: ethersLib.constants.AddressZero },
+      { contractName: 'charityPool2', charityName: 'Charity Pool 2', charityWalletAddress: ethersLib.constants.AddressZero },
+      { contractName: 'charityPool3', charityName: 'Charity Pool 3', charityWalletAddress: ethersLib.constants.AddressZero }
+    ]);
 
     console.log('newly deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
     let numberOfCharities = await ihelp.numberOfCharities();
@@ -141,7 +148,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     // RUN ALL THE CHARITIES
     const charityJsonRun = charityJson;
 
-    const deployCharity = async(ci) => {
+    const deployCharity = async (ci) => {
 
       const c = charityJsonRun[ci];
 
@@ -165,8 +172,8 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
         const forceRegisterMissingCharities = true;
 
         function delay(t, val) {
-          return new Promise(function(resolve) {
-            setTimeout(function() {
+          return new Promise(function (resolve) {
+            setTimeout(function () {
               resolve(val);
             }, t);
           });
@@ -180,7 +187,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
             if (currentCharities.indexOf(allCharities[i][1].address) == -1) {
               cyan(`   ${i + 1}/${allCharities.length} - registering: ${allCharities[i][0]}`);
-              
+
               // add a delay if not on a local chain to throttle requests
               console.log(network.name)
               if (network.name != 'localhost') {
@@ -197,7 +204,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
           for (let i = 0; i < deployedCharities.length; i++) {
 
             cyan(`   ${i + 1}/${deployedCharities.length} - registering: ${deployedCharities[i][0]}`);
-            
+
             // add a delay if not on a local chain to throttle requests
             if (network.name != 'localhost') {
               await delay(2000);
@@ -225,4 +232,4 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 };
 
 module.exports.tags = ["charityDeployment"];
-module.exports.dependencies = ['FactoryDeployments', ];
+module.exports.dependencies = ['FactoryDeployments',];
