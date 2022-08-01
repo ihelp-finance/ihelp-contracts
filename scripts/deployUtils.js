@@ -28,42 +28,59 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
         const fileData = readFileSync(FILE_PATH, { encoding: 'utf-8' });
         deployedCharities = JSON.parse(fileData);
     }
-
+    
     const existing = [];
     for (const [index, configuration] of configurations.entries()) {
         const { charityName } = configuration;
+        
+        // can use this to regenerate the charities.json file if accidentally deleted
+        // const deplo = await deployments.get(charityName);
+        // deployedCharities.push({
+        //     charityName: charityName,
+        //     address: deplo.address
+        // })
+        
         const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
         if (alreadyExists) {
-            this.yellow(`Charity ${charityName} was already deployed, skipping...`);
+            this.yellow(`   Charity ${charityName} was already deployed, skipping...`);
             result.push({ ...JSON.parse(JSON.stringify(alreadyExists)), exists: true })
             existing.push(index)
         }
     }
-    const remaning = configurations.filter((_, index) => !existing.includes(index));
-    const factoryDeployment = await deployments.get(factoryContractName);
-    const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
 
-    const tx = await factory.createCharityPool(remaning);
-
-    const { events } = await tx.wait();
-    const { args } = events.find(item => item.event === 'Created');
-    const { newCharities } = args;
-
-    for (const charity of newCharities) {
-        result.push({
-            charityName: charity.name,
-            address: charity.addr,
-            exists: false
-        });
-        deployedCharities.push({
-            charityName: charity.name,
-            address: charity.addr,
-            exists: false
-        })
-        console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
+    // writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
+    
+    const remaining = configurations.filter((_, index) => !existing.includes(index));
+    
+    if (remaining.length > 0) {
+    
+        const factoryDeployment = await deployments.get(factoryContractName);
+        const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
+    
+        const tx = await factory.createCharityPool(remaining);
+    
+        const { events } = await tx.wait();
+        const { args } = events.find(item => item.event === 'Created');
+        const { newCharities } = args;
+    
+        for (const charity of newCharities) {
+            result.push({
+                charityName: charity.name,
+                address: charity.addr,
+                exists: false
+            });
+            deployedCharities.push({
+                charityName: charity.name,
+                address: charity.addr,
+                exists: false
+            })
+            console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
+        }
+        
+        writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
+        
     }
 
-    writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
     return result;
 };
 

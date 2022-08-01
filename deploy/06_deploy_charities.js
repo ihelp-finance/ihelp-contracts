@@ -98,7 +98,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         wrappedNativeAddress: nativeWrapper
       })
     }
-
+    
     const charityResult = await deployCharityPoolsToNetwork(pools, network.name);
     for (const result of charityResult) {
       const { contractName } = configurations.find(config => config.charityName === result.charityName)
@@ -147,19 +147,25 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
     // RUN ALL THE CHARITIES
     const charityJsonRun = charityJson;
-
+    
+    const charitiesToDeploy = [];
+    
     const deployCharity = async (ci) => {
 
       const c = charityJsonRun[ci];
 
-      console.log(c['Organization Name']);
+      // console.log(c['Organization Name']);
 
       // assume all the charity pools start with no charity wallet defined (can update this on a case by case basis later)
-      await deployCharityPool(`${c['Organization Name']}`, c['Organization Name'], ethersLib.constants.AddressZero);
+      charitiesToDeploy.push({ contractName: c['Organization Name'], charityName:c['Organization Name'], charityWalletAddress: ethersLib.constants.AddressZero });
+      
       if (ci < charityJsonRun.length - 1 && (ci < parseInt(charitiesToDeloy) - 1 || charitiesToDeloy == 'all')) {
         await deployCharity(ci + 1);
       }
       else {
+      
+        console.log('Deploying',charitiesToDeploy.length,'charityPool contracts...')
+        await deployCharityPools(charitiesToDeploy);
 
         const contractAddresses = [];
         deployedCharities.map((d) => { contractAddresses.push({ name: d[0], address: d[1].address }); });
@@ -216,7 +222,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         }
 
         const number = await ihelp.numberOfCharities();
-        yellow(`Number of Registered Charities:${Big(number).toFixed(0)}`);
+        yellow(`Number of Registered Charities: ${Big(number).toFixed(0)}`);
 
         // write the key addresses to a csv file
         return true
@@ -226,7 +232,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     if (charityJsonRun.length > 0) {
       await deployCharity(0);
     }
-
+    
   }
 
 };

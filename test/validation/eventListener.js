@@ -1,5 +1,5 @@
 const hardhat = require("hardhat");
-const { Web3LogListener } = require('../../scripts/utils/wsLogs')
+const { Web3LogListener } = require('../../scripts/archive/wsLogs.ethers')
 const { yellow, dim } = require("../../scripts/deployUtils");
 
 let charityPool1;

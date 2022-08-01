@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../env/.env') })
+require('dotenv').config({ path: '../env/.env' })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -73,7 +73,7 @@ module.exports = {
       mining: {
         auto: true
       },
-      loggingEnabled:true
+      loggingEnabled:false
     },
     fuji: {
       url: forkingData['url'],
@@ -94,7 +94,7 @@ module.exports = {
     localhost: {
       url: process.env.REACT_APP_RPC_URL || "http://localhost:7545",
       forking: forkingData,
-      loggingEnabled:true,
+      loggingEnabled:false,
       mining: {
         auto: true
       }

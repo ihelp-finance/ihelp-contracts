@@ -23,12 +23,11 @@ var os = new os_func();
 //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
 
 describe("End TO End", function () {
+    
     beforeEach(async function () {
         await os.execCommand('rm -rf ./deployments/localhost');
-        await os.execCommand('rm -rf ./build');
-
+        await os.execCommand('rm -rf ./build/localhost_*');
         await os.execCommand('rm -rf ./deployed-charities/hardhat.json');
-
         await run("deploy", { "reset": true });
     });
 
