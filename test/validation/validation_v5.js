@@ -408,10 +408,10 @@ const validate = async () => {
   const rewardStep = async () => {
 
     // take the staking pool dai amount and distribute this across stakers
-    const stakepoolTx = await dai.balanceOf(stakingPool);
+    // const stakepoolTx = await dai.balanceOf(stakingPool);
     // approve the staking pool address to send from xhelp contract
-    let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
-    await rewardApprove.wait();
+    // let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
+    // await rewardApprove.wait();
     await xhelp.distributeRewards();
   };
 
@@ -604,7 +604,9 @@ const validate = async () => {
 
   // // take the staking pool dai amount and distribute this across stakers
   const approvalTx4u1 = await ihelp.connect(userSigner1).approve(xhelpAddress, web3.utils.toWei('50000'));
+
   await approvalTx4u1.wait();
+
   const stakeTx4u1 = await xhelp.connect(userSigner1).deposit(web3.utils.toWei('50000'));
   await stakeTx4u1.wait();
 
