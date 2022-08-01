@@ -33,8 +33,9 @@ if (removeLogStatements) {
   };
 }
 
+// currently localhost requires a fork from rinkeby for liquidty pools for swapper
 const forkingData = {
-  url: process.env.REACT_APP_RPC_URL
+  url: process.env.REACT_APP_RPC_URL || `https://rinkeby.infura.io/v3/${process.env.INFURA_ID}`
 };
 
 function mnemonic() {
@@ -66,7 +67,7 @@ module.exports = {
   networks: {
     hardhat: {
       gasPrice: 225000000000,
-      // forking: forkingData,
+      forking: forkingData,
       accounts: {
         accountBalance: parseEther("1000000")
       },
@@ -76,7 +77,7 @@ module.exports = {
       loggingEnabled:false
     },
     fuji: {
-      url: forkingData['url'],
+      url: forkingData['url'] || "http://localhost:7545",
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: [
@@ -84,7 +85,7 @@ module.exports = {
       ]
     },
     avalanche: {
-      url: forkingData['url'],
+      url: forkingData['url']  || "http://localhost:7545",
       gasPrice: 225000000000,
       chainId: 43114,
       accounts: [
@@ -100,7 +101,7 @@ module.exports = {
       }
     },
     rinkeby: {
-      url: forkingData['url'],
+      url: forkingData['url']  || "http://localhost:7545",
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -108,7 +109,7 @@ module.exports = {
       gasLimit: 10000000,
     },
     kovan: {
-      url: forkingData['url'],
+      url: forkingData['url']  || "http://localhost:7545",
       chainId: 42,
       accounts: [
         `0x${deployerPrivateKey}`, // deployer

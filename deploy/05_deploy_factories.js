@@ -50,7 +50,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   );
 
   const owner = await read('CharityBeaconFactory', { from: deployer, log: true }, 'owner');
-  if (owner !== proxyAdmin) {
+  if (owner !== proxyAdmin && proxyAdmin != undefined) {
     // Transfer the ownership to the proxy admin  is not in test mode
     await execute('CharityBeaconFactory', { from: deployer, log: true }, 'transferOwnership', proxyAdmin);
   }
