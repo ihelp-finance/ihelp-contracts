@@ -25,6 +25,8 @@ var os = new os_func();
 describe("End TO End", function () {
     beforeEach(async function () {
         await os.execCommand('rm -rf ./deployments/localhost');
+        await os.execCommand('rm -rf ./build');
+
         await os.execCommand('rm -rf ./deployed-charities/hardhat.json');
 
         await run("deploy", { "reset": true });

@@ -47,7 +47,7 @@ describe('Charity Factory Deployment', function () {
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
 
-        const tx1 = await this.factory.createCharityPool({
+        const tx1 = await this.factory.createCharityPool([{
             charityName: "TestCharity",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
@@ -57,10 +57,12 @@ describe('Charity Factory Deployment', function () {
             swapperAddress: swapperMock.address,
             priceFeedProvider: priceFeedProviderMock.address,
             wrappedNativeAddress: cTokenMock.address,
-        }, { from: this.accounts[0].address });
+        }], { from: this.accounts[0].address });
 
         const { events } = await tx1.wait();
-        const { address } = events.find(Boolean);
+        const { args } = events.find(item => item.event === 'Created');
+
+        const { addr: address } = args.newCharities[0];
 
         console.log("Contract deployed at ", address);
         const { interface } = await ethers.getContractFactory('CharityPool');

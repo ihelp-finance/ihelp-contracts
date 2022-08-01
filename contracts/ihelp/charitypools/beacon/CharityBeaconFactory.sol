@@ -14,22 +14,34 @@ contract CharityBeaconFactory is OwnableUpgradeable {
     mapping(uint256 => address) private charities;
 
     UpgradeableBeacon public beacon;
-    
-    function initialize(address _charityImpl) public initializer  {
+
+    struct DeployedCharity {
+        string name;
+        address addr;
+    }
+    event Created(DeployedCharity[] newCharities);
+
+    function initialize(address _charityImpl) public initializer {
         __Ownable_init();
         beacon = new UpgradeableBeacon(_charityImpl);
     }
 
-    function createCharityPool(CharityPoolUtils.CharityPoolConfiguration memory configuration)
+    function createCharityPool(CharityPoolUtils.CharityPoolConfiguration[] memory configurations)
         external
-        returns (address)
     {
-        BeaconProxy proxy = new BeaconProxy(
-            address(beacon),
-            abi.encodeWithSelector(CharityPool(payable(address(0))).initialize.selector, configuration)
-        );
-        charities[counter++] = address(proxy);
-        return address(proxy);
+        DeployedCharity[] memory result = new DeployedCharity[](configurations.length);
+        for (uint256 i = 0; i < configurations.length; i++) {
+            BeaconProxy proxy = new BeaconProxy(
+                address(beacon),
+                abi.encodeWithSelector(CharityPool(payable(address(0))).initialize.selector, configurations[i])
+            );
+            charities[counter++] = address(proxy);
+            result[i] = DeployedCharity({
+                addr:   address(proxy),
+                name:   configurations[i].charityName
+            });
+        }
+        emit Created(result);
     }
 
     function getImplementation() public view returns (address) {

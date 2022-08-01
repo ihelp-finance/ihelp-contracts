@@ -2,6 +2,7 @@ const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
+const { constructorCode } = require('@openzeppelin/upgrades');
 use(smock.matchers);
 
 
@@ -29,8 +30,9 @@ describe('Charity Beacon Factory Deployment', function () {
 
         this.accounts = await ethers.getSigners();
         const CharityBeaconFactory = await ethers.getContractFactory('CharityBeaconFactory');
-        
-        this.factory = await CharityBeaconFactory.deploy(charityPool.address);
+
+        this.factory = await CharityBeaconFactory.deploy();
+        await this.factory.initialize(charityPool.address);
 
     });
 
@@ -38,11 +40,11 @@ describe('Charity Beacon Factory Deployment', function () {
         await expect(this.factory.deployTransaction.wait()).to.not.be.reverted;
     });
 
-    it('should  deploy a charity ', async function () {
+    it('should  deploy a charity', async function () {
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
 
-        const tx1 = await this.factory.createCharityPool({
+        const tx1 = await this.factory.createCharityPool([{
             charityName: "TestCharity",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
@@ -52,12 +54,12 @@ describe('Charity Beacon Factory Deployment', function () {
             swapperAddress: swapperMock.address,
             priceFeedProvider: priceFeedProviderMock.address,
             wrappedNativeAddress: cTokenMock.address,
-        }, { from: this.accounts[0].address });
+        }], { from: this.accounts[0].address });
 
         const { events } = await tx1.wait();
-        const { address } = events.find(Boolean);
+        const { args } = events.find(item => item.event === 'Created');
 
-        console.log("Contract deployed at ", address);
+        const { addr: address } = args.newCharities[0];
         const { interface } = await ethers.getContractFactory('CharityPool');
         const charityPoolInstance = new ethers.Contract(address, interface, this.accounts[0]);
         expect(await charityPoolInstance.name()).to.equal("TestCharity");
@@ -67,7 +69,7 @@ describe('Charity Beacon Factory Deployment', function () {
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
 
-        const tx1 = await this.factory.createCharityPool({
+        const tx1 = await this.factory.createCharityPool([{
             charityName: "TestCharity1",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
@@ -77,10 +79,7 @@ describe('Charity Beacon Factory Deployment', function () {
             swapperAddress: swapperMock.address,
             priceFeedProvider: priceFeedProviderMock.address,
             wrappedNativeAddress: cTokenMock.address,
-        }, { from: this.accounts[0].address });
-
-
-        const tx2 = await this.factory.createCharityPool({
+        }, {
             charityName: "TestCharity2",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
@@ -90,14 +89,17 @@ describe('Charity Beacon Factory Deployment', function () {
             swapperAddress: swapperMock.address,
             priceFeedProvider: priceFeedProviderMock.address,
             wrappedNativeAddress: cTokenMock.address,
-        }, { from: this.accounts[0].address });
+        }], { from: this.accounts[0].address });
 
-        const { events: events1 } = await tx1.wait();
-        const { address: charity1Address } = events1.find(Boolean);
+
+
+        const { events } = await tx1.wait();
+        const { args } = events.find(item => item.event === 'Created');
+        const [c1, c2] = args.newCharities;
+        const charity1Address = c1.addr;
+        const charity2Address = c2.addr;
+
         console.log("Contract 1 deployed at ", charity1Address);
-
-        const { events: events2 } = await tx2.wait();
-        const { address: charity2Address } = events2.find(Boolean);
         console.log("Contract 2 deployed at ", charity2Address);
 
         const CharityPoolFactory = await ethers.getContractFactory('CharityPool', this.accounts[0]);

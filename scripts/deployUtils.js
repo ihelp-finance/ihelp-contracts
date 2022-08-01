@@ -13,62 +13,58 @@ const ether = require('@openzeppelin/test-helpers/src/ether');
 
 
 
-module.exports.deployCharityPoolToNetwork = async ({
-    charityName, operatorAddress, charityWalletAddress, holdingTokenAddress, ihelpAddress, swapperAddress, wrappedNativeAddress, priceFeedProvider
-}, network, factoryContractName = "CharityBeaconFactory") => {
-    
+module.exports.deployCharityPoolsToNetwork = async (configurations, network, factoryContractName = "CharityBeaconFactory") => {
     const FILE_DIR = 'build'
-    
-    if (!fs.existsSync(FILE_DIR)){
+    if (!fs.existsSync(FILE_DIR)) {
         fs.mkdirSync(FILE_DIR);
     }
-    
+
     const FILE_PATH = path.join(FILE_DIR, `${network}_charities.json`);
 
     let deployedCharities = [];
+    let result = [];
 
     if (fs.existsSync(FILE_PATH)) {
         const fileData = readFileSync(FILE_PATH, { encoding: 'utf-8' });
         deployedCharities = JSON.parse(fileData);
     }
 
-    const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
-    if (alreadyExists) {
-        this.yellow(`Charity ${charityName} was already deployed, skipping...`);
-        const result = JSON.parse(JSON.stringify(alreadyExists));
-        result['exists'] = true;
-        return result
+    const existing = [];
+    for (const [index, configuration] of configurations.entries()) {
+        const { charityName } = configuration;
+        const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
+        if (alreadyExists) {
+            this.yellow(`Charity ${charityName} was already deployed, skipping...`);
+            result.push({ ...JSON.parse(JSON.stringify(alreadyExists)), exists: true })
+            existing.push(index)
+        }
     }
-
+    const remaning = configurations.filter((_, index) => !existing.includes(index));
     const factoryDeployment = await deployments.get(factoryContractName);
     const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
 
-    const tx = await factory.createCharityPool({
-        charityName,
-        operatorAddress,
-        charityWalletAddress,
-        holdingTokenAddress,
-        ihelpAddress,
-        swapperAddress,
-        wrappedNativeAddress,
-        priceFeedProvider
-    });
+    const tx = await factory.createCharityPool(remaning);
 
     const { events } = await tx.wait();
-    const charityResult = events.find(Boolean);
+    const { args } = events.find(item => item.event === 'Created');
+    const { newCharities } = args;
 
-    deployedCharities.push({
-        charityName,
-        address: charityResult.address,
-        exists: false
-    });
-
-    console.log('   deployed:', charityName, '   to address  ', charityResult.address, ' at network :', network);
-    console.log(`       charityWalletAddress ${charityWalletAddress}`);
+    for (const charity of newCharities) {
+        result.push({
+            charityName: charity.name,
+            address: charity.addr,
+            exists: false
+        });
+        deployedCharities.push({
+            charityName: charity.name,
+            address: charity.addr,
+            exists: false
+        })
+        console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
+    }
 
     writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
-
-    return charityResult;
+    return result;
 };
 
 module.exports.getTokenAddresses = async (currency, lender, chainId) => {
@@ -211,7 +207,7 @@ module.exports.getNativeWrapper = async (chainId) => {
     const hardhatContracts = require(`../build/hardhat_contracts`);
     try {
         return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
-    }catch(e){
+    } catch (e) {
         this.yellow('   WARNING - no NativeWrapper found... cannot wrap currency')
         return '0x0000000000000000000000000000000000000000'
     }
