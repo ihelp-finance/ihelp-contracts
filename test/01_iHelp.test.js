@@ -46,6 +46,10 @@ describe("iHelp", function () {
             cTokenUnderlyingMock.address,
             priceFeedProvider.address
         );
+
+        await iHelp.setStakingPool(
+            stakingPool.address
+        );
     });
 
     describe("Deployment", function () {
@@ -431,9 +435,21 @@ describe("iHelp", function () {
                 const contribution1 = await charityPool1.accountedBalanceUSD();
 
                 const share1 = contribution1 / totalCharityPoolContributions;
+
+                const phase = await iHelp.__tokenPhase();
+                const tokensPerInterest = await iHelp.tokensPerInterestByPhase(phase);
+                const interestInPhase = (tokensToCirculate / tokensPerInterest) * 1e18;
+
+
+                const interestInPhasePoolShare1 = share1 * interestInPhase;
+
                 const poolTokens1 = share1 * tokensToCirculate;
 
                 console.log("\n");
+                console.log(tokensToCirculate, "tokensToCirculate");
+                console.log(tokensPerInterest, "tokensPerInterest");
+                console.log(interestInPhase, "interest pershare")
+
                 console.log(totalCharityPoolContributions.toString(), "totalCharityPoolContributions");
                 console.log(contribution1.toString(), "contribution pool 1");
                 console.log(share1.toString(), "pool share1");
@@ -442,19 +458,26 @@ describe("iHelp", function () {
                 const contribution2 = await await charityPool2.accountedBalanceUSD();
 
                 const share2 = contribution2 / totalCharityPoolContributions;
+                const interestInPhasePoolShare2 = share2 * interestInPhase;
+
                 const poolTokens2 = share2 * tokensToCirculate;
 
-                console.log(contribution2.toString(), "contribution pool 1");
+                console.log(contribution2.toString(), "contribution pool 2");
                 console.log(share2.toString(), " pool share2");
                 console.log(poolTokens2, "poolTokens2");
 
 
                 // User sahre is the pool balance in BUSD deveided by the pool contributution
-                const userSharePool1 = 20 / contribution1;
-                const userSharePool2 = 40 / contribution2;
+                const userSharePool1 = (20 / contribution1);
+                const userSharePool2 = (40 / contribution2);
 
-                const contributionTokens1 = userSharePool1 * newInterestUS;
-                const contributionTokens2 = userSharePool2 * newInterestUS;
+
+
+                const contributionTokens1 = userSharePool1 * interestInPhasePoolShare1;
+                const contributionTokens2 = userSharePool2 * interestInPhasePoolShare2;
+
+                console.log("UserShare1", contributionTokens1)
+                console.log("UserShare2", contributionTokens2)
 
                 const tokenClaims1 = userSharePool1 * poolTokens1;
                 const tokenClaims2 = userSharePool2 * poolTokens2;
@@ -478,7 +501,7 @@ describe("iHelp", function () {
                     await iHelp.dripStage1();
                     await iHelp.dripStage2();
 
-                    await iHelp.setProcessingGasLimit(24_000);
+                    await iHelp.setProcessingGasLimit(26_000);
                     await iHelp.dripStage4();
                     let state = await iHelp.processingState();
 
@@ -541,7 +564,7 @@ describe("iHelp", function () {
                     await iHelp.dripStage1();
                     await iHelp.dripStage2();
 
-                    await iHelp.setProcessingGasLimit(24_000);
+                    await iHelp.setProcessingGasLimit(28_000);
                     await iHelp.dripStage3();
                     let state = await iHelp.processingState();
 
@@ -549,7 +572,6 @@ describe("iHelp", function () {
                     expect(state.i).to.equal(0);
                     expect(state.ii).to.equal(1);
 
-                    console.log(state.status, state.i, state.ii);
                     await iHelp.dripStage3();
                     state = await iHelp.processingState();
                     expect(state.status).to.equal(2);
@@ -733,18 +755,18 @@ describe("iHelp", function () {
     });
 
     describe("Contributor counter", function () {
-        it('should increase the number of contributors', async function ()  {
+        it('should increase the number of contributors', async function () {
             await iHelp.registerCharityPool(owner.address);
             console.log(await iHelp.hasCharity(owner.address));
             await iHelp.notifyBalanceUpdate(owner.address, 200, true);
-            expect(await iHelp.numberOfContributors()).to.equal(1); 
+            expect(await iHelp.numberOfContributors()).to.equal(1);
         })
 
-        it('should dencrease the number of contributors', async function ()  {  
+        it('should dencrease the number of contributors', async function () {
             await iHelp.registerCharityPool(owner.address);
             await iHelp.notifyBalanceUpdate(owner.address, 200, true);
             await iHelp.notifyBalanceUpdate(owner.address, 200, false);
-            expect(await iHelp.numberOfContributors()).to.equal(0); 
+            expect(await iHelp.numberOfContributors()).to.equal(0);
 
         })
     })
