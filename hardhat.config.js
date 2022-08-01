@@ -52,7 +52,7 @@ function mnemonic() {
 }
 
 // signer accounts keys for transactions
-const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY || new Array(64 + 1).join( '0' );
 const reportGas = process.env.REPORT_GAS;
 
 // gnosis-safe
@@ -66,7 +66,7 @@ module.exports = {
   networks: {
     hardhat: {
       gasPrice: 225000000000,
-      forking: forkingData,
+      // forking: forkingData,
       accounts: {
         accountBalance: parseEther("1000000")
       },
