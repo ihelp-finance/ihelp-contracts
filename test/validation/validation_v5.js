@@ -114,9 +114,7 @@ const validate = async () => {
   const charity1walletSigner = hardhat.ethers.provider.getSigner(charity1wallet);
   const charity2walletSigner = hardhat.ethers.provider.getSigner(charity2wallet);
   const charity3walletSigner = hardhat.ethers.provider.getSigner(charity3wallet);
-  const developmentPoolSigner = hardhat.ethers.provider.getSigner(developmentPool);
   const stakingPoolSigner = hardhat.ethers.provider.getSigner(stakingPool);
-  const holdingPoolSigner = hardhat.ethers.provider.getSigner(holdingPool);
 
   console.log(`signer: ${signer._address}`);
 

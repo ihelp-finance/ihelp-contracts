@@ -228,8 +228,8 @@ module.exports.getSwapAddresses = async (dex, chainId) => {
 };
 
 module.exports.getNativeWrapper = async (chainId) => {
-    const hardhatContracts = require(`../build/hardhat_contracts`);
     try {
+        const hardhatContracts = require(`../build/hardhat_contracts`);
         return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
     } catch (e) {
         this.yellow('   WARNING - no NativeWrapper found... cannot wrap currency')
