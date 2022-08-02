@@ -162,6 +162,13 @@ module.exports.yellow = function () {
     }
 };
 
+module.exports.red = function () {
+    if (!process.env.HIDE_DEPLOY_LOG) {
+        console.log(chalk.red.call(chalk, ...arguments));
+    }
+};
+
+
 module.exports.green = function () {
     if (!process.env.HIDE_DEPLOY_LOG) {
         console.log(chalk.green.call(chalk, ...arguments));
