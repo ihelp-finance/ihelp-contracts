@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const path = require('path')
-require('dotenv').config({ path: '../env/.env' })
+require('dotenv').config({ path: process.env.ENV_PATH  || '../env/.env' })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -118,7 +118,7 @@ module.exports = {
     }
   },
   solidity: {
-    version: "0.8.9",
+    version: "0.8.10",
     settings: {
       optimizer: {
         enabled: true,

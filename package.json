@@ -20,6 +20,7 @@
     "solidity-coverage": "^0.7.21"
   },
   "dependencies": {
+    "@aave/core-v3": "^1.13.1",
     "@chainlink/contracts": "^0.2.1",
     "@eth-optimism/hardhat-ovm": "^0.2.2",
     "@ethereum-waffle/mock-contract": "^3.4.4",
