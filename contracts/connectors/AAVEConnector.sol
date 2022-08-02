@@ -4,12 +4,19 @@ pragma solidity ^0.8.10;
 import "./ConnectorInterface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@aave/core-v3/contracts/interfaces/IPool.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {AToken} from "@aave/core-v3/contracts/protocol/tokenization/AToken.sol";
 
-contract AAVEConnector is ConnectorInterface {
+contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     address public LENDING_TOKEN_ADDRESS;
+
+    function initialize(address _lendingTokenAddress) public initializer {
+        __Ownable_init();
+        LENDING_TOKEN_ADDRESS = _lendingTokenAddress;
+    }
 
     function mint(uint256 mintAmount) external override returns (uint256) {
         IERC20(UNDERLYING()).safeTransferFrom(msg.sender, address(this), mintAmount);
