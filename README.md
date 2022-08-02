@@ -1,12 +1,14 @@
 # iHelp Protocol Smart Contracts
 
-| Statements                  | Functions                 | Lines             |
-| --------------------------- | ------------------------- | ----------------- |
-| ![Statements](https://img.shields.io/badge/statements-93.25%25-brightgreen.svg?style=flat) | ![Functions](https://img.shields.io/badge/functions-89.27%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-93.15%25-brightgreen.svg?style=flat) |
+| Statements                  | Functions                 | Lines             | Tests             |
+| --------------------------- | ------------------------- | ----------------- | ----------------- |
+| ![Statements](https://img.shields.io/badge/statements-93.25%25-brightgreen.svg?style=flat) | ![Functions](https://img.shields.io/badge/functions-89.27%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-93.15%25-brightgreen.svg?style=flat) | ![Tests](https://github.com/iHelp-Finance/ihelp-contracts/actions/workflows/unit-tests.yml/badge.svg) |
 
 <em>Test Coverage Reports: <a href="https://ihelp-finance.github.io/ihelp-contracts/coverage" target="_blank">https://ihelp-finance.github.io/ihelp-contracts/coverage</a></em>
 
 <em>Internal Audit Report: <a href="https://ihelp-finance.github.io/ihelp-contracts/audits/iHelpAuditReport.pdf" target="_blank">https://ihelp-finance.github.io/ihelp-contracts/audits/iHelpAuditReport.pdf</a></em>
+
+[![node](https://img.shields.io/badge/node-16.x-brightgreen.svg)](https://nodejs.org/en/blog/release/v16.16.0/)
 
 ## Overview
 
