@@ -35,6 +35,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   let cUsdcResult = null;
   let cEthResult = null;
   let wethResult = null;
+  let cWethResult = null;
 
   if (isTestEnvironment && deployMockTokens == 'true') {
     dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -145,9 +146,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
   //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
 
-
   cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-  return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+  try {
+    return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+  }catch(e){}
 
 };
 
