@@ -240,7 +240,17 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return __tokenPhase;
     }
 
+    function bulkRegisterCharityPool(address[] memory _addresses) public onlyOperatorOrOwner {
+        for (uint i = 0; i < _addresses.length; i++) {
+            _registerCharityPool(_addresses[i]);
+        }
+    }
+
     function registerCharityPool(address _addr) public onlyOperatorOrOwner returns (address) {
+       return _registerCharityPool(_addr);
+    }
+
+    function _registerCharityPool(address _addr) internal returns (address) {
         require(_addr != address(0), "Charity pool cannot be null");
         console.log("Registering Charity:", _addr);
         charityPoolList.add(_addr);
