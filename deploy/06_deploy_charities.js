@@ -12,7 +12,7 @@ const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypoo
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolsToNetwork, dim, yellow, chainName, fromBigNumber, cyan, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
+const { deployCharityPoolsToNetwork, dim, yellow, red, chainName, fromBigNumber, cyan, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
@@ -100,11 +100,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     }
     
     const charityResult = await deployCharityPoolsToNetwork(pools, network.name);
+    
     for (const result of charityResult) {
       const { contractName } = configurations.find(config => config.charityName === result.charityName)
 
       const isInAllCharities = allCharities.indexOf(item => item.contractName === contractName);
-      if (!isInAllCharities) {
+      if (isInAllCharities == -1) {
         allCharities.push([contractName, result])
       }
 
@@ -113,10 +114,74 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       }
       deployments.save(contractName, { abi: CharityPoolAbi, address: result.address });
       deployedCharities.push([contractName, result]);
-      yellow('   deployed:', contractName, result.address);
+      //yellow('   deployed:', contractName, result.address);
     }
 
   };
+  
+  const registerCharityPools = async () => {
+  
+      const forceRegisterMissingCharities = true;
+
+      function delay(t, val) {
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(val);
+          }, t);
+        });
+      }
+      
+      const charitiesToRegister = [];
+
+      if (forceRegisterMissingCharities == true) {
+
+        const currentCharities = await ihelp.getCharities()
+        
+        for (let i = 0; i < allCharities.length; i++) {
+
+          if (currentCharities.indexOf(allCharities[i][1].address) == -1) {
+            
+            //cyan(`   ${i + 1}/${allCharities.length} - registering: ${allCharities[i][0]}`);
+            // add a delay if not on a local chain to throttle requests
+            // if (network.name != 'localhost') {
+            //   await delay(2000);
+            // }
+            // await ihelp.registerCharityPool(allCharities[i][1].address);
+            
+            charitiesToRegister.push(allCharities[i][1].address);
+            
+          }
+
+        }
+
+      }
+      else {
+
+        for (let i = 0; i < deployedCharities.length; i++) {
+
+          //cyan(`   ${i + 1}/${deployedCharities.length} - registering: ${deployedCharities[i][0]}`);
+          // add a delay if not on a local chain to throttle requests
+          // if (network.name != 'localhost') {
+          //   await delay(2000);
+          // }
+          // await ihelp.registerCharityPool(deployedCharities[i][1].address);
+          
+          charitiesToRegister.push(deployedCharities[i][1].address);
+
+        }
+
+      }
+      
+      if (charitiesToRegister.length > 0) {
+        console.log('Registering',charitiesToRegister.length,'charities with the ihelp protocol...');
+        await ihelp.bulkRegisterCharityPools(charitiesToRegister);
+      }
+
+      const number = await ihelp.numberOfCharities();
+      red(`Number of Registered Charities: ${Big(number).toFixed(0)}`);
+      
+  }
+  
 
   if (isTestEnvironment == true && deployTestCharities == 'true') {
 
@@ -126,13 +191,17 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       { contractName: 'charityPool3', charityName: 'Charity Pool 3', charityWalletAddress: ethersLib.constants.AddressZero }
     ]);
 
-    console.log('newly deployedCharities:', deployedCharities.map((d) => { return [d[0], d[1].address]; }));
-    let numberOfCharities = await ihelp.numberOfCharities();
-    if (numberOfCharities.toString() == '0') {
-      for (let i = 0; i < deployedCharities.length; i++) {
-        await ihelp.registerCharityPool(deployedCharities[i][1].address);
-      }
-    }
+    console.log('\nDeployed Charities:', deployedCharities.length);
+    console.log('');
+    // let numberOfCharities = await ihelp.numberOfCharities();
+    // if (numberOfCharities.toString() == '0') {
+    //   console.log('registering deployed charities with the ihelp protocol...');
+    //   for (let i = 0; i < deployedCharities.length; i++) {
+    //     await ihelp.registerCharityPool(deployedCharities[i][1].address);
+    //   }
+    // }
+    
+    await registerCharityPools();
 
   }
   else {
@@ -170,59 +239,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         const contractAddresses = [];
         deployedCharities.map((d) => { contractAddresses.push({ name: d[0], address: d[1].address }); });
 
-        console.log('\ndeployedCharities:', deployedCharities.length);
+        console.log('\nDeployed Charities:', deployedCharities.length);
         console.log('');
 
-        console.log('registering deployed charities with the ihelp protocol...');
-
-        const forceRegisterMissingCharities = true;
-
-        function delay(t, val) {
-          return new Promise(function (resolve) {
-            setTimeout(function () {
-              resolve(val);
-            }, t);
-          });
-        }
-
-        if (forceRegisterMissingCharities == true) {
-
-          const currentCharities = await ihelp.getCharities()
-
-          for (let i = 0; i < allCharities.length; i++) {
-
-            if (currentCharities.indexOf(allCharities[i][1].address) == -1) {
-              cyan(`   ${i + 1}/${allCharities.length} - registering: ${allCharities[i][0]}`);
-
-              // add a delay if not on a local chain to throttle requests
-              console.log(network.name)
-              if (network.name != 'localhost') {
-                await delay(2000);
-              }
-              await ihelp.registerCharityPool(allCharities[i][1].address);
-            }
-
-          }
-
-        }
-        else {
-
-          for (let i = 0; i < deployedCharities.length; i++) {
-
-            cyan(`   ${i + 1}/${deployedCharities.length} - registering: ${deployedCharities[i][0]}`);
-
-            // add a delay if not on a local chain to throttle requests
-            if (network.name != 'localhost') {
-              await delay(2000);
-            }
-            await ihelp.registerCharityPool(deployedCharities[i][1].address);
-
-          }
-
-        }
-
-        const number = await ihelp.numberOfCharities();
-        yellow(`Number of Registered Charities: ${Big(number).toFixed(0)}`);
+        await registerCharityPools();
 
         // write the key addresses to a csv file
         return true
