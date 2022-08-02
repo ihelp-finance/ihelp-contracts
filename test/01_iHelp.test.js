@@ -177,7 +177,7 @@ describe("iHelp", function () {
             });
 
             it("Should bulk register  new charity pools", async function () {
-                await iHelp.bulkRegisterCharityPool([addr2.address, addr1.address]);
+                await iHelp.bulkRegisterCharityPools([addr2.address, addr1.address]);
                 expect(await iHelp.numberOfCharities()).to.equal(2);
             });
         });
