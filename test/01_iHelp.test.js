@@ -175,6 +175,11 @@ describe("iHelp", function () {
                 await iHelp.registerCharityPool(addr2.address);
                 expect(await iHelp.numberOfCharities()).to.equal(1);
             });
+
+            it("Should bulk register  new charity pools", async function () {
+                await iHelp.bulkRegisterCharityPools([addr2.address, addr1.address]);
+                expect(await iHelp.numberOfCharities()).to.equal(2);
+            });
         });
 
         describe("Testing deregisterCharityPool", function () {
