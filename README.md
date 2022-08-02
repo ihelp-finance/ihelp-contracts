@@ -2,7 +2,7 @@
 
 | Statements                  | Functions                 | Lines             | Tests             |
 | --------------------------- | ------------------------- | ----------------- | ----------------- |
-| [![Statements](https://img.shields.io/badge/statements-93.25%25-brightgreen.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Functions](https://img.shields.io/badge/functions-89.27%25-yellow.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Lines](https://img.shields.io/badge/lines-93.15%25-brightgreen.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Tests](https://github.com/iHelp-Finance/ihelp-contracts/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/iHelp-Finance/ihelp-contracts/actions/workflows/unit-tests.yml) |
+| [![Statements](https://img.shields.io/badge/statements-93.25%25-brightgreen.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Functions](https://img.shields.io/badge/functions-89.27%25-yellow.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Lines](https://img.shields.io/badge/lines-93.15%25-brightgreen.svg?style=flat)](https://ihelp-finance.github.io/ihelp-contracts/coverage/) | [![Tests](https://github.com/iHelp-Finance/ihelp-contracts/actions/workflows/tests.yml/badge.svg)](https://github.com/iHelp-Finance/ihelp-contracts/actions/workflows/tests.yml) |
 
 <em>Test Coverage Reports: <a href="https://ihelp-finance.github.io/ihelp-contracts/coverage" target="_blank">https://ihelp-finance.github.io/ihelp-contracts/coverage</a></em>
 
@@ -23,7 +23,7 @@ nvm install v16
 nvm use v16
 ```
 
-You can test the iHelp contracts with hardhat local development environment using the commands below:
+You can deploy the iHelp contracts with hardhat local development environment using the commands below:
 
 ```
 yarn chain
@@ -36,7 +36,6 @@ yarn deploy
 You can run through the extensive battery of tests (almost full coverage) using the command below:
 
 ```
-# run the deploy command first on local chain so the e2e tests run properly
 yarn test
 
 # run a specific test with the command below
