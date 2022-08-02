@@ -1,4 +1,4 @@
-name: iHelp Functional / Unit Testing
+name: tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  unit-tests:
+  tests:
     runs-on: ubuntu-latest
     env:
         node_version: 16.x
