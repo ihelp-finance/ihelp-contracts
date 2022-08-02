@@ -166,7 +166,7 @@ module.exports = {
     }
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: 'USD',
     gasPrice: 30,
     excludeContracts: ["testing/"]
