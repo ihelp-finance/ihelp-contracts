@@ -19,4 +19,4 @@ jobs:
         with:
           node-version: ${{ env.node_version }}
       - run: yarn install
-      - run: yarn test
+      - run: yarn test test/00_e2e-validation.test.js

@@ -27,7 +27,6 @@ describe("End TO End", function () {
     beforeEach(async function () {
         await os.execCommand('rm -rf ./deployments/localhost');
         await os.execCommand('rm -rf ./build/localhost_*');
-        await os.execCommand('rm -rf ./deployed-charities/hardhat.json');
         await run("deploy", { "reset": true });
     });
 
