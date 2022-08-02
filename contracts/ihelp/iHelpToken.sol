@@ -240,7 +240,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return __tokenPhase;
     }
 
-    function bulkRegisterCharityPool(address[] memory _addresses) public onlyOperatorOrOwner {
+    function bulkRegisterCharityPools(address[] memory _addresses) public onlyOperatorOrOwner {
         for (uint i = 0; i < _addresses.length; i++) {
             _registerCharityPool(_addresses[i]);
         }
