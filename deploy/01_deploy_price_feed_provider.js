@@ -1,4 +1,4 @@
-const { dim, green, getSwapAddresses, chainName, yellow, getTokenAddresses } = require("../scripts/deployUtils");
+const { dim, green, chainName, yellow, getTokenAddresses } = require("../scripts/deployUtils");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
@@ -18,7 +18,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
   let lendingTokenDetails
   if (isTestEnvironment) {
-    lendingTokenDetails = [await getTokenAddresses('DAI', 'compound', chainId), await getTokenAddresses('USDC', 'compound',chainId), await getTokenAddresses('WETH', 'compound',chainId)]
+    lendingTokenDetails = [
+      await getTokenAddresses('DAI', 'compound', chainId), 
+      await getTokenAddresses('USDC', 'compound',chainId),
+      await getTokenAddresses('WETH', 'compound',chainId)
+    ]
   } else {
     
     lendingTokenDetails = [

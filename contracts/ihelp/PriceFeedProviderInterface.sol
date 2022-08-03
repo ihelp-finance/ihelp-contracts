@@ -20,7 +20,7 @@ interface PriceFeedProviderInterface {
     function numberOfDonationCurrencies() external view returns (uint256);
     function getDonationCurrencyAt(uint256 index) external view returns (DonationCurrency memory);
     function getUnderlyingTokenPrice(address _lendingAddress) external view returns (uint256, uint256);
-    function addDonationCurrency(DonationCurrency memory _donationCurrency) external;
+    function addDonationCurrencies(DonationCurrency[] memory _newDonationCurrencies) external;
     function updateDonationCurrency(DonationCurrency memory _donationCurrency) external;
     function removeDonationCurrency(address _lendingAddress) external;
     function getDonationCurrency(address _lendingAddress) external view returns (DonationCurrency memory);

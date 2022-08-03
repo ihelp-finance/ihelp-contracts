@@ -66,6 +66,7 @@
     "deploy": "hardhat deploy  --network localhost  --export-all ./build/localhost_contracts.json",
     "postdeploy": "hardhat run scripts/publish.js",
     "updateCharities": "hardhat run  --network localhost  scripts/updateCharities.js",
+    "addDonatoonsCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",
     "watch": "node scripts/watch.js",
     "accounts": "hardhat accounts",
     "balance": "hardhat balance",
