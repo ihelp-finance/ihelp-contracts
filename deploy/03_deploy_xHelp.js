@@ -1,4 +1,4 @@
-const { dim, green, chainName, getTokenAddresses, yellow } = require("../scripts/deployUtils");
+const { dim, green, chainName, yellow } = require("../scripts/deployUtils");
 
 module.exports = async ({ getNamedAccounts, deployments, execute }) => {
   const chainId = parseInt(await getChainId(), 10);

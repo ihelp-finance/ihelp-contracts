@@ -1,4 +1,4 @@
-const { dim, green, chainName, yellow, getTokenAddresses } = require("../scripts/deployUtils");
+const { dim, green, chainName, yellow, cyan, addDonationCurrencies, getLendingConfigurations } = require("../scripts/deployUtils");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
@@ -6,7 +6,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
   yellow("Protocol Contracts - Deploy Script for Price Feed Provider");
   yellow("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-
 
   const { deploy, catchUnknownSigner } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
@@ -16,35 +15,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   dim(`chainId: ${chainId}`);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  let lendingTokenDetails
-  if (isTestEnvironment) {
-    lendingTokenDetails = [
-      await getTokenAddresses('DAI', 'compound', chainId), 
-      await getTokenAddresses('USDC', 'compound',chainId),
-      await getTokenAddresses('WETH', 'compound',chainId)
-    ]
-  } else {
-    
-    lendingTokenDetails = [
-      await getTokenAddresses('DAI', 'compound', chainId), 
-      await getTokenAddresses('USDC', 'compound',chainId), 
-      await getTokenAddresses('USDT', 'compound',chainId),
-      await getTokenAddresses('BAT', 'compound',chainId),
-      await getTokenAddresses('ZRX', 'compound',chainId),
-    ]
-    
-  }
-
-  lendingTokenDetails = lendingTokenDetails.map(item => ({
-    provider: item.lender,
-    currency: item.currency,
-    underlyingToken: item.underlyingToken,
-    lendingAddress: item.lendingAddress,
-    priceFeed: item.priceFeed
-  }));
-
-  console.log(lendingTokenDetails)
-
+  
   // We deploy a mocked version of the price provider which will always return 1 as the price of any call
   const contract = isTestEnvironment ? 'PriceFeedProviderMock' : 'PriceFeedProvider';
 
@@ -58,7 +29,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         execute: {
           init: {
             methodName: "initialize",
-            args: [lendingTokenDetails]
+            args: [[]] // initialize the currencies after deployment
           }
         }
       },
@@ -73,6 +44,26 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   green('PriceFeedProvider Proxy:', address);
   green('PriceFeedProvider Implementation:', result.implementation);
+
+  const configurations = await getLendingConfigurations(chainId);
+  const currencies = [];
+
+  for (const lender of Object.keys(configurations)) {
+      for (const token of Object.keys(configurations[lender])) {
+          currencies.push({
+              "currency": token,
+              "lender": lender,
+              "underlyingToken": configurations[lender][token].underlyingToken,
+              "lendingAddress": configurations[lender][token].lendingAddress,
+              "priceFeed":  configurations[lender][token].priceFeed
+          })
+      }
+  }
+  cyan(`\nadding ${currencies.length} supported currencies to the protocol...`);
+  
+  await addDonationCurrencies(currencies);
+  console.log("✅  Success ");
+  
 };
 
 module.exports.tags = ['PriceFeedProvider'];

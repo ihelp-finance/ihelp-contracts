@@ -84,61 +84,10 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     return result;
 };
 
-module.exports.getTokenAddresses = async (currency, lender, chainId) => {
-
-    let ctokenaddress = null;
-    let pricefeed = null;
-    let tokenaddress = null;
-
-    let addresses = fs.readFileSync(`./networks/${this.chainName(chainId)}-lending.json`, 'utf8');
-    addresses = JSON.parse(addresses);
-
-    const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-
-    if (isTestEnvironment) {
-
-        if (currency == 'HELP') {
-            tokenaddress = (await deployments.getOrNull("iHelp")).address;
-            ctokenaddress = null;
-            pricefeed = null;
-        }
-        else {
-            tokenaddress = (await deployments.getOrNull(currency)).address;
-            ctokenaddress = (await deployments.getOrNull('c' + currency)).address;
-            pricefeed = addresses[lender][currency]['priceFeed']
-        }
-
-    }
-    else {
-
-        if (currency == 'HELP') {
-            tokenaddress = (await deployments.getOrNull("iHelp")).address;
-            ctokenaddress = null;
-            pricefeed = null;
-        }
-        else {
-            tokenaddress = addresses[lender][currency]['underlyingToken']
-            ctokenaddress = addresses[lender][currency]['lendingAddress']
-            pricefeed = addresses[lender][currency]['priceFeed']
-        }
-
-    }
-
-    return {
-        "currency": currency,
-        "lender": isTestEnvironment ? 'mock' : lender,
-        "underlyingToken": tokenaddress,
-        "lendingAddress": ctokenaddress,
-        "priceFeed": pricefeed
-    };
-
-};
-
-
 module.exports.getLendingConfigurations = async (chainId) => {
     let lendingConfiguration = fs.readFileSync(`./networks/${this.chainName(chainId)}-lending.json`, 'utf8');
     lendingConfiguration = JSON.parse(lendingConfiguration);
-
+    
     const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
     if (isTestEnvironment) {
@@ -260,7 +209,7 @@ module.exports.addDonationCurrencies = async (currencies) => {
 
     const priceFeedProviderDeployment = await deployments.getOrNull("priceFeedProvider");
     if (!priceFeedProviderDeployment) {
-        this.yellow('   WARNING - no {riceFeedProvider found... cannot add currencies')
+        this.yellow('   WARNING - no priceFeedProvider found... cannot add currencies')
         return;
     }
     this.yellow(`Using PriceFeedProvider at ${priceFeedProviderDeployment.address}...`);

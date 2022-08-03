@@ -12,7 +12,7 @@ const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypoo
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolsToNetwork, dim, yellow, red, chainName, fromBigNumber, cyan, green, getNativeWrapper, getTokenAddresses } = require("../scripts/deployUtils");
+const { deployCharityPoolsToNetwork, dim, yellow, red, chainName, fromBigNumber, cyan, green, getNativeWrapper } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
@@ -36,8 +36,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-  // set this value to false to actually deploy a contract for reach charity pool
+  // set this value to false to actually deploy a contract for each charity pool
   const deployTestCharities = process.env.TEST_CHARITIES || 'true';
+  const deployMockTokens = process.env.TEST_TOKENS || 'true';
+  
   const charitiesToDeloy = 'all';
 
   dim(`deployer: ${deployer}`);
@@ -71,13 +73,24 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   console.log('');
 
-
-  // deploy charity - make this a function
-  const ihelpAddresses = await getTokenAddresses('DAI', 'compound', chainId);
-  const holdingtokenAddress = ihelpAddresses['underlyingToken'];
-
-  console.log("Holding Token", "DAI", chainId, holdingtokenAddress);
-
+  const holdingToken = 'DAI';
+  let holdingtokenAddress = null;
+  if (isTestEnvironment && deployMockTokens == 'true') {
+    holdingtokenAddress = (await deployments.getOrNull(holdingToken)).address;
+  }
+  else {
+    const configurations = await getLendingConfigurations(chainId);
+    for (const lender of Object.keys(lendingConfiguration)) {
+      for (const coin of Object.keys(lendingConfiguration[lender])) {
+        if (coin == holdingToken) {
+          holdingtokenAddress = lendingConfiguration[lender][coin]
+          break
+        }
+      }
+    }
+  }
+  
+  // deploy charity
   const deployedCharities = [];
   const allCharities = [];
 
