@@ -52,10 +52,9 @@
     "sequelize": "^4.0.0"
   },
   "scripts": {
-    "manual": "concurrently \"yarn chain\" \"sleep 3 && yarn deploy\" ",
     "prechain": "rimraf build/localhost_* && rimraf build/hardhat_*",
     "chain": "hardhat node --no-deploy  --network hardhat  --hostname 0.0.0.0 --port 7545",
-    "fork": "hardhat node --no-deploy --network hardhat --fork https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad",
+    "fork": "hardhat node --no-deploy --network hardhat --fork https://mainnet.infura.io/v3/$INFURA_ID",
     "test": "hardhat test --network hardhat",
     "compile": "hardhat compile",
     "coverage": "hardhat --network hardhat coverage",
@@ -66,13 +65,13 @@
     "deploy": "hardhat deploy  --network localhost  --export-all ./build/localhost_contracts.json",
     "postdeploy": "hardhat run scripts/publish.js",
     "updateCharities": "hardhat run  --network localhost  scripts/updateCharities.js",
-    "addDonatoonsCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",
+    "addDonationCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",
     "watch": "node scripts/watch.js",
     "accounts": "hardhat accounts",
     "balance": "hardhat balance",
     "send": "hardhat send",
     "generate": "hardhat generate",
     "account": "hardhat account",
-    "etherscan-verify": "hardhat etherscan-verify --api-key PSW8C433Q667DVEX5BCRMGNAH9FSGFZ7Q8"
+    "etherscan-verify": "hardhat etherscan-verify --api-key $REACT_APP_ETHERSCAN_KEY"
   }
 }
