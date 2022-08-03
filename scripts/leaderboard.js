@@ -82,22 +82,19 @@ const chainName = (chainId) => {
 
 const upkeep = async() => {
     
-    const { deploy } = hardhat.deployments;
-
     let {
         deployer
     } = await hardhat.getNamedAccounts();
     
-    // const currentBlock = await hardhat.ethers.provider.getBlock('latest')
-    // console.log(currentBlock['number'])
-    // process.exit(0)
+    const nodeUrl = hardhat.network.config.url;
+    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://').replace('.infura.io/','.infura.io/ws/')
 
-    signer = await hardhat.ethers.provider.getSigner(deployer);
+    const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
 
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
-
-    const analyticsAddress = (await hardhat.deployments.get('analytics')).address;
-    analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
+    const analyticsContract = (await hardhat.deployments.get('analytics'));
+    
+    analytics = new ethers.Contract(analyticsContract.address, analyticsContract.abi, provider);
     
     // const nicknames = await axios.get('https://dev.ihelp.finance/api/v1/data/allnicknames')
     // const nicknameHash = {}
@@ -260,7 +257,7 @@ const upkeep = async() => {
     // hook.setAvatar(IMAGE_URL);
      
     // hook.send("Reward Job Completed Successfully...\n   Signer Cost: "+signerCost.toFixed(4)+'\n   Staking Cost: '+stakerCost.toFixed(4)+'\n   Signer Balance: '+fromBigNumber(balanceend).toFixed(4)+'\n   Staker Balance: '+fromBigNumber(endbalancestaking).toFixed(4) +'\nNewly Awarded:' + (parseFloat(stakepool2) - parseFloat(stakepool1)).toFixed(6));
-
+ 
 }
 
 upkeep();

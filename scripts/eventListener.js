@@ -25,20 +25,21 @@ let analytics = null;
 // The listener configuration
 const runListener = async() => {
 
-    const ihelpContract = await hardhat.deployments.get('iHelp');
+    
     const nodeUrl = hardhat.network.config.url;
-
     const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://').replace('.infura.io/','.infura.io/ws/')
 
     // console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
 
-    const provider = new ethers.providers.JsonRpcProvider(nodeUrl);
-    iHelp = new ethers.Contract(ihelpContract.address, ihelpContract.abi, provider);
-
+    const provider = new ethers.providers.WebSocketProvider(nodeUrlWs);
+    
+    const ihelpContract = await hardhat.deployments.get('iHelp');
     const analyticsContract = await hardhat.deployments.get('analytics');
 
+    iHelp = new ethers.Contract(ihelpContract.address, ihelpContract.abi, provider);
     analytics = new ethers.Contract(analyticsContract.address, analyticsContract.abi, provider);
 
+    // Connect
     const options = {
         timeout: 30000, // ms
     
@@ -61,7 +62,6 @@ const runListener = async() => {
         }
     };
     
-    // Connect
     let providerWeb3, web3;
     providerWeb3 = new Web3.providers.WebsocketProvider(nodeUrlWs, options);
     web3 = new Web3(providerWeb3);
