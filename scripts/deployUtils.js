@@ -28,18 +28,18 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
         const fileData = readFileSync(FILE_PATH, { encoding: 'utf-8' });
         deployedCharities = JSON.parse(fileData);
     }
-    
+
     const existing = [];
     for (const [index, configuration] of configurations.entries()) {
         const { charityName } = configuration;
-        
+
         // can use this to regenerate the charities.json file if accidentally deleted
         // const deplo = await deployments.get(charityName);
         // deployedCharities.push({
         //     charityName: charityName,
         //     address: deplo.address
         // })
-        
+
         const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
         if (alreadyExists) {
             this.yellow(`   Charity ${charityName} was already deployed, skipping...`);
@@ -49,20 +49,20 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     }
 
     // writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
-    
+
     const remaining = configurations.filter((_, index) => !existing.includes(index));
-    
+
     if (remaining.length > 0) {
-    
+
         const factoryDeployment = await deployments.get(factoryContractName);
         const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
-    
+
         const tx = await factory.createCharityPool(remaining);
-    
+
         const { events } = await tx.wait();
         const { args } = events.find(item => item.event === 'Created');
         const { newCharities } = args;
-    
+
         for (const charity of newCharities) {
             result.push({
                 charityName: charity.name,
@@ -76,9 +76,9 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
             })
             console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
         }
-        
+
         writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
-        
+
     }
 
     return result;
@@ -132,6 +132,24 @@ module.exports.getTokenAddresses = async (currency, lender, chainId) => {
         "priceFeed": pricefeed
     };
 
+};
+
+
+module.exports.getLendingConfigurations = async (chainId) => {
+    let lendingConfiguration = fs.readFileSync(`./networks/${this.chainName(chainId)}-lending.json`, 'utf8');
+    lendingConfiguration = JSON.parse(lendingConfiguration);
+
+    const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+
+    if (isTestEnvironment) {
+        for (const lender of Object.keys(lendingConfiguration)) {
+            for (const coin of Object.keys(lendingConfiguration[lender])) {
+                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin)).address;
+                lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull('c' + coin)).address;
+            }
+        }
+    }
+    return lendingConfiguration;
 };
 
 
@@ -237,17 +255,61 @@ module.exports.getNativeWrapper = async (chainId) => {
     }
 }
 
+module.exports.addDonationCurrencies = async (currencies) => {
+    const { deployer } = await getNamedAccounts();
+
+    const priceFeedProviderDeployment = await deployments.getOrNull("priceFeedProvider");
+    if (!priceFeedProviderDeployment) {
+        this.yellow('   WARNING - no {riceFeedProvider found... cannot add currencies')
+        return;
+    }
+    this.yellow(`Using PriceFeedProvider at ${priceFeedProviderDeployment.address}...`);
+
+    const signer = await ethers.getSigner(deployer);
+    const PriceFeedProvider = await ethers.getContractAt("PriceFeedProvider", priceFeedProviderDeployment.address, signer);
+
+    const skipped = [];
+    for (let index = 0; index < currencies.length; index++) {
+        const currency = currencies[index];
+
+        process.stdout.write(`\n ${chalk.gray(`Verifying ${currency.currency} at ${currency.lender} (${currency.lendingAddress}) ...`)}`);
+        const exists = await PriceFeedProvider.hasDonationCurrency(currency.lendingAddress);
+        if (exists) {
+            process.stdout.write(`${chalk.yellow(` Already exists, skipping ...`)}`);
+            skipped[index] = true;
+        } else {
+            process.stdout.write(` ✅`);
+        }
+    }
+    process.stdout.write(`\n`);
+
+    const requestData = currencies
+        .filter((_, index) => !skipped[index])
+        .map(item => ({
+            provider: item.lender,
+            currency: item.currency,
+            underlyingToken: item.underlyingToken,
+            lendingAddress: item.lendingAddress,
+            priceFeed: item.priceFeed
+        }));
+
+    console.log(`\n ${chalk.gray(`Adding `)} ${chalk.yellow(`${requestData.map(item => item.currency).join(', ')}`)}... \n`);
+
+    await PriceFeedProvider.addDonationCurrencies(requestData);
+}
 
 module.exports.updateCharityPools = async () => {
     const { deployer } = await getNamedAccounts();
+
     const result = await deployments.deploy('CharityPool_Implementation', {
         contract: 'CharityPool',
         from: deployer,
         args: [],
         log: true,
     });
-    console.log('');
+
     address = result.address
+
     if (!result.newlyDeployed) {
         this.yellow(`${chalk.gray(`Reusing deployment`)} (${address})`);
     }
@@ -264,7 +326,7 @@ module.exports.updateCharityPools = async () => {
     } else {
         const { data } = await beaconFactory.populateTransaction.update(address);
         console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx from ${chalk.yellow(owner)} to execute the update :
-       
+
         ${chalk.yellow(`${data}`)}
     `));
     }
