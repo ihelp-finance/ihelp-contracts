@@ -258,27 +258,43 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
 
       yellow('\nActivating liquidity pools for test environment...');
 
-      const holdingTokenName = 'DAI';
+      const priceFeedProviderDeployment = await deployments.getOrNull("priceFeedProvider");
+      if (!priceFeedProviderDeployment) {
+        yellow('   WARNING - no priceFeedProvider found... cannot add currencies')
+        return;
+      }
+      yellow(`Using PriceFeedProvider at ${priceFeedProviderDeployment.address}...`);
 
-      let mockCurrenciesToDeploy = ['DAI', 'USDC', 'USDT', 'WBTC', 'WETH'];
+      const signer = await ethers.getSigner(deployer);
+      const PriceFeedProvider = await ethers.getContractAt("PriceFeedProvider", priceFeedProviderDeployment.address, signer);
+
+      const currencies = await PriceFeedProvider.getAllDonationCurrencies()
 
       const configurations = await getLendingConfigurations(chainId);
 
+      const holdingTokenName = 'DAI';
+
       let holdingToken = null
-      for (const lender of Object.keys(configurations)) {
-        for (const coin of Object.keys(configurations[lender])) {
-          if (coin == holdingTokenName) {
-            holdingToken = configurations[lender][coin];
-            holdingToken['name'] = coin;
+      for (const coin of currencies) {
+        if (coin['currency'] == holdingTokenName) {
+          holdingToken = {
+            underlyingToken: coin['underlyingToken'],
+            name: coin['currency']
           }
         }
       }
 
-      for (const lender of Object.keys(configurations)) {
-        for (const coin of Object.keys(configurations[lender])) {
+      const currencyNames = [];
+      for (const coin of currencies) {
 
-          const token = configurations[lender][coin];
-          token['name'] = coin;
+        if (currencyNames.indexOf(coin['currency']) == -1 && coin['currency'] != holdingTokenName) {
+          
+          currencyNames.push(coin['currency'])
+
+          const token = {
+            underlyingToken: coin['underlyingToken'],
+            name: coin['currency']
+          }
 
           await activateETHLiquidityPool(token, '50000000', 'uniswap');
 
@@ -287,7 +303,9 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
           }
 
         }
+
       }
+
     }
 
   }

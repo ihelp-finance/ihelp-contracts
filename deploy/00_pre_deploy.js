@@ -35,27 +35,32 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
     let mockCurrenciesToDeploy = [{
-        currency: 'DAI',
+        currency: 'cDAI',
         decimals: 18,
         contract: 'ERC20MintableMock'
       },
       {
-        currency: 'USDC',
+        currency: 'cUSDC',
         decimals: 6,
         contract: 'ERC20MintableMock'
       },
       {
-        currency: 'USDT',
+        currency: 'cUSDT',
         decimals: 6,
         contract: 'ERC20MintableMock'
       },
       {
-        currency: 'WBTC',
+        currency: 'aDAI',
+        decimals: 18,
+        contract: 'ERC20MintableMock'
+      },
+      {
+        currency: 'aWBTC',
         decimals: 8,
         contract: 'ERC20MintableMock'
       },
       {
-        currency: 'WETH',
+        currency: 'aWETH',
         decimals: 18,
         contract: 'WTokenMock'
       }
@@ -71,16 +76,16 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
       const c = mockCurrenciesToDeploy[ci];
 
-      let result = await deployments.getOrNull(c['currency']);
+      let result = await deployments.getOrNull(c['currency'].replace('c','').replace('a',''));
       if (result == null) {
 
-        cyan(`Deploying ${c['currency']}...`);
+        cyan(`Deploying ${c['currency'].replace('c','').replace('a','')}...`);
 
         let args = null;
         if (c['contract'] != 'WTokenMock') {
           args = [
-            `${c['currency']} Test Token`,
-            c['currency'],
+            `${c['currency'].replace('c','').replace('a','')} Test Token`,
+            c['currency'].replace('c','').replace('a',''),
             c['decimals']
           ];
         }
@@ -88,7 +93,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
           args = [];
         }
 
-        result = await deploy(c['currency'], {
+        result = await deploy(c['currency'].replace('c','').replace('a',''), {
           args: args,
           contract: c['contract'],
           from: deployer,
@@ -97,13 +102,13 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
       }
 
-      let cresult = await deployments.getOrNull(`c${c['currency']}`);
+      let cresult = await deployments.getOrNull(`${c['currency']}`);
       if (cresult == null) {
 
-        cyan(`Deploying c${c['currency']}...`);
+        cyan(`Deploying ${c['currency']}...`);
         // should be about 20% APR
         let supplyRate = '8888888888888';
-        cresult = await deploy(`c${c['currency']}`, {
+        cresult = await deploy(`${c['currency']}`, {
           args: [
             result.address,
             supplyRate
@@ -115,8 +120,8 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
       }
 
-      currencyResults.push(`  - ${c['currency']}: ${result.address}`);
-      currencyResults.push(`  - c${c['currency']}: ${cresult.address}`);
+      currencyResults.push(`  - ${c['currency'].replace('c','').replace('a','')}: ${result.address}`);
+      currencyResults.push(`  - ${c['currency']}: ${cresult.address}`);
 
     }
 

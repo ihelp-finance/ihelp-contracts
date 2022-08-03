@@ -51,7 +51,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   for (const lender of Object.keys(configurations)) {
       for (const token of Object.keys(configurations[lender])) {
           currencies.push({
-              "currency": token,
+              "currency": token.replace('c','').replace('a',''),
               "lender": lender,
               "underlyingToken": configurations[lender][token].underlyingToken,
               "lendingAddress": configurations[lender][token].lendingAddress,
