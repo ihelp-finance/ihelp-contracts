@@ -125,21 +125,29 @@ const upkeep = async() => {
     var seq = Promise.resolve();
     charityPoolsWithContributions.map(async (c)=>{
         
-        leaderboard['charities'].push({
-            'address': c['charityAddress'],
-            'name': c['charityName'],
-            'contributions': parseFloat(ethers.utils.formatUnits(c['totalContributions'],18)),
-            'donations': parseFloat(ethers.utils.formatUnits(c['totalDonations'],18)),
-            'interests': parseFloat(ethers.utils.formatUnits(c['totalInterestGenerated'],18)),
-        })
+        const totalContributions = parseFloat(ethers.utils.formatUnits(c['totalContributions'],18));
+        const totalDonations = parseFloat(ethers.utils.formatUnits(c['totalDonations'],18));
+        const totalInterests = parseFloat(ethers.utils.formatUnits(c['totalInterestGenerated'],18));
         
-        seq = seq.then(function() {
-          //console.log(c)
-            return analytics.getContributorsPerCharity(c['charityAddress'],0,1000).then(function(result) {
-                results.push(result);
-            }).catch((e)=>{})
-        });
+        if (totalContributions > 0 || totalDonations > 0 || totalInterests > 0) {
         
+            leaderboard['charities'].push({
+                'address': c['charityAddress'],
+                'name': c['charityName'],
+                'contributions': totalContributions,
+                'donations': totalDonations,
+                'interests': totalInterests,
+            })
+            
+            seq = seq.then(function() {
+              //console.log(c)
+                return analytics.getContributorsPerCharity(c['charityAddress'],0,1000).then(function(result) {
+                    results.push(result);
+                }).catch((e)=>{})
+            });
+        
+        }
+
     })
     
     await seq.then(async function() {
