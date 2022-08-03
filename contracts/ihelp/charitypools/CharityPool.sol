@@ -245,7 +245,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         }
         
         uint256 cumulativeBalance = cummulativeBalanceOf(_sender) ;
-        if(cumulativeBalance == 0 ){
+        if(cumulativeBalance == 0 && _donationsRegistry[_sender].totalContribUSD == 0){
             contributors.remove(_sender);
         }
     }
@@ -332,6 +332,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             _donationsRegistry[_account].charityDonationUSD += charityDonation;
             totalDonationsUSD += _amount;
 
+            contributors.add(_account);
+            
             emit DirectDonation(_account, charityWallet, _amount);
         }
     }
