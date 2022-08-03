@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const path = require('path')
-require('dotenv').config({ path: '../env/.env' })
+require('dotenv').config({ path: process.env.ENV_PATH || '../env/.env' })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -21,6 +21,7 @@ const { parseEther } = require('ethers/lib/utils');
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
 const defaultNetwork = process.env.REACT_APP_NETWORK || "localhost";
+
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation

@@ -270,7 +270,6 @@ describe("Charity Pool", function () {
                 underlyingToken: holdingMock.address,
                 priceFeed: aggregator.address
             })
-
         });
 
         it("Should do nothing when donating 0", async function () {
@@ -283,11 +282,16 @@ describe("Charity Pool", function () {
                 .to.emit(charityPool, "DirectDonation").withArgs(owner.address, charityWallet.address, 100);
         });
 
+        it("Should add address to contributors", async function () {
+            expect(await charityPool.directDonation(holdingMock.address, 100));
+            expect(await charityPool.getContributors()).to.have.members([owner.address]);
+            expect(await charityPool.numberOfContributors()).to.equal(1);
+        });
+
         it("Should update the direct doantions balance", async function () {
             await charityPool.directDonation(holdingMock.address, 100);
             expect(await charityPool.donationBalances(owner.address, holdingMock.address)).to.equal(100);
         });
-
 
         it("Should send staking fee", async function () {
             await charityPool.setVariable('holdingToken', cTokenUnderlyingMock.address);
