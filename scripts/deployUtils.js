@@ -93,8 +93,8 @@ module.exports.getLendingConfigurations = async (chainId) => {
     if (isTestEnvironment) {
         for (const lender of Object.keys(lendingConfiguration)) {
             for (const coin of Object.keys(lendingConfiguration[lender])) {
-                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin)).address;
-                lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull('c' + coin)).address;
+                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c','').replace('a',''))).address;
+                lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull(coin)).address;
             }
         }
     }
@@ -223,6 +223,7 @@ module.exports.addDonationCurrencies = async (currencies) => {
 
         process.stdout.write(`\n ${chalk.gray(`Verifying ${currency.currency} at ${currency.lender} (${currency.lendingAddress}) ...`)}`);
         const exists = await PriceFeedProvider.hasDonationCurrency(currency.lendingAddress);
+        
         if (exists) {
             process.stdout.write(`${chalk.yellow(` Already exists, skipping ...`)}`);
             skipped[index] = true;
