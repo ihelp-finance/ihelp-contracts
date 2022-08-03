@@ -639,7 +639,7 @@ describe("Analytics", function () {
                 expect(result.stakingAllowance).to.equal(100)
             })
 
-            it("should return the contributors of a charity ", async () => {
+            it("should return the contributors of a charity", async () => {
 
                 charityPool1.numberOfContributors.returns(2);
                 await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address);
@@ -685,6 +685,8 @@ describe("Analytics", function () {
                 });
 
                 const result = await analytics.getContributorsPerCharity(charityPool1.address, 0, 0);
+
+                console.log(result);
                 expect(result[0].contributorAddress).to.equal(addr1.address);
                 expect(result[0].totalContributions).to.equal("0");
                 expect(result[0].totalDonations).to.equal("20" );
