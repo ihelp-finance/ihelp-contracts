@@ -1,6 +1,6 @@
 const { dim, green, getSwapAddresses, chainName, yellow } = require("../scripts/deployUtils");
 
-module.exports = async ({ getNamedAccounts, deployments, getTokenAddresses }) => {
+module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
 
   yellow("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");

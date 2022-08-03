@@ -2,7 +2,7 @@ const { dim, fromBigNumber, chainName, cyan } = require("../scripts/deployUtils"
 const fs = require("fs");
 const { run } = require("hardhat");
 
-module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
+module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgrades }) => {
   const { deploy } = deployments;
   let {
     deployer,
@@ -17,7 +17,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  
   const deployMockTokens = process.env.TEST_TOKENS || 'true';
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
 
@@ -29,107 +28,111 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const balance = await ethers.provider.getBalance(signer._address);
   console.log(`signer balance: ${fromBigNumber(balance)}`);
 
-  let daiResult = null;
-  let cDaiResult = null;
-  let usdcResult = null;
-  let cUsdcResult = null;
-  let cEthResult = null;
-  let wethResult = null;
-  let cWethResult = null;
-
   if (isTestEnvironment && deployMockTokens == 'true') {
+
     dim("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     dim("Protocol Contracts - Deploy Script For Mocks");
     dim("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
-    dim(`network: ${chainName(chainId)} `);
+    let mockCurrenciesToDeploy = [{
+        currency: 'DAI',
+        decimals: 18,
+        contract: 'ERC20MintableMock'
+      },
+      {
+        currency: 'USDC',
+        decimals: 6,
+        contract: 'ERC20MintableMock'
+      },
+      {
+        currency: 'USDT',
+        decimals: 6,
+        contract: 'ERC20MintableMock'
+      },
+      {
+        currency: 'WBTC',
+        decimals: 8,
+        contract: 'ERC20MintableMock'
+      },
+      {
+        currency: 'WETH',
+        decimals: 18,
+        contract: 'WTokenMock'
+      }
+    ];
+
+    dim(`currencies: ${mockCurrenciesToDeploy.map((c)=>{return c['currency']})}`);
+    dim(`network: ${chainName(chainId)}`);
     dim(`deployer: ${deployer}`);
-    dim(`chainId: ${chainId}`);
+    dim(`chainId: ${chainId}\n`);
 
-    cyan("\nDeploying DAI...");
-    daiResult = await deploy("DAI", {
-      args: [
-        'DAI Test Token',
-        'DAI',
-        18
-      ],
-      contract: 'ERC20MintableMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    });
+    currencyResults = [];
+    for (let ci = 0; ci < mockCurrenciesToDeploy.length; ci++) {
 
-    cyan("\nDeploying cDAI...");
-    // should be about 20% APR
-    let supplyRate = '8888888888888';
-    cDaiResult = await deploy("cDAI", {
-      args: [
-        daiResult.address,
-        supplyRate
-      ],
-      contract: 'CTokenMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    });
+      const c = mockCurrenciesToDeploy[ci];
 
-    cyan("\nDeploying USDC...");
-    usdcResult = await deploy("USDC", {
-      args: [
-        'USDC Test Token',
-        'USDC',
-        6
-      ],
-      contract: 'ERC20MintableMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    });
+      let result = await deployments.getOrNull(c['currency']);
+      if (result == null) {
 
-    cyan("\nDeploying cUSDC...");
-    // should be about 20% APR
-    cUsdcResult = await deploy("cUSDC", {
-      args: [
-        usdcResult.address,
-        supplyRate
-      ],
-      contract: 'CTokenMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    });
+        cyan(`Deploying ${c['currency']}...`);
 
-    cyan("\nDeploying WETH...")
-    wethResult = await deploy("WETH", {
-      args: [],
-      contract: 'WTokenMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    });
+        let args = null;
+        if (c['contract'] != 'WTokenMock') {
+          args = [
+            `${c['currency']} Test Token`,
+            c['currency'],
+            c['decimals']
+          ];
+        }
+        else {
+          args = [];
+        }
 
-    cyan("\nDeploying cWETH...")
-    // should be about 20% APR
-    cWethResult = await deploy("cWETH", {
-      args: [
-        wethResult.address,
-        supplyRate
-      ],
-      contract: 'CTokenMock',
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    })
+        result = await deploy(c['currency'], {
+          args: args,
+          contract: c['contract'],
+          from: deployer,
+          skipIfAlreadyDeployed: true
+        });
+
+      }
+
+      let cresult = await deployments.getOrNull(`c${c['currency']}`);
+      if (cresult == null) {
+
+        cyan(`Deploying c${c['currency']}...`);
+        // should be about 20% APR
+        let supplyRate = '8888888888888';
+        cresult = await deploy(`c${c['currency']}`, {
+          args: [
+            result.address,
+            supplyRate
+          ],
+          contract: 'CTokenMock',
+          from: deployer,
+          skipIfAlreadyDeployed: true
+        });
+
+      }
+
+      currencyResults.push(`  - ${c['currency']}: ${result.address}`);
+      currencyResults.push(`  - c${c['currency']}: ${cresult.address}`);
+
+    }
 
     // Display Contract Addresses
     dim("\nLocal Contract Deployments;\n");
-    dim("  - DAI:               ", daiResult.address);
-    dim("  - cDAI:              ", cDaiResult.address);
-    dim("  - USDC:              ", usdcResult.address);
-    dim("  - cUSDC:             ", cUsdcResult.address);
-    dim("  - WETH:              ", wethResult.address)
-    dim("  - cWETH:              ", cWethResult.address)
+    await currencyResults.map((r) => {
+      dim(r);
+    })
+
   }
 
   // publish the contracts
   const exec = require('child_process').exec;
 
   function os_func() {
-    this.execCommand = function (cmd) {
+    this.execCommand = function(cmd) {
       return new Promise((resolve, reject) => {
         exec(cmd, (error, stdout, stderr) => {
           if (error) {
@@ -149,7 +152,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   cyan('hardhat export --export-all ./build/hardhat_contracts.json');
   try {
     return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
-  }catch(e){}
+  }
+  catch (e) {}
 
 };
 

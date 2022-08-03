@@ -35,9 +35,12 @@ if (removeLogStatements) {
 }
 
 // currently localhost requires a fork from rinkeby for liquidty pools for swapper
-const forkingData = {
-  url: process.env.REACT_APP_RPC_URL || `https://rinkeby.infura.io/v3/${process.env.INFURA_ID}`
-};
+let forkingData = undefined;
+if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
+  forkingData = {
+    url: process.env.TEST_FORK
+  };
+}
 
 function mnemonic() {
   try {
@@ -78,7 +81,7 @@ module.exports = {
       loggingEnabled:false
     },
     fuji: {
-      url: forkingData['url'] || "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL,
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: [
@@ -86,7 +89,7 @@ module.exports = {
       ]
     },
     avalanche: {
-      url: forkingData['url']  || "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL,
       gasPrice: 225000000000,
       chainId: 43114,
       accounts: [
@@ -94,7 +97,7 @@ module.exports = {
       ]
     },
     localhost: {
-      url: process.env.REACT_APP_RPC_URL || "http://localhost:7545",
+      url: "http://localhost:7545",
       forking: forkingData,
       loggingEnabled:false,
       mining: {
@@ -102,7 +105,7 @@ module.exports = {
       }
     },
     rinkeby: {
-      url: forkingData['url']  || "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL,
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -110,7 +113,7 @@ module.exports = {
       gasLimit: 10000000,
     },
     kovan: {
-      url: forkingData['url']  || "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL,
       chainId: 42,
       accounts: [
         `0x${deployerPrivateKey}`, // deployer
