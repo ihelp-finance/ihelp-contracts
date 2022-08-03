@@ -51,8 +51,10 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
         return (uint256(price), decimals);
     }
 
-    function addDonationCurrency(DonationCurrency memory _donationCurrency) public onlyOwner {
-        _addDonationCurrency(_donationCurrency);
+    function addDonationCurrencies(DonationCurrency[] memory _newDonationCurrencies) public onlyOwner {
+         for (uint256 i = 0; i < _newDonationCurrencies.length; i++) {
+            _addDonationCurrency(_newDonationCurrencies[i]);
+        }
     }
 
     function _addDonationCurrency(DonationCurrency memory _donationCurrency) internal {
