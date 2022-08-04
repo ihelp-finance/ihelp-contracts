@@ -6,12 +6,13 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+import "../../connectors/ConnectorInterface.sol";
 import "./CharityPoolUtils.sol";
 
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "../../utils/IERC20.sol";
-import "../../utils/ICErc20.sol";
 import "../../utils/IWrappedNative.sol";
 
 import "../iHelpTokenInterface.sol";
@@ -168,7 +169,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         require(_amount > 0, "Funding/small-amount");
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
 
-        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
+        require(connector(_cTokenAddress).redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
         _withdraw(msg.sender, _cTokenAddress, _amount);
         wrappedNative.withdraw(_amount);
         payable(msg.sender).transfer(_amount);
@@ -194,8 +195,12 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             _amount = balances[msg.sender][_cTokenAddress];
         }
         _withdraw(msg.sender, _cTokenAddress, _amount);
+
+        ConnectorInterface connectorInstance = connector(_cTokenAddress);
+
         // Withdraw from Compound and transfer
-        require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
+        require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+        require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
         require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
@@ -220,7 +225,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
         // Deposit into Compound
         require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
-        require(ICErc20(_cTokenAddress).mint(_amount) == 0, "Funding/supply");
+        require(connector(_cTokenAddress).mint(_cTokenAddress, _amount) == 0, "Funding/supply");
 
         contributors.add(_spender);
         ihelpToken.notifyBalanceUpdate(_spender, _amount, true);
@@ -364,12 +369,12 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
-        ICErc20 cToken = ICErc20(_cTokenAddress);
+        ConnectorInterface cToken = connector(_cTokenAddress);
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
             // redeem the yield
-            cToken.redeemUnderlying(amount);
+            cToken.redeemUnderlying(_cTokenAddress,amount);
 
             // Get The underlying token for this cToken
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);
@@ -439,8 +444,12 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @notice Returns the token underlying the cToken.
      * @return An ERC20 token address
      */
-    function getUnderlying(address cTokenAddress) public view returns (IERC20) {
-        return IERC20(ICErc20(cTokenAddress).underlying());
+    function getUnderlying(address _cTokenAddress) public view returns (IERC20) {
+        return IERC20(connector(_cTokenAddress).underlying(_cTokenAddress));
+    }
+
+    function connector(address _cTokenAddress) internal view returns (ConnectorInterface) {
+        return ConnectorInterface(priceFeedProvider.getDonationCurrency(_cTokenAddress).connector);
     }
 
     /**
@@ -473,7 +482,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @return The cToken underlying balance for this contract.
      */
     function balance(address _cTokenAddress) public view returns (uint256) {
-        return ICErc20(_cTokenAddress).balanceOfUnderlying(address(this));
+        return connector(_cTokenAddress).balanceOfUnderlying(_cTokenAddress, address(this));
     }
 
     function interestEarned(address _cTokenAddress) public view returns (uint256) {
@@ -500,7 +509,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @return The cToken supply rate per block
      */
     function supplyRatePerBlock(address _cTokenAddress) public view returns (uint256) {
-        return ICErc20(_cTokenAddress).supplyRatePerBlock();
+        return connector(_cTokenAddress).supplyRatePerBlock(_cTokenAddress);
     }
 
     function getUnderlyingTokenPrice(address _cTokenAdddress) public view returns (uint256, uint256) {

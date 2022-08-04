@@ -1,73 +1,63 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.10;
 
-import "./ConnectorInterface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@aave/core-v3/contracts/interfaces/IPool.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../utils/ICErc20.sol";
 import {AToken} from "@aave/core-v3/contracts/protocol/tokenization/AToken.sol";
 
-contract AAVEConnector is ICErc20, OwnableUpgradeable {
-    using SafeERC20 for IERC20;
+import "./ConnectorInterface.sol";
 
-    address public LENDING_TOKEN_ADDRESS;
+contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
+    using SafeERC20 for IERC20;
 
     function initialize(address _lendingTokenAddress) public initializer {
         __Ownable_init();
-        LENDING_TOKEN_ADDRESS = _lendingTokenAddress;
     }
 
-    function mint(uint256 mintAmount) external override returns (uint256) {
-        IERC20(UNDERLYING()).safeTransferFrom(msg.sender, address(this), mintAmount);
-        IPool pool = AToken(LENDING_TOKEN_ADDRESS).POOL();
-        IERC20(UNDERLYING()).safeIncreaseAllowance(address(pool), mintAmount);
-        pool.supply(UNDERLYING(), mintAmount, msg.sender, 0);
+    function mint(address aToken, uint256 mintAmount) external override returns (uint256) {
+        IERC20(UNDERLYING(aToken)).safeTransferFrom(msg.sender, address(this), mintAmount);
+        IPool pool = AToken(aToken).POOL();
+        IERC20(UNDERLYING(aToken)).safeIncreaseAllowance(address(pool), mintAmount);
+        pool.supply(UNDERLYING(aToken), mintAmount, msg.sender, 0);
         return 0;
     }
 
-    function redeemUnderlying(uint256 redeemAmount) external override returns (uint256) {
-        IERC20(LENDING_TOKEN_ADDRESS).safeTransferFrom(msg.sender, address(this), redeemAmount);
-        IPool pool = AToken(LENDING_TOKEN_ADDRESS).POOL();
-        IERC20(LENDING_TOKEN_ADDRESS).safeIncreaseAllowance(address(pool), redeemAmount);
-        pool.withdraw(UNDERLYING(), redeemAmount, msg.sender);
+    function redeemUnderlying(address aToken, uint256 redeemAmount) external override returns (uint256) {
+        IERC20(aToken).safeTransferFrom(msg.sender, address(this), redeemAmount);
+        IPool pool = AToken(aToken).POOL();
+        IERC20(aToken).safeIncreaseAllowance(address(pool), redeemAmount);
+        pool.withdraw(UNDERLYING(aToken), redeemAmount, msg.sender);
         return 0;
     }
 
-    function approve(uint256 redeemAmount) external override {
-        IERC20(LENDING_TOKEN_ADDRESS).safeTransferFrom(msg.sender, address(this), redeemAmount);
-        IPool pool = AToken(LENDING_TOKEN_ADDRESS).POOL();
-        IERC20(LENDING_TOKEN_ADDRESS).safeIncreaseAllowance(address(pool), redeemAmount);
-        pool.withdraw(UNDERLYING(), redeemAmount, msg.sender);
+    function balanceOfUnderlying(address aToken, address owner) external view override returns (uint256) {
+        return AToken(aToken).scaledBalanceOf(owner);
     }
 
-    function balanceOfUnderlying(address owner) external view override returns (uint256) {
-        return AToken(LENDING_TOKEN_ADDRESS).scaledBalanceOf(owner);
-    }
-
-    function supplyRatePerBlock() external view override returns (uint256) {
-        IPool pool = AToken(LENDING_TOKEN_ADDRESS).POOL();
-        DataTypes.ReserveData memory data = pool.getReserveData(UNDERLYING());
+    function supplyRatePerBlock(address aToken) external view override returns (uint256) {
+        IPool pool = AToken(aToken).POOL();
+        DataTypes.ReserveData memory data = pool.getReserveData(UNDERLYING(aToken));
         return uint256(data.currentLiquidityRate);
     }
 
-    function totalSupply() external view override returns (uint256) {
-        return AToken(LENDING_TOKEN_ADDRESS).totalSupply();
+    function totalSupply(address aToken) external view override returns (uint256) {
+        return AToken(aToken).totalSupply();
     }
 
-    function balanceOf(address user) external view override returns (uint256) {
-        return AToken(LENDING_TOKEN_ADDRESS).balanceOf(user);
+    function balanceOf(address aToken, address user) external view override returns (uint256) {
+        return AToken(aToken).balanceOf(user);
     }
 
-    function underlying() external view override returns (address) {
-        return UNDERLYING();
+    function underlying(address aToken) external view override returns (address) {
+        return UNDERLYING(aToken);
     }
 
-    function UNDERLYING() internal view returns (address) {
-        return AToken(LENDING_TOKEN_ADDRESS).UNDERLYING_ASSET_ADDRESS();
+    function UNDERLYING(address aToken) internal view returns (address) {
+        return AToken(aToken).UNDERLYING_ASSET_ADDRESS();
     }
 
-    function getCash() external view override returns (uint256) {}
-
-    function burn(uint256 amount) external override {}
+    function lender() external view returns (string memory) {
+        return "aave";
+    }
 }
