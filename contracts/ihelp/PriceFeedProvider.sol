@@ -11,7 +11,6 @@ import "./PriceFeedProviderInterface.sol";
 contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-
     mapping(address => DonationCurrency) private _donationCurrencies;
     EnumerableSet.AddressSet private _donationCurrencyMapping;
 

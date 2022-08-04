@@ -651,6 +651,15 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         _transfer(operator, msg.sender, amount);
     }
 
+    /**
+        Performs a bulk withdrawals on the given charities
+     */
+    function withdrawBulk(address[] calldata _charities) external {
+        for (uint i = 0; i <  _charities.length; i++) {
+            CharityPoolInterface(_charities[i]).withdrawAll(msg.sender);
+        }
+    }
+
     // getters used for iHelp interface definition
     function getUnderlyingToken() public view returns (IERC20) {
         return underlyingToken;

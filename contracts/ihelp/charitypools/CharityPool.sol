@@ -147,6 +147,15 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         return ihelpToken.stakingPool();
     }
 
+    function withdrawAll(address _account) external {
+        require(msg.sender == _account || msg.sender == address(ihelpToken), "funding/not-allowed");
+        uint256 numberOfCurrencies = priceFeedProvider.numberOfDonationCurrencies();
+        for (uint256 i = 0; i < numberOfCurrencies; i++) {
+            PriceFeedProviderInterface.DonationCurrency memory currency = priceFeedProvider.getDonationCurrencyAt(i);
+            _withdrawTokens(currency.lendingAddress, 0, _account);
+        }
+    }
+
     /**
      * Allows depositing native tokens to the charity contract
      */
@@ -187,17 +196,30 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     /**
-     * @notice Withdraw the sender's entire balance back to them.
+     * @notice Withdraw the sender's tokens.
      */
     function withdrawTokens(address _cTokenAddress, uint256 _amount) public {
+        _withdrawTokens(_cTokenAddress, _amount, msg.sender);
+    }
+
+    function _withdrawTokens(
+        address _cTokenAddress,
+        uint256 _amount,
+        address _account
+    ) internal {
         if (_amount == 0) {
-            _amount = balances[msg.sender][_cTokenAddress];
+            _amount = balances[_account][_cTokenAddress];
         }
-        _withdraw(msg.sender, _cTokenAddress, _amount);
+
+        if(_amount == 0) {
+            return;
+        }
+
+        _withdraw(_account, _cTokenAddress, _amount);
         // Withdraw from Compound and transfer
         require(ICErc20(_cTokenAddress).redeemUnderlying(_amount) == 0, "Funding/redeem");
-        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
-        emit Withdrawn(msg.sender, _cTokenAddress, _amount);
+        require(getUnderlying(_cTokenAddress).transfer(_account, _amount), "Funding/transfer");
+        emit Withdrawn(_account, _cTokenAddress, _amount);
     }
 
     /**
@@ -243,9 +265,9 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         } else {
             accountedBalances[_cTokenAddress] = 0;
         }
-        
-        uint256 cumulativeBalance = cummulativeBalanceOf(_sender) ;
-        if(cumulativeBalance == 0 && _donationsRegistry[_sender].totalContribUSD == 0){
+
+        uint256 cumulativeBalance = cummulativeBalanceOf(_sender);
+        if (cumulativeBalance == 0 && _donationsRegistry[_sender].totalContribUSD == 0) {
             contributors.remove(_sender);
         }
     }
@@ -333,7 +355,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             totalDonationsUSD += _amount;
 
             contributors.add(_account);
-            
+
             emit DirectDonation(_account, charityWallet, _amount);
         }
     }
