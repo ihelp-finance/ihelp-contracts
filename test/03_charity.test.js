@@ -13,9 +13,9 @@ describe("Charity Pool", function () {
     let addr1;
     let addr2;
     let addrs;
-    let stakingPool, cTokenUnderlyingMock, developmentPool, holdingPool, cTokenMock, iHelpMock, holdingMock;
+    let stakingPool, cTokenUnderlyingMock, developmentPool, cTokenMock, iHelpMock, holdingMock;
     let wTokenMock;
-    let CTokenMock;
+    let CTokenMock, Mock;
     let swapperMock;
     let priceFeedProviderMock, aggregator;
     beforeEach(async function () {
@@ -23,7 +23,7 @@ describe("Charity Pool", function () {
 
         [owner, addr1, addr2, stakingPool, developmentPool, holdingPool, operator, swapperPool, charityWallet, ...addrs] = await ethers.getSigners();
 
-        const Mock = await smock.mock("ERC20MintableMock");
+        Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
         CTokenMock = await smock.mock("CTokenMock");
 
@@ -240,6 +240,48 @@ describe("Charity Pool", function () {
             it("Should change the user balance on deposit", async function () {
                 await expect(await charityPool.withdrawNative(cTokenMock.address, amount)).to
                     .changeEtherBalances([owner, wTokenMock], [100, -100])
+            })
+        });
+
+        describe("Bulk withdrawals", function () {
+            let amount = 100;
+            let cTokenMock2, uTokenMock2;
+            beforeEach(async () => {
+                uTokenMock2 = await Mock.deploy("uMock", "uMOK", 18);
+                cTokenMock2 = await CTokenMock.deploy(uTokenMock2.address, 1000);
+
+                await priceFeedProviderMock.addDonationCurrencies([{
+                    provider: "TestProvider2",
+                    lendingAddress: cTokenMock2.address,
+                    currency: "CTokenMock",
+                    underlyingToken: uTokenMock2.address,
+                    priceFeed: aggregator.address
+                }]);
+
+                await uTokenMock2.mint(owner.address, 10000);
+                await uTokenMock2.increaseAllowance(charityPool.address, 1000);
+
+                await charityPool.depositTokens(cTokenMock2.address, amount);
+            })
+
+            it("Should not allow withdrawal if sender is not the target account", async function () {
+                expect(charityPool.withdrawAll(addr1.address)).to.be.revertedWith("funding/not-allowed");
+            })
+
+            it("Should perform bulk withdrawals", async function () {
+                await expect(charityPool.withdrawAll(owner.address)).to
+                    .emit(uTokenMock2, "Transfer")
+                    .withArgs(charityPool.address, owner.address, amount)
+                    .emit(wTokenMock, "Transfer")
+                    .withArgs(charityPool.address, owner.address, amount)
+            })
+
+            it("Should perform bulk withdrawals fromIHelp", async function () {
+                await expect(charityPool.connect(iHelpMock.wallet).withdrawAll(owner.address)).to
+                    .emit(uTokenMock2, "Transfer")
+                    .withArgs(charityPool.address, owner.address, amount)
+                    .emit(wTokenMock, "Transfer")
+                    .withArgs(charityPool.address, owner.address, amount)
             })
         });
     });
