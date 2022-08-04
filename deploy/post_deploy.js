@@ -287,7 +287,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
       const currencyNames = [];
       for (const coin of currencies) {
 
-        if (currencyNames.indexOf(coin['currency']) == -1 && coin['currency'] != holdingTokenName) {
+        if (currencyNames.indexOf(coin['currency']) == -1) {
           
           currencyNames.push(coin['currency'])
 
@@ -298,7 +298,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
 
           await activateETHLiquidityPool(token, '50000000', 'uniswap');
 
-          if (coin != holdingTokenName) {
+          if (coin['currency'] != holdingTokenName) {
             await activateLiquidityPool(token, holdingToken, '50000000', '50000000', 'uniswap');
           }
 
