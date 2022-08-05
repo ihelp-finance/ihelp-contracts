@@ -33,9 +33,9 @@ describe('Charity Factory Deployment', function () {
         const AToken = await smock.mock("ATokenMock");
         const APool = await smock.mock("APoolMock");
 
-
         const ProtocolConnector = await smock.mock("AAVEConnector");
-        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
+        AAVEConnector = await ProtocolConnector.deploy();
+        await AAVEConnector.initialize();
 
         aTokenPoolMock = await APool.deploy();
 
@@ -63,7 +63,10 @@ describe('Charity Factory Deployment', function () {
         aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
 
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
+        
+        const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
+
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
         wTokenMock = await WMock.deploy();
 

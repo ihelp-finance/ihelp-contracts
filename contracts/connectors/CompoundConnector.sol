@@ -12,24 +12,23 @@ import "../utils/ICErc20.sol";
 contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
-    function initialize(address _lendingTokenAddress) public initializer {
+    function initialize() public initializer {
         __Ownable_init();
     }
 
     function mint(address cToken, uint256 mintAmount) external override returns (uint256) {
-        IERC20(UNDERLYING(cToken)).safeTransferFrom(msg.sender, address(this), mintAmount);
-        IERC20(UNDERLYING(cToken)).safeIncreaseAllowance(address(cToken), mintAmount);
+        IERC20(_underlying(cToken)).safeTransferFrom(msg.sender, address(this), mintAmount);
+        IERC20(_underlying(cToken)).safeIncreaseAllowance(address(cToken), mintAmount);
         uint256 result = ICErc20(cToken).mint(mintAmount);
         IERC20(cToken).safeTransfer(msg.sender, mintAmount);
         return result;
     }
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        IERC20(UNDERLYING(cToken)).safeTransferFrom(msg.sender, address(this), redeemAmount);
-        IERC20(UNDERLYING(cToken)).safeIncreaseAllowance(address(cToken), redeemAmount);
+        IERC20(cToken).safeTransferFrom(msg.sender, address(this), redeemAmount);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
-        IERC20(UNDERLYING(cToken)).safeTransfer(msg.sender, redeemAmount);
+        IERC20(_underlying(cToken)).safeTransfer(msg.sender, redeemAmount);
         return result;
     }
 
@@ -50,10 +49,10 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function underlying(address cToken) external view override returns (address) {
-        return UNDERLYING(cToken);
+        return _underlying(cToken);
     }
 
-    function UNDERLYING(address cToken) internal view returns (address) {
+    function _underlying(address cToken) internal view returns (address) {
         return ICErc20(cToken).underlying();
     }
 
