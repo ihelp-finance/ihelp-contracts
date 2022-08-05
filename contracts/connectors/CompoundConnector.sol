@@ -9,7 +9,7 @@ import {AToken} from "@aave/core-v3/contracts/protocol/tokenization/AToken.sol";
 import "./ConnectorInterface.sol";
 import "../utils/ICErc20.sol";
 
-contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
+contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     function initialize(address _lendingTokenAddress) public initializer {

@@ -168,10 +168,18 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
         require(_amount > 0, "Funding/small-amount");
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
+        
 
-        require(connector(_cTokenAddress).redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+        ConnectorInterface connectorIntance = connector(_cTokenAddress);
+        // Allow connector to pull cTokens from this contracts
+        require(IERC20(_cTokenAddress).approve(address(connectorIntance), _amount), "Funding/approve");
+       
+        // Redeem the underlying tokens
+        require(connectorIntance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+
         _withdraw(msg.sender, _cTokenAddress, _amount);
         wrappedNative.withdraw(_amount);
+       
         payable(msg.sender).transfer(_amount);
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
@@ -198,9 +206,14 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
         ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
-        // Withdraw from Compound and transfer
+        // Allow connector to pull cTokens from this contracts
+
+        console.log("Approving", _cTokenAddress, _amount);
         require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+       
+        // Reddem the underlying tokens for cTokens
         require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+      
         require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
@@ -224,8 +237,10 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         accountedBalances[_cTokenAddress] += _amount;
 
         // Deposit into Compound
-        require(getUnderlying(_cTokenAddress).approve(address(_cTokenAddress), _amount), "Funding/approve");
-        require(connector(_cTokenAddress).mint(_cTokenAddress, _amount) == 0, "Funding/supply");
+        ConnectorInterface connectorInstance = connector(_cTokenAddress);
+
+        require(getUnderlying(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+        require(connectorInstance.mint(_cTokenAddress, _amount) == 0, "Funding/supply");
 
         contributors.add(_spender);
         ihelpToken.notifyBalanceUpdate(_spender, _amount, true);
@@ -369,12 +384,14 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
-        ConnectorInterface cToken = connector(_cTokenAddress);
+        ConnectorInterface connectorInstance = connector(_cTokenAddress);
         console.log("redeemAmount", amount);
 
         if (amount > 0) {
-            // redeem the yield
-            cToken.redeemUnderlying(_cTokenAddress,amount);
+         
+            // Allow connector to pull cTokens from this contracts
+            require(IERC20(_cTokenAddress).approve(address(connectorInstance), amount), "Funding/approve");
+            connectorInstance.redeemUnderlying(_cTokenAddress, amount);
 
             // Get The underlying token for this cToken
             IERC20 underlyingToken = getUnderlying(_cTokenAddress);

@@ -8,32 +8,31 @@ import "hardhat/console.sol";
 
 // Ave pool mock
 contract ATokenMock is AToken {
+    using WadRayMath for uint256;
+
     constructor(IPool pool) AToken(pool) {}
 
-    function mint(
-        address caller,
-        address onBehalfOf,
-        uint256 amount,
-        uint256 index
-    ) external virtual override onlyPool returns (bool) {
-        // mint
-        _userState[onBehalfOf].balance += uint128(amount);
-        return true;
-    }
+    // function mint(
+    //     address caller,
+    //     address onBehalfOf,
+    //     uint256 amount,
+    //     uint256 index
+    // ) external virtual override onlyPool returns (bool) {
+    //     // mint
+    //     _userState[onBehalfOf].balance += uint128(amount.rayDiv(1));
+    //     return true;
+    // }
 
-    function burn(
-        address from,
-        address receiverOfUnderlying,
-        uint256 amount,
-        uint256 index
-    ) external virtual override onlyPool {
-        // burn
-        _userState[receiverOfUnderlying].balance -= uint128(amount);
-        IERC20(_underlyingAsset).transfer(receiverOfUnderlying, amount);
-    }
+    // function burn(
+    //     address from,
+    //     address receiverOfUnderlying,
+    //     uint256 amount,
+    //     uint256 index
+    // ) external virtual override onlyPool {
+    //     // burn
+    //     _userState[receiverOfUnderlying].balance -=  uint128(amount.rayDiv(1));
+    //     IERC20(_underlyingAsset).transfer(receiverOfUnderlying, amount);
+    // }
 
-    function balanceOf(address user) public view virtual override returns (uint256) {
-        return _userState[user].balance;
-    }
 
 }

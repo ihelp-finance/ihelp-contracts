@@ -4,6 +4,7 @@ const { smock } = require("@defi-wonderland/smock");
 
 const { abi } = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
 const { abi: PoolAbi } = require("../artifacts/@aave/core-v3/contracts/interfaces/IPool.sol/IPool.json");
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
 use(smock.matchers);
 
@@ -19,7 +20,7 @@ describe('Charity Factory Deployment', function () {
     let addr2;
     let addrs;
     let stakingPool, wTokenMock, developmentPool, holdingPool, iHelpMock, holdingMock, aggregator;
-    let AAVEConector;
+    let AAVEConnector;
     let aTokenPoolMock
     let aTokenMock;
     let uMock;
@@ -36,7 +37,6 @@ describe('Charity Factory Deployment', function () {
         const ProtocolConnector = await smock.mock("AAVEConnector");
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
 
-
         aTokenPoolMock = await APool.deploy();
 
         uMock = await Mock.deploy("uMock", "uMOK", 18);
@@ -47,7 +47,7 @@ describe('Charity Factory Deployment', function () {
             aTokenPoolMock.address,
             addrs[6].address,
             uMock.address,
-            addrs[7].address,
+            ZERO_ADDRESS,
             18,
             "aTokenMock",
             "ATKNM",
@@ -56,8 +56,8 @@ describe('Charity Factory Deployment', function () {
 
         await aTokenPoolMock.setAToken(aTokenMock.address);
 
-        AAVEConector = await ProtocolConnector.deploy();
-        await AAVEConector.initialize(aTokenMock.address);
+        AAVEConnector = await ProtocolConnector.deploy();
+        await AAVEConnector.initialize();
 
         aggregator = await smock.fake(abi);
         aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
@@ -82,17 +82,18 @@ describe('Charity Factory Deployment', function () {
 
         await priceFeedProviderMock.initialize([{
             provider: "TestProvider",
-            lendingAddress: AAVEConector.address,
+            lendingAddress: aTokenMock.address,
             currency: "ATokenMock",
             underlyingToken: uMock.address,
-            priceFeed: aggregator.address
+            priceFeed: aggregator.address,
+            connector: AAVEConnector.address
         }]);
 
         iHelpMock.stakingPool.returns(stakingPool.address);
         iHelpMock.developmentPool.returns(developmentPool.address);
         iHelpMock.getPools.returns([developmentPool.address, stakingPool.address]);
         swapperMock.nativeToken.returns(wTokenMock.address);
-        swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
+        swapperMock.getAmountsOutByPath.returns(arg => arg[1]);
     });
 
     describe('Connector should be a drop in replacement for any cToken', () => {
@@ -102,19 +103,20 @@ describe('Charity Factory Deployment', function () {
             await uMock.increaseAllowance(charityPool.address, 15);
         });
 
-        it("shoud deposit tokens", async function () {
-            await charityPool.depositTokens(AAVEConector.address, 15);
-            expect(await AAVEConector.balanceOfUnderlying(charityPool.address)).to.equal(15);
-            expect(await AAVEConector.balanceOf(charityPool.address)).to.equal(15);
+        it("should deposit tokens", async function () {
+            await charityPool.depositTokens(aTokenMock.address, 15);
+            expect(await AAVEConnector.balanceOfUnderlying(aTokenMock.address, charityPool.address)).to.equal(15);
+            expect(await AAVEConnector.balanceOf(aTokenMock.address, charityPool.address)).to.equal(15);
             expect(await uMock.balanceOf(owner.address)).to.equal(0);
 
         });
 
-        it("shoud withdarw tokens", async function () {
-            await charityPool.depositTokens(AAVEConector.address, 15);
-            await charityPool.withdrawTokens(AAVEConector.address, 10);
-            expect(await AAVEConector.balanceOfUnderlying(charityPool.address)).to.equal(5);
-            expect(await AAVEConector.balanceOf(charityPool.address)).to.equal(5);
+        it("should withdarw tokens", async function () {
+            await charityPool.depositTokens(aTokenMock.address, 15);
+            console.log(await aTokenMock.balanceOf(charityPool.address), "Balance");
+            await charityPool.withdrawTokens(aTokenMock.address, 10);
+            expect(await AAVEConnector.balanceOfUnderlying(aTokenMock.address, charityPool.address)).to.equal(5);
+            expect(await AAVEConnector.balanceOf(aTokenMock.address, charityPool.address)).to.equal(5);
             expect(await uMock.balanceOf(owner.address)).to.equal(10);
         });
     })
