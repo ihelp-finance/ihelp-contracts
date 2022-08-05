@@ -24,4 +24,6 @@ interface ICErc20 {
     
     // Links to public address variable from CERC200Storage
     function underlying() external view returns (address);
+
+    function cTokenValueOf(uint256 amount) external view returns (uint256);
 }

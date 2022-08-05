@@ -390,7 +390,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         if (amount > 0) {
          
             // Allow connector to pull cTokens from this contracts
-            require(IERC20(_cTokenAddress).approve(address(connectorInstance), amount), "Funding/approve");
+            uint256 cTokenValueOfInterest = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, amount);
+            require(IERC20(_cTokenAddress).approve(address(connectorInstance), cTokenValueOfInterest), "Funding/approve");
             connectorInstance.redeemUnderlying(_cTokenAddress, amount);
 
             // Get The underlying token for this cToken

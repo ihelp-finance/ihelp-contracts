@@ -283,6 +283,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
           }
         }
       }
+      await activateETHLiquidityPool(holdingToken, '50000000', 'uniswap');
 
       const currencyNames = [];
       for (const coin of currencies) {

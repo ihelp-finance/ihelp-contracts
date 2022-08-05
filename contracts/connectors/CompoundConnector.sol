@@ -20,16 +20,22 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         IERC20(_underlying(cToken)).safeTransferFrom(msg.sender, address(this), mintAmount);
         IERC20(_underlying(cToken)).safeIncreaseAllowance(address(cToken), mintAmount);
         uint256 result = ICErc20(cToken).mint(mintAmount);
-        IERC20(cToken).safeTransfer(msg.sender, mintAmount);
+        IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
         return result;
     }
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        IERC20(cToken).safeTransferFrom(msg.sender, address(this), redeemAmount);
+        uint256 cTokens = ICErc20(cToken).cTokenValueOf(redeemAmount);
+        IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
-        IERC20(_underlying(cToken)).safeTransfer(msg.sender, redeemAmount);
+        IERC20(_underlying(cToken)).safeTransfer(msg.sender,  IERC20(_underlying(cToken)).balanceOf(address(this)));
+        IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
         return result;
+    }
+
+    function cTokenValueOfUnderlying(address cToken, uint256 amount) external  view returns (uint256) {
+        return ICErc20(cToken).cTokenValueOf(amount);
     }
 
     function balanceOfUnderlying(address cToken, address owner) external view override returns (uint256) {

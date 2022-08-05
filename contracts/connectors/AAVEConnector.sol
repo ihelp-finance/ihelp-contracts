@@ -30,9 +30,6 @@ contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function redeemUnderlying(address aToken, uint256 redeemAmount) external override returns (uint256) {
-        console.log("Redeeming ", aToken, redeemAmount);
-        console.log(IERC20(aToken).balanceOf(msg.sender));
-
         IERC20(aToken).transferFrom(msg.sender, address(this), redeemAmount);
         return _redeemUnderlying(aToken, redeemAmount);
     }
@@ -42,6 +39,10 @@ contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
         IERC20(aToken).safeIncreaseAllowance(address(pool), redeemAmount);
         pool.withdraw(_underlying(aToken), redeemAmount, msg.sender);
         return 0;
+    }
+
+    function cTokenValueOfUnderlying(address token, uint256 amount) external  view returns (uint256) {
+        return amount;
     }
 
     function balanceOfUnderlying(address aToken, address owner) external view override returns (uint256) {
