@@ -10,7 +10,7 @@ interface IAnalytics {
     /**
      * Calaculates the generated interest for a given charity
      */
-    function generatedInterest(CharityPoolInterface _charityPool) external view returns (uint256);
+    function generatedInterest(address _charityPool) external view returns (uint256);
 
     /**
      * Calaculates the total generated interest for all charities

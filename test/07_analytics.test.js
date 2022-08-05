@@ -1,6 +1,7 @@
 const { expect, use } = require("chai");
 
 const { smock } = require("@defi-wonderland/smock");
+const AggregatorInfoAbi = require('@chainlink/contracts/abi/v0.4/AggregatorV3Interface.json')
 
 use(smock.matchers);
 
@@ -14,10 +15,10 @@ describe("Analytics", function () {
     let CTokenMock;
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
     let priceFeedProviderMock, xhelpMock;
+    let CompoundConnector, CharityPool, chainLinkAggretator;
 
-    beforeEach(async function () {
+    beforeEach(async () => {
         const IHelp = await smock.mock("iHelpToken");
-        const CharityPool = await smock.mock("CharityPool");
 
         const Mock = await smock.mock("ERC20MintableMock");
 
@@ -26,8 +27,6 @@ describe("Analytics", function () {
 
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
-
-        priceFeedProviderMock.hasDonationCurrency.returns(true);
 
         const WMock = await ethers.getContractFactory("WTokenMock");
         const Analytics = await ethers.getContractFactory("Analytics");
@@ -42,21 +41,28 @@ describe("Analytics", function () {
         cTokenMock1 = await CTokenMock.deploy(uMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(uMock2.address, 1000);
 
+        const ProtocolConnector = await smock.mock("CompoundConnector");
+        CompoundConnector = await ProtocolConnector.deploy();
+        await CompoundConnector.initialize();
+        chainLinkAggretator = await smock.fake(AggregatorInfoAbi);
         donationCurrencies = [{
             provider: "Provider1",
-            currency: "currency1",
+            currency: "eth",
             underlyingToken: uMock1.address,
             lendingAddress: cTokenMock1.address,
-            priceFeed: addrs[5].address
+            priceFeed: chainLinkAggretator.address,
+            connector: CompoundConnector.address
         }, {
             provider: "Provider2",
-            currency: "currency2",
+            currency: "eth",
             underlyingToken: uMock2.address,
             lendingAddress: cTokenMock2.address,
-            priceFeed: addrs[5].address
+            priceFeed: chainLinkAggretator.address,
+            connector: CompoundConnector.address
         }];
 
         await priceFeedProviderMock.initialize(donationCurrencies)
+        priceFeedProviderMock.hasDonationCurrency.returns(true);
 
         iHelp = await IHelp.deploy();
 
@@ -72,8 +78,12 @@ describe("Analytics", function () {
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
         wTokenMock = await WMock.deploy();
 
+        CharityPool = await smock.mock("CharityPool");
+
         charityPool1 = await CharityPool.deploy();
         charityPool2 = await CharityPool.deploy();
+
+        charityPool1.calculateTotalInterestEarned.returns(20);
 
         await charityPool1.setVariable("operator", owner.address);
         await charityPool2.setVariable("operator", owner.address);
@@ -81,21 +91,24 @@ describe("Analytics", function () {
         charityPool1.getUnderlyingTokenPrice.returns([1e9, 9]);
         charityPool2.getUnderlyingTokenPrice.returns([1e9, 9]);
 
-        charityPool1.calculateTotalInterestEarned.returns(20);
-        charityPool2.calculateTotalInterestEarned.returns(30);
-
+        await charityPool1.calculateTotalInterestEarned.returns(20);
+        await charityPool2.calculateTotalInterestEarned.returns(30);
     });
 
     describe("Analytics testing", async () => {
         describe("Isolated calls", () => {
             it("should return the generated interest", async () => {
-                expect(await analytics.generatedInterest(charityPool1.address)).to.equal(20);
-                expect(await analytics.generatedInterest(charityPool2.address)).to.equal(30);
+                await analytics.generatedInterest(charityPool1.address);
+                expect(charityPool1.calculateTotalInterestEarned).to.have.been.called;
+                await analytics.generatedInterest(charityPool2.address);
+                expect(charityPool2.calculateTotalInterestEarned).to.have.been.called;
+
             });
 
             it("should return the total generated interest", async () => {
                 await iHelp.registerCharityPool(charityPool1.address);
                 await iHelp.registerCharityPool(charityPool2.address);
+
 
                 expect(await analytics.totalGeneratedInterest(iHelp.address, 0, 0)).to.equal(50);
             });
@@ -286,12 +299,12 @@ describe("Analytics", function () {
                 expect(currencies[0].provider).to.equal("Provider1");
                 expect(currencies[0].underlyingToken).to.equal(uMock1.address);
                 expect(currencies[0].lendingAddress).to.equal(cTokenMock1.address);
-                expect(currencies[0].priceFeed).to.equal(addrs[5].address);
+                expect(currencies[0].priceFeed).to.equal(chainLinkAggretator.address);
 
                 expect(currencies[1].provider).to.equal("Provider2");
                 expect(currencies[1].underlyingToken).to.equal(uMock2.address);
                 expect(currencies[1].lendingAddress).to.equal(cTokenMock2.address);
-                expect(currencies[1].priceFeed).to.equal(addrs[5].address);
+                expect(currencies[1].priceFeed).to.equal(chainLinkAggretator.address);
             });
         })
 
@@ -689,13 +702,13 @@ describe("Analytics", function () {
                 console.log(result);
                 expect(result[0].contributorAddress).to.equal(addr1.address);
                 expect(result[0].totalContributions).to.equal("0");
-                expect(result[0].totalDonations).to.equal("20" );
+                expect(result[0].totalDonations).to.equal("20");
                 expect(result[0].totalDonationsCount).to.equal("5");
                 expect(result[0].totalInterestGenerated).to.equal("10");
-                
-                expect(result[1 ].contributorAddress).to.equal(addr2.address);
+
+                expect(result[1].contributorAddress).to.equal(addr2.address);
                 expect(result[1].totalContributions).to.equal("0");
-                expect(result[1].totalDonations).to.equal("25" );
+                expect(result[1].totalDonations).to.equal("25");
                 expect(result[1].totalDonationsCount).to.equal("2");
                 expect(result[1].totalInterestGenerated).to.equal("10");
 

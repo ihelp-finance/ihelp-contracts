@@ -31,7 +31,6 @@ describe("Charity Pool", function () {
         CTokenMock = await smock.mock("CTokenMock");
 
         const ProtocolConnector = await smock.mock("CompoundConnector");
-
         CompoundConnector = await ProtocolConnector.deploy();
         await CompoundConnector.initialize();
 

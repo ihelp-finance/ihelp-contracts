@@ -484,9 +484,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @return The user's current balance.
      */
     function cummulativeBalanceOf(address _account) internal view returns (uint256) {
-        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         uint256 result;
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += balances[_account][cTokenAddress];
@@ -596,7 +595,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      *  Expensive function should be called by offchain process
      */
     function accountedBalanceUSD() public view returns (uint256) {
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -609,7 +608,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      *  Expensive function should be called by offchain process
      */
     function newTotalInterestEarnedUSD() public view returns (uint256) {
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -622,7 +621,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      *  Expensive function should be called by offchain process
      */
     function totalInterestEarnedUSD() public view returns (uint256) {
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
@@ -636,7 +635,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function calculateTotalInterestEarned() public view returns (uint256) {
         uint256 result;
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += totalInterestEarned[cTokenAddress];
@@ -657,13 +656,13 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     function getAllDonationCurrencies() public view returns (PriceFeedProviderInterface.DonationCurrency[] memory) {
+        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         return priceFeedProvider.getAllDonationCurrencies();
     }
 
     function balanceOfUSD(address _addr) public view returns (uint256) {
-        require(address(priceFeedProvider) != address(0), "not-found/price-feed-provider");
         uint256 result;
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
