@@ -552,10 +552,15 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
+        if( _value == 0 ) {
+            return 0;
+        }
+        
         (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
         uint256 valueUSD = _value * tokenPrice;
         valueUSD = valueUSD / safepow(10, priceDecimals);
         uint256 _decimals = decimals(_cTokenAddress);
+
         if (_decimals < holdingDecimals) {
             valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
         } else if (_decimals > holdingDecimals) {
@@ -636,6 +641,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function calculateTotalInterestEarned() public view returns (uint256) {
         uint256 result;
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
+
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += totalInterestEarned[cTokenAddress];
