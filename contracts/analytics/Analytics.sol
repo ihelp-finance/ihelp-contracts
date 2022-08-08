@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.9;
+pragma solidity ^0.8.9;
 
 import "../ihelp/charitypools/CharityPoolInterface.sol";
 import "../ihelp/iHelpTokenInterface.sol";
@@ -16,8 +16,8 @@ contract Analytics is IAnalytics {
     /**
      * Calaculates the generated interest for a given charity
      */
-    function generatedInterest(CharityPoolInterface _charityPool) external view override returns (uint256) {
-        return _charityPool.calculateTotalInterestEarned();
+    function generatedInterest(address _charityPool) external view override returns (uint256) {
+        return CharityPoolInterface(_charityPool).calculateTotalInterestEarned();
     }
 
     /**

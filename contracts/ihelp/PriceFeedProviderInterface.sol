@@ -14,6 +14,7 @@ interface PriceFeedProviderInterface {
         address underlyingToken;
         address lendingAddress;
         address priceFeed;
+        address connector;
     }
     
     function allowedDirectDonationCurrencies(address _currencyAddr) external view returns (bool);

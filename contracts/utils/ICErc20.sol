@@ -19,7 +19,11 @@ interface ICErc20 {
     function balanceOf(address user) external view returns (uint256);
 
     function burn(uint256 amount) external;
-
+    
+    function approve(uint256 amount) external;
+    
     // Links to public address variable from CERC200Storage
     function underlying() external view returns (address);
+
+    function cTokenValueOf(uint256 amount) external view returns (uint256);
 }

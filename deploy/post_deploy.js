@@ -288,7 +288,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
       for (const coin of currencies) {
 
         if (currencyNames.indexOf(coin['currency']) == -1) {
-          
+
           currencyNames.push(coin['currency'])
 
           const token = {

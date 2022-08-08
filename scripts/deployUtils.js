@@ -12,6 +12,25 @@ const { deployments, ethers, getNamedAccounts } = require("hardhat");
 const ether = require('@openzeppelin/test-helpers/src/ether');
 
 
+module.exports.saveConnector = async (name, address, network) => {
+    const FILE_DIR = 'networks'
+    if (!fs.existsSync(FILE_DIR)) {
+        fs.mkdirSync(FILE_DIR);
+    }
+
+    const FILE_PATH = path.join(FILE_DIR, `${network}-connectors.json`);
+
+    let connectors = {}
+    if (fs.existsSync(FILE_PATH)) {
+        const fileData = readFileSync(FILE_PATH, { encoding: 'utf-8' });
+        connectors = JSON.parse(fileData);
+    }
+
+    connectors[name] = address;
+
+    writeFileSync(FILE_PATH, JSON.stringify(connectors), "UTF-8", { 'flags': 'w' });
+
+}
 
 module.exports.deployCharityPoolsToNetwork = async (configurations, network, factoryContractName = "CharityBeaconFactory") => {
     const FILE_DIR = 'build'
@@ -32,7 +51,7 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     const existing = [];
     for (const [index, configuration] of configurations.entries()) {
         const { charityName } = configuration;
-
+        
         // can use this to regenerate the charities.json file if accidentally deleted
         // const deplo = await deployments.get(charityName);
         // deployedCharities.push({
@@ -87,14 +106,24 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
 module.exports.getLendingConfigurations = async (chainId) => {
     let lendingConfiguration = fs.readFileSync(`./networks/${this.chainName(chainId)}-lending.json`, 'utf8');
     lendingConfiguration = JSON.parse(lendingConfiguration);
-    
+
+    let connectors = fs.readFileSync(`./networks/${this.chainName(chainId)}-connectors.json`, 'utf8');
+    connectors = JSON.parse(connectors);
+
     const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-    if (isTestEnvironment) {
-        for (const lender of Object.keys(lendingConfiguration)) {
-            for (const coin of Object.keys(lendingConfiguration[lender])) {
-                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c','').replace('a',''))).address;
+    for (const lender of Object.keys(lendingConfiguration)) {
+        if (!connectors[lender]) {
+            this.red(`Warning: No ${chalk.yellow(`${lender} connctor found`)}, all currencies for this lender will be skipped...`)
+            continue;
+        }
+        for (const coin of Object.keys(lendingConfiguration[lender])) {
+            lendingConfiguration[lender][coin].connector = connectors[lender];
+            if (isTestEnvironment) {
+                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c', '').replace('a', ''))).address;
                 lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull(coin)).address;
+                //TODO: Use real connector like aave lender later 
+                lendingConfiguration[lender][coin].connector =  connectors['compound'];
             }
         }
     }
@@ -223,7 +252,7 @@ module.exports.addDonationCurrencies = async (currencies) => {
 
         process.stdout.write(`\n ${chalk.gray(`Verifying ${currency.currency} at ${currency.lender} (${currency.lendingAddress}) ...`)}`);
         const exists = await PriceFeedProvider.hasDonationCurrency(currency.lendingAddress);
-        
+
         if (exists) {
             process.stdout.write(`${chalk.yellow(` Already exists, skipping ...`)}`);
             skipped[index] = true;
@@ -240,7 +269,8 @@ module.exports.addDonationCurrencies = async (currencies) => {
             currency: item.currency,
             underlyingToken: item.underlyingToken,
             lendingAddress: item.lendingAddress,
-            priceFeed: item.priceFeed
+            priceFeed: item.priceFeed,
+            connector: item.connector
         }));
 
     console.log(`\n ${chalk.gray(`Adding `)} ${chalk.yellow(`${requestData.map(item => item.currency).join(', ')}`)}... \n`);

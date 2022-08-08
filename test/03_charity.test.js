@@ -18,6 +18,9 @@ describe("Charity Pool", function () {
     let CTokenMock, Mock;
     let swapperMock;
     let priceFeedProviderMock, aggregator;
+    let CompoundConnector;
+
+
     beforeEach(async function () {
         const CharityPool = await smock.mock("CharityPool");
 
@@ -26,6 +29,10 @@ describe("Charity Pool", function () {
         Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
         CTokenMock = await smock.mock("CTokenMock");
+
+        const ProtocolConnector = await smock.mock("CompoundConnector");
+        CompoundConnector = await ProtocolConnector.deploy();
+        await CompoundConnector.initialize();
 
         aggregator = await smock.fake(abi);
         aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
@@ -59,7 +66,8 @@ describe("Charity Pool", function () {
             lendingAddress: cTokenMock.address,
             currency: "CTokenMock",
             underlyingToken: cTokenUnderlyingMock.address,
-            priceFeed: aggregator.address
+            priceFeed: aggregator.address,
+            connector: CompoundConnector.address
         }]);
 
         iHelpMock.stakingPool.returns(stakingPool.address);
@@ -305,13 +313,15 @@ describe("Charity Pool", function () {
             iHelpMock.stakingShareOfInterest.returns(stakeFee);
             iHelpMock.getFees.returns([devFee, stakeFee, charityFee]);
 
-            await priceFeedProviderMock.addDonationCurrency({
+            await priceFeedProviderMock.addDonationCurrencies([{
                 provider: "TestProvide2r",
                 lendingAddress: holdingMock.address,
                 currency: "HoldingToken",
                 underlyingToken: holdingMock.address,
-                priceFeed: aggregator.address
-            })
+                priceFeed: aggregator.address,
+                connector: CompoundConnector.address
+            }]);
+            
         });
 
         it("Should do nothing when donating 0", async function () {
@@ -564,9 +574,13 @@ describe("Charity Pool", function () {
                     [cTokenMock.address]: interest
                 });
 
+                await cTokenMock.setVariable("_balances", {
+                    [charityPool.address]: interest
+                });
+
                 cTokenMock.redeemUnderlying.returns(async () => {
                     await cTokenUnderlyingMock.setVariable("_balances", {
-                        [charityPool.address]: interest
+                        [CompoundConnector.address]: interest
                     })
 
                     await holdingMock.setVariable("_balances", {
@@ -575,9 +589,7 @@ describe("Charity Pool", function () {
                     return 0;
                 });
 
-                swapperMock.swap.returns(async () => {
-                    return interest;
-                });
+                swapperMock.swap.returns(async () => { return interest; });
 
                 await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
                 expect(await charityPool.connect(iHelpMock.wallet, "it should emit rewarded").redeemInterest(cTokenMock.address)).to.emit(charityPool, "Rewarded");

@@ -16,6 +16,7 @@ describe("PriceFeedProvider", function () {
     let CTokenMock;
     let underlyingMock1, underlyingMock2, cTokenMock1, cTokenMock2;
     let donationCurrencies, chainLinkAggretator;
+    let mockConnector
 
     beforeEach(async function () {
         const Mock = await smock.mock("ERC20MintableMock");
@@ -33,6 +34,8 @@ describe("PriceFeedProvider", function () {
         cTokenMock1 = await CTokenMock.deploy(underlyingMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(underlyingMock1.address, 1000);
 
+        mockConnector = await smock.fake('CompoundConnector');
+
         priceFeedProvider = await PriceFeedProvider.deploy();
 
         donationCurrencies = [{
@@ -41,14 +44,14 @@ describe("PriceFeedProvider", function () {
             underlyingToken: underlyingMock1.address,
             lendingAddress: cTokenMock1.address,
             currency: "currency1",
-            priceFeed: chainLinkAggretator.address
+            connector: mockConnector.address
         }, {
             provider: "Provider2",
             currency: "ETH",
             underlyingToken: underlyingMock2.address,
             lendingAddress: cTokenMock2.address,
-            currency: "currency2",
-            priceFeed: chainLinkAggretator.address
+            priceFeed: chainLinkAggretator.address,
+            connector: mockConnector.address
         }];
 
         await priceFeedProvider.initialize(donationCurrencies);
@@ -69,57 +72,62 @@ describe("PriceFeedProvider", function () {
     describe("Configuration", async () => {
         describe("Adding new donation currencies", async () => {
             it("should revert if not owner", async function () {
-                await expect(priceFeedProvider.connect(addr1).addDonationCurrency()).to.be.reverted;
+                await expect(priceFeedProvider.connect(addr1).addDonationCurrencies()).to.be.reverted;
             });
 
             it("should revert if lending token is 0x", async function () {
-                await expect(priceFeedProvider.addDonationCurrency({
+                await expect(priceFeedProvider.addDonationCurrencies([{
                     provider: "Provider",
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: constants.ZERO_ADDRESS,
-                    priceFeed: chainLinkAggretator.address
-                })).to.be.revertedWith("price-feed/invalid-lending");
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
+                }])).to.be.revertedWith("price-feed/invalid-lending");
             });
 
             it("should revert if price feed is 0x", async function () {
-                await expect(priceFeedProvider.addDonationCurrency({
+                await expect(priceFeedProvider.addDonationCurrencies([{
                     provider: "Provider",
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: constants.ZERO_ADDRESS
-                })).to.be.revertedWith("price-feed/invalid-price-feed");
+                    priceFeed: constants.ZERO_ADDRESS,
+                    connector: mockConnector.address
+                }])).to.be.revertedWith("price-feed/invalid-price-feed");
             });
 
             it("should revert if undelying token is 0x", async function () {
-                await expect(priceFeedProvider.addDonationCurrency({
+                await expect(priceFeedProvider.addDonationCurrencies([{
                     provider: "Provider",
                     currency: "ETH",
                     underlyingToken: constants.ZERO_ADDRESS,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: chainLinkAggretator.address
-                })).to.be.revertedWith("price-feed/invalid-underlying");
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
+                }])).to.be.revertedWith("price-feed/invalid-underlying");
             });
 
             it("should revert if already exists", async function () {
-                await expect(priceFeedProvider.addDonationCurrency({
+                await expect(priceFeedProvider.addDonationCurrencies([{
                     provider: "Provider3",
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: chainLinkAggretator.address
-                })).to.be.revertedWith("price-feed/already-exists");
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
+                }])).to.be.revertedWith("price-feed/already-exists");
             });
 
             it("should add new donation currency", async function () {
-                expect(await priceFeedProvider.addDonationCurrency({
+                expect(await priceFeedProvider.addDonationCurrencies([{
                     provider: "Provider3",
                     currency: "ETH",
                     underlyingToken: addrs[5].address,
                     lendingAddress: addrs[6].address,
-                    priceFeed: addrs[7].address
-                }));
+                    priceFeed: addrs[7].address,
+                    connector: mockConnector.address
+                }]));
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
@@ -161,7 +169,8 @@ describe("PriceFeedProvider", function () {
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: constants.ZERO_ADDRESS,
-                    priceFeed: chainLinkAggretator.address
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
                 })).to.be.revertedWith("price-feed/invalid-lending");
             });
 
@@ -171,7 +180,8 @@ describe("PriceFeedProvider", function () {
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: constants.ZERO_ADDRESS
+                    priceFeed: constants.ZERO_ADDRESS,
+                    connector: mockConnector.address
                 })).to.be.revertedWith("price-feed/invalid-price-feed");
             });
 
@@ -181,7 +191,8 @@ describe("PriceFeedProvider", function () {
                     currency: "ETH",
                     underlyingToken: constants.ZERO_ADDRESS,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: chainLinkAggretator.address
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
                 })).to.be.revertedWith("price-feed/invalid-underlying");
             });
 
@@ -191,7 +202,8 @@ describe("PriceFeedProvider", function () {
                     currency: "ETH",
                     underlyingToken: underlyingMock2.address,
                     lendingAddress: addr1.address,
-                    priceFeed: chainLinkAggretator.address
+                    priceFeed: chainLinkAggretator.address,
+                    connector: mockConnector.address
                 })).to.be.revertedWith("price-feed/not-found");
             });
 
@@ -201,7 +213,8 @@ describe("PriceFeedProvider", function () {
                     currency: "ETH",
                     underlyingToken: addrs[5].address,
                     lendingAddress: cTokenMock2.address,
-                    priceFeed: addrs[7].address
+                    priceFeed: addrs[7].address,
+                    connector: mockConnector.address
                 });
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
@@ -216,8 +229,8 @@ describe("PriceFeedProvider", function () {
     });
 
     describe("Price Data", async () => {
-        it("should return price data from price feed", async ()=> {
-            chainLinkAggretator.latestRoundData.returns([0,100,0,0,0]);
+        it("should return price data from price feed", async () => {
+            chainLinkAggretator.latestRoundData.returns([0, 100, 0, 0, 0]);
             chainLinkAggretator.decimals.returns(8);
 
             const [price, decimals] = await priceFeedProvider.getUnderlyingTokenPrice(cTokenMock2.address);

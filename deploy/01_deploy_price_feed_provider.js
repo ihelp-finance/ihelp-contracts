@@ -55,7 +55,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
               "lender": lender,
               "underlyingToken": configurations[lender][token].underlyingToken,
               "lendingAddress": configurations[lender][token].lendingAddress,
-              "priceFeed":  configurations[lender][token].priceFeed
+              "priceFeed":  configurations[lender][token].priceFeed,
+              "connector":  configurations[lender][token].connector
           })
       }
   }
@@ -65,5 +66,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   console.log("✅  Success ");
   
 };
-
+module.exports.dependencies = ['connectors'];
 module.exports.tags = ['PriceFeedProvider'];
