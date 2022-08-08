@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
         node_version: 16.x
-        INFURA_ID: ${{ secrets.INFURA_ID }}
+        TEST_FORK: ${{ secrets.TEST_FORK }}
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js ${{ env.node_version }}

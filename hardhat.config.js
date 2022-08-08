@@ -3,7 +3,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 
 const path = require('path')
-require('dotenv').config({ path: process.env.ENV_PATH  || '../env/.env' })
+require('dotenv').config({ path: process.env.ENV_PATH || '../env/.env' })
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -81,7 +81,7 @@ module.exports = {
       loggingEnabled:false
     },
     fuji: {
-      url: process.env.REACT_APP_RPC_URL,
+      url: process.env.REACT_APP_RPC_URL || "",
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: [
@@ -89,7 +89,7 @@ module.exports = {
       ]
     },
     avalanche: {
-      url: process.env.REACT_APP_RPC_URL,
+      url: process.env.REACT_APP_RPC_URL || "",
       gasPrice: 225000000000,
       chainId: 43114,
       accounts: [
@@ -105,7 +105,7 @@ module.exports = {
       }
     },
     rinkeby: {
-      url: process.env.REACT_APP_RPC_URL,
+      url: process.env.REACT_APP_RPC_URL || "",
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -113,7 +113,7 @@ module.exports = {
       gasLimit: 10000000,
     },
     kovan: {
-      url: process.env.REACT_APP_RPC_URL,
+      url: process.env.REACT_APP_RPC_URL || "",
       chainId: 42,
       accounts: [
         `0x${deployerPrivateKey}`, // deployer

@@ -772,7 +772,25 @@ describe("iHelp", function () {
             await iHelp.notifyBalanceUpdate(owner.address, 200, true);
             await iHelp.notifyBalanceUpdate(owner.address, 200, false);
             expect(await iHelp.numberOfContributors()).to.equal(0);
+        })
+    })
 
+    describe("Bulk withdrawals counter", function () {
+        let charityPool1, charityPool2;
+        
+        beforeEach(async function () {
+            charityPool1 = await smock.fake('CharityPool');
+            charityPool2 = await smock.fake('CharityPool');
+        })
+
+        it('call withdraw all on 2 charities', async function () {
+            await iHelp.registerCharityPool(charityPool1.address);
+            await iHelp.registerCharityPool(charityPool2.address);
+
+            await iHelp.withdrawBulk([charityPool1.address, charityPool2.address]);
+
+            expect(charityPool1.withdrawAll).to.be.calledOnce;
+            expect(charityPool2.withdrawAll).to.be.calledOnce
         })
     })
 

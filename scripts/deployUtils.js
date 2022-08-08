@@ -51,6 +51,13 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     const existing = [];
     for (const [index, configuration] of configurations.entries()) {
         const { charityName } = configuration;
+        
+        // can use this to regenerate the charities.json file if accidentally deleted
+        // const deplo = await deployments.get(charityName);
+        // deployedCharities.push({
+        //     charityName: charityName,
+        //     address: deplo.address
+        // })
 
         const alreadyExists = deployedCharities.find(item => item.charityName === charityName);
         if (alreadyExists) {

@@ -22,6 +22,7 @@ interface CharityPoolInterface {
     function withdrawNative(address _cTokenAddress, uint256 _amount) external;
     function depositTokens(address _cTokenAddress, uint256 _amount) external;
     function withdrawTokens(address _cTokenAddress, uint256 _amount) external;
+    function withdrawAll(address _account) external;
     function directDonation(IERC20 _donationToken, uint256 _amount) external;
     function redeemInterest(address _cTokenAddress) external;
     function claimInterest() external;
