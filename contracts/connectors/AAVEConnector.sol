@@ -41,11 +41,11 @@ contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
         return 0;
     }
 
-    function cTokenValueOfUnderlying(address token, uint256 amount) external  view returns (uint256) {
+    function cTokenValueOfUnderlying(address, uint256 amount) external pure returns (uint256) {
         return amount;
     }
 
-    function balanceOfUnderlying(address aToken, address owner) external view override returns (uint256) {
+    function accrueAndGetBalance(address aToken, address owner) external view returns (uint256) {
         return AToken(aToken).balanceOf(owner);
     }
 
