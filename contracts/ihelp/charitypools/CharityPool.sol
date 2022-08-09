@@ -116,6 +116,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function initialize(CharityPoolUtils.CharityPoolConfiguration memory configuration) public initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
 
         require(configuration.operatorAddress != address(0), "Funding/operator-zero");
 
