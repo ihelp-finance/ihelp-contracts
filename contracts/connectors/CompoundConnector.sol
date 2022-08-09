@@ -29,16 +29,16 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
-        IERC20(_underlying(cToken)).safeTransfer(msg.sender,  IERC20(_underlying(cToken)).balanceOf(address(this)));
+        IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
         IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
         return result;
     }
 
-    function cTokenValueOfUnderlying(address cToken, uint256 amount) external  view returns (uint256) {
+    function cTokenValueOfUnderlying(address cToken, uint256 amount) external view returns (uint256) {
         return ICErc20(cToken).cTokenValueOf(amount);
     }
 
-    function balanceOfUnderlying(address cToken, address owner) external view override returns (uint256) {
+    function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {
         return ICErc20(cToken).balanceOfUnderlying(owner);
     }
 
@@ -62,7 +62,7 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         return ICErc20(cToken).underlying();
     }
 
-    function lender() external view returns (string memory) {
+    function lender() external pure returns (string memory) {
         return "compound";
     }
 }

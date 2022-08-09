@@ -30,8 +30,6 @@ interface CharityPoolInterface {
     function collectOffChainInterest(address _destAddr, address _depositCurrency) external;
     function getUnderlying(address cTokenAddress) external view returns (IERC20);
     function balanceOf(address _account, address _cTokenAddress) external view returns (uint256);
-    function balance(address _cTokenAddress) external view returns (uint256);
-    function interestEarned(address _cTokenAddress) external view returns (uint256);
     function estimatedInterestRate(uint256 _blocks, address _cTokenAddres) external view returns (uint256);
     function supplyRatePerBlock(address _cTokenAddress) external view returns (uint256);
     function getUnderlyingTokenPrice(address _cTokenAdddress) external view returns (uint256, uint256);

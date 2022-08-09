@@ -513,16 +513,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         return result;
     }
 
-    /**
-     * @notice Returns the underlying balance of this contract in the cToken.
-     * @return The cToken underlying balance for this contract.
-     */
-    function balance(address _cTokenAddress) public view returns (uint256) {
-        return connector(_cTokenAddress).balanceOfUnderlying(_cTokenAddress, address(this));
-    }
-
-    function interestEarned(address _cTokenAddress) public view returns (uint256) {
-        uint256 _balance = balance(_cTokenAddress);
+    function interestEarned(address _cTokenAddress) internal returns (uint256) {
+        uint256 _balance = connector(_cTokenAddress).accrueAndGetBalance(_cTokenAddress, address(this));
 
         if (_balance > accountedBalances[_cTokenAddress]) {
             return _balance - accountedBalances[_cTokenAddress];
