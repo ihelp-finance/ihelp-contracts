@@ -32,6 +32,20 @@ module.exports.saveConnector = async (name, address, network) => {
 
 }
 
+function breakArrayIntoGroups(data, maxPerGroup) {
+    var numInGroupProcessed = 0;
+    var groups = [[]];
+    for (var i = 0; i < data.length; i++) {
+        groups[groups.length - 1].push(data[i]);
+        ++numInGroupProcessed;
+        if (numInGroupProcessed >= maxPerGroup && i !== (data.length - 1)) {
+            groups.push([]);
+            numInGroupProcessed = 0;
+        }
+    }
+    return groups;
+}
+
 module.exports.deployCharityPoolsToNetwork = async (configurations, network, factoryContractName = "CharityBeaconFactory") => {
     const FILE_DIR = 'build'
     if (!fs.existsSync(FILE_DIR)) {
@@ -72,31 +86,43 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     const remaining = configurations.filter((_, index) => !existing.includes(index));
 
     if (remaining.length > 0) {
-
+        
         const factoryDeployment = await deployments.get(factoryContractName);
         const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
 
-        const tx = await factory.createCharityPool(remaining);
+        const BATCH_SIZE = 30;
+        
+        const groups = breakArrayIntoGroups(remaining, BATCH_SIZE);
+        
+        for (let i=0;i<groups.length;i++) {
+            
+            const group = groups[i];
+            
+            console.log('\n   Processing group',i+1,'/',groups.length);
+            
+            const tx = await factory.createCharityPool(group);
 
-        const { events } = await tx.wait();
-        const { args } = events.find(item => item.event === 'Created');
-        const { newCharities } = args;
+            const { events } = await tx.wait();
+            const { args } = events.find(item => item.event === 'Created');
+            const { newCharities } = args;
+    
+            for (const charity of newCharities) {
+                result.push({
+                    charityName: charity.name,
+                    address: charity.addr,
+                    exists: false
+                });
+                deployedCharities.push({
+                    charityName: charity.name,
+                    address: charity.addr,
+                    exists: false
+                })
+                console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
+            }
+    
+            writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
 
-        for (const charity of newCharities) {
-            result.push({
-                charityName: charity.name,
-                address: charity.addr,
-                exists: false
-            });
-            deployedCharities.push({
-                charityName: charity.name,
-                address: charity.addr,
-                exists: false
-            })
-            console.log('   deployed:', charity.name, '   to address  ', charity.addr, ' at network :', network);
         }
-
-        writeFileSync(FILE_PATH, JSON.stringify(deployedCharities), "UTF-8", { 'flags': 'a+' });
 
     }
 
@@ -104,32 +130,39 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
 };
 
 module.exports.getLendingConfigurations = async (chainId) => {
-    let lendingConfiguration = fs.readFileSync(`./networks/${this.chainName(chainId)}-lending.json`, 'utf8');
+    let lendingConfiguration = fs.readFileSync(`./networks/${process.env.NETWORK_ADDRESSES || this.chainName(chainId)}-lending.json`, 'utf8');
     lendingConfiguration = JSON.parse(lendingConfiguration);
 
-    let connectors = fs.readFileSync(`./networks/${this.chainName(chainId)}-connectors.json`, 'utf8');
+    let connectors = fs.readFileSync(`./networks/${process.env.NETWORK_ADDRESSES || this.chainName(chainId)}-connectors.json`, 'utf8');
     connectors = JSON.parse(connectors);
+    
+    for (const lender of Object.keys(lendingConfiguration)) {
+        for (const coin of Object.keys(lendingConfiguration[lender])) {
+            if (!connectors[lendingConfiguration[lender][coin]['connector']]) {
+                this.red(`Warning: No ${chalk.yellow(`${lender} connctor found`)}, all currencies for this lender will be skipped...`)
+                continue;
+            }
+            lendingConfiguration[lender][coin].connector = connectors[lendingConfiguration[lender][coin]['connector']];
+        }
+    }
 
     const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+    const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
-    for (const lender of Object.keys(lendingConfiguration)) {
-        if (!connectors[lender]) {
-            this.red(`Warning: No ${chalk.yellow(`${lender} connctor found`)}, all currencies for this lender will be skipped...`)
-            continue;
-        }
-        for (const coin of Object.keys(lendingConfiguration[lender])) {
-            lendingConfiguration[lender][coin].connector = connectors[lender];
-            if (isTestEnvironment) {
-                lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c', '').replace('a', ''))).address;
-                lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull(coin)).address;
-                //TODO: Use real connector like aave lender later 
-                lendingConfiguration[lender][coin].connector =  connectors['compound'];
+    if (isTestEnvironment && deployMockTokens == 'true') {
+        for (const lender of Object.keys(lendingConfiguration)) {
+            for (const coin of Object.keys(lendingConfiguration[lender])) {
+                if (isTestEnvironment) {
+                    lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c', '').replace('j', '').replace('a', ''))).address;
+                    lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull(coin)).address;
+                    //TODO: Use real connector like aave lender later 
+                    lendingConfiguration[lender][coin].connector =  connectors['compound'];
+                }
             }
         }
     }
     return lendingConfiguration;
 };
-
 
 module.exports.fromBigNumber = (number, decimals) => {
     if (decimals == undefined) {
@@ -218,19 +251,35 @@ module.exports.chainName = (chainId) => {
 };
 
 module.exports.getSwapAddresses = async (dex, chainId) => {
-    let addresses = fs.readFileSync(`./networks/${this.chainName(chainId)}-dex.json`);
+    let addresses = fs.readFileSync(`./networks/${process.env.NETWORK_ADDRESSES || this.chainName(chainId)}-dex.json`);
     addresses = JSON.parse(addresses);
     return addresses[dex];
 };
 
 module.exports.getNativeWrapper = async (chainId) => {
-    try {
-        const hardhatContracts = require(`../build/hardhat_contracts`);
-        return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
-    } catch (e) {
-        this.yellow('   WARNING - no NativeWrapper found... cannot wrap currency')
-        return '0x0000000000000000000000000000000000000000'
+    
+    const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+    const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
+
+    if (isTestEnvironment && deployMockTokens == 'true') {
+        try {
+            const hardhatContracts = require(`../build/hardhat_contracts`);
+            return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
+        } catch (e) {
+            this.yellow('   WARNING - no NativeWrapper found... cannot wrap currency')
+            return '0x0000000000000000000000000000000000000000'
+        }
+    } else {
+        const configurations = await this.getLendingConfigurations(chainId);
+        for (const lender of Object.keys(configurations)) {
+          for (const coin of Object.keys(configurations[lender])) {
+            if (coin.replace('c','').replace('j','').replace('a','') == 'WETH' || coin.replace('c','').replace('j','').replace('a','') == 'WAVAX') {
+              return configurations[lender][coin]['underlyingToken']
+            }
+          }
+        }
     }
+    
 }
 
 module.exports.addDonationCurrencies = async (currencies) => {
@@ -261,7 +310,7 @@ module.exports.addDonationCurrencies = async (currencies) => {
         }
     }
     process.stdout.write(`\n`);
-
+    
     const requestData = currencies
         .filter((_, index) => !skipped[index])
         .map(item => ({

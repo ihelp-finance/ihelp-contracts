@@ -9,10 +9,8 @@ const axios = require('axios');
 const csv = require('csvtojson');
 const { abi: CharityPoolAbi } = require('../artifacts/contracts/ihelp/charitypools/CharityPool.sol/CharityPool.json');
 
-// const externalContracts = require('../../react-app/src/contracts/external_contracts');
-
 const { assert, use, expect } = require("chai");
-const { deployCharityPoolsToNetwork, dim, yellow, red, chainName, fromBigNumber, cyan, green, getNativeWrapper } = require("../scripts/deployUtils");
+const { deployCharityPoolsToNetwork, dim, yellow, red, chainName, fromBigNumber, cyan, green, getNativeWrapper, getLendingConfigurations } = require("../scripts/deployUtils");
 const { network } = require("hardhat");
 
 let userAccount, userSigner;
@@ -38,7 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
 
   // set this value to false to actually deploy a contract for each charity pool
   const deployTestCharities = process.env.TEST_CHARITIES || 'true';
-  const deployMockTokens = process.env.TEST_TOKENS || 'true';
+  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
   
   const charitiesToDeloy = 'all';
 
@@ -80,10 +78,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   }
   else {
     const configurations = await getLendingConfigurations(chainId);
-    for (const lender of Object.keys(lendingConfiguration)) {
-      for (const coin of Object.keys(lendingConfiguration[lender])) {
-        if (coin == holdingToken) {
-          holdingtokenAddress = lendingConfiguration[lender][coin]
+    for (const lender of Object.keys(configurations)) {
+      for (const coin of Object.keys(configurations[lender])) {
+        if (coin.replace('c','').replace('j','').replace('a','') == holdingToken) {
+          holdingtokenAddress = configurations[lender][coin]['underlyingToken']
           break
         }
       }
@@ -97,7 +95,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
   const deployCharityPools = async (configurations) => {
     const pools = [];
     const nativeWrapper = await getNativeWrapper(chainId);
-
+    
     for (const config of configurations) {
       const { charityName, charityWalletAddress } = config;
       pools.push({
@@ -111,7 +109,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
         wrappedNativeAddress: nativeWrapper
       })
     }
-    
+
     const charityResult = await deployCharityPoolsToNetwork(pools, network.name);
     
     for (const result of charityResult) {
@@ -191,7 +189,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       }
 
       const number = await ihelp.numberOfCharities();
-      red(`Number of Registered Charities: ${Big(number).toFixed(0)}`);
+      cyan(`\nNumber of Registered Charities: ${Big(number).toFixed(0)}`);
       
   }
   

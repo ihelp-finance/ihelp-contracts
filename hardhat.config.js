@@ -25,10 +25,10 @@ const defaultNetwork = process.env.REACT_APP_NETWORK || "localhost";
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "yarn run hardhat remove-logs" to create source files with removed log statements and duplicate contracts dir for bytecode validation
-let removeLogStatements = false;
+let removeLogStatements = process.env.REMOVE_LOG_STATEMENTS || false;
 
 let preprocessOptions = null;
-if (removeLogStatements) {
+if (removeLogStatements && removeLogStatements == 'true') {
   preprocessOptions = {
     eachLine: removeConsoleLog()
   };
@@ -40,20 +40,6 @@ if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
   forkingData = {
     url: process.env.TEST_FORK
   };
-}
-
-function mnemonic() {
-  try {
-    return fs.readFileSync("./mnemonic.txt").toString().trim();
-  }
-  catch (e) {
-    // if (defaultNetwork !== "localhost") {
-    //   console.log(
-    //     "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
-    //   );
-    // }
-  }
-  return "";
 }
 
 // signer accounts keys for transactions
@@ -70,55 +56,63 @@ module.exports = {
 
   networks: {
     hardhat: {
-      gasPrice: 225000000000,
       forking: forkingData,
-      accounts: {
-        accountBalance: parseEther("1000000")
-      },
+      accounts: [{
+        privateKey:`0x${deployerPrivateKey}`, // deployer
+        balance: "10000000000000000000000"
+      }],
       mining: {
         auto: true
       },
-      loggingEnabled:false
-    },
-    fuji: {
-      url: process.env.REACT_APP_RPC_URL || "",
-      gasPrice: 225000000000,
-      chainId: 43113,
-      accounts: [
-        `0x${deployerPrivateKey}`, // deployer
-      ]
-    },
-    avalanche: {
-      url: process.env.REACT_APP_RPC_URL || "",
-      gasPrice: 225000000000,
-      chainId: 43114,
-      accounts: [
-        `0x${deployerPrivateKey}`, // deployer
-      ]
+      loggingEnabled:true,
+      timeout: 10000000, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 1000000,
     },
     localhost: {
       url: "http://localhost:7545",
       forking: forkingData,
-      loggingEnabled:false,
+      loggingEnabled:true,
       mining: {
         auto: true
-      }
+      },
+      timeout: 10000000, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 1000000,
+    },
+    mainnet: {
+      url: process.env.REACT_APP_RPC_URL || "",
+      chainId: 1,
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ]
     },
     rinkeby: {
       url: process.env.REACT_APP_RPC_URL || "",
-      accounts: {
-        mnemonic: mnemonic(),
-      },
-      gasPrice: 21500000000,
-      gasLimit: 10000000,
+      chainId: 4,
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ]
     },
     kovan: {
       url: process.env.REACT_APP_RPC_URL || "",
       chainId: 42,
       accounts: [
         `0x${deployerPrivateKey}`, // deployer
+      ]
+    },
+    avalanche: {
+      url: process.env.REACT_APP_RPC_URL || "",
+      chainId: 43114,
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
       ],
-      // gasPrice: 225000000000
+      
+    },
+    fuji: {
+      url: process.env.REACT_APP_RPC_URL || "",
+      chainId: 43113,
+      accounts: [
+        `0x${deployerPrivateKey}`, // deployer
+      ]
     }
   },
   solidity: {
@@ -143,7 +137,7 @@ module.exports = {
       default: 0,
     },
     developmentPool: {
-      default: 1,
+      default: 0,
       43114: developmentPoolAddress, // gnosis-safe multi-sig
       42: developmentPoolAddress,
     },

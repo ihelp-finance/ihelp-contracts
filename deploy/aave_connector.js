@@ -40,7 +40,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, }) => {
   green('AAVEConnector Proxy:', address);
   green('AAVEConnector Implementation:', result.implementation);
 
-  await saveConnector('aave', address, chainName(chainId));
+  await saveConnector('aave', address, process.env.NETWORK_ADDRESSES || chainName(chainId));
 
 };
 

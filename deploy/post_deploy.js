@@ -44,7 +44,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
 
-  const deployMockTokens = process.env.TEST_TOKENS || 'true';
+  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
   const signer = await ethers.provider.getSigner(deployer);
 
@@ -72,7 +72,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   const IUniswapV2Pair = require("@uniswap/v2-core/build/IUniswapV2Pair.json");
   const IUniswapV2Router02 = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json");
 
-  const swapperAddresses = await getSwapAddresses('uniswap', chainId);
+  const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
   const swapv2FactoryAddress = swapperAddresses['factory'];
   const swapv2RouterAddress = swapperAddresses['router'];
 

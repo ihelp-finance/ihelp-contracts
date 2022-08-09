@@ -40,7 +40,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId }) => {
   green('CompoundConnector Proxy:', address);
   green('CompoundConnector Implementation:', result.implementation);
 
-  await saveConnector('compound', address, chainName(chainId));
+  await saveConnector('compound', address, process.env.NETWORK_ADDRESSES || chainName(chainId));
 };
 
 module.exports.tags = ['connectors', 'CompoundConnector'];

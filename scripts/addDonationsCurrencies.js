@@ -16,11 +16,12 @@ async function main() {
     for (const lender of Object.keys(configurations)) {
         for (const token of Object.keys(configurations[lender])) {
             currencies.push({
-                "currency": token,
-                "lender": isTestEnvironment ? 'mock' : lender,
+                "currency": token.replace('c','').replace('a','').replace('j',''),
+                "lender": lender,
                 "underlyingToken": configurations[lender][token].underlyingToken,
                 "lendingAddress": configurations[lender][token].lendingAddress,
-                "priceFeed":  configurations[lender][token].priceFeed
+                "priceFeed":  configurations[lender][token].priceFeed,
+                "connector":  configurations[lender][token].connector
             })
         }
     }

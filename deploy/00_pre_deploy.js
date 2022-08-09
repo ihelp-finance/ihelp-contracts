@@ -17,7 +17,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
   const chainId = parseInt(await getChainId(), 10);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  const deployMockTokens = process.env.TEST_TOKENS || 'true';
+  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
   const skipIfAlreadyDeployed = true; //isTestEnvironment == true ? false : true;
 
   const signer = await ethers.provider.getSigner(deployer);
@@ -71,7 +71,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     dim(`deployer: ${deployer}`);
     dim(`chainId: ${chainId}\n`);
 
-    currencyResults = [];
+    const currencyResults = [];
     for (let ci = 0; ci < mockCurrenciesToDeploy.length; ci++) {
 
       const c = mockCurrenciesToDeploy[ci];
@@ -130,35 +130,31 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     await currencyResults.map((r) => {
       dim(r);
     })
-
-  }
-
-  // publish the contracts
-  const exec = require('child_process').exec;
-
-  function os_func() {
-    this.execCommand = function(cmd) {
-      return new Promise((resolve, reject) => {
-        exec(cmd, (error, stdout, stderr) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(stdout);
+    
+    // publish the contracts
+    const exec = require('child_process').exec;
+  
+    function os_func() {
+      this.execCommand = function(cmd) {
+        return new Promise((resolve, reject) => {
+          exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(stdout);
+          });
         });
-      });
-    };
-  }
-  var os = new os_func();
+      };
+    }
+    var os = new os_func();
+    cyan('hardhat export --export-all ./build/hardhat_contracts.json');
+    try {
+      return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
+    }
+    catch (e) {}
 
-  //cyan('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-  //await os.execCommand('hardhat export --export-all ../react-app/src/contracts/hardhat_contracts.json');
-
-  cyan('hardhat export --export-all ./build/hardhat_contracts.json');
-  try {
-    return await run('export', { "exportAll": "./build/hardhat_contracts.json" });
   }
-  catch (e) {}
 
 };
 

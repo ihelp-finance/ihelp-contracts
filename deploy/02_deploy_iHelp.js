@@ -20,7 +20,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId }) => {
   dim(`chainId: ${chainId}`);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  const deployMockTokens = process.env.TEST_TOKENS || 'true';
+  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
   // deploy the iHelp token
   const holdingToken = 'DAI';
@@ -32,8 +32,8 @@ module.exports = async({ getNamedAccounts, deployments, getChainId }) => {
     const configurations = await getLendingConfigurations(chainId);
     for (const lender of Object.keys(configurations)) {
       for (const coin of Object.keys(configurations[lender])) {
-        if (coin == holdingToken) {
-          holdingtokenAddress = configurations[lender][coin]
+        if (coin.replace('c','').replace('j','').replace('a','') == holdingToken) {
+          holdingtokenAddress = configurations[lender][coin]['underlyingToken']
           break
         }
       }

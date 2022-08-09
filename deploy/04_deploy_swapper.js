@@ -15,9 +15,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   dim(`deployer: ${deployer}`);
   dim(`chainId: ${chainId}`);
 
-  const swapperAddresses = await getSwapAddresses('uniswap', chainId);
+  const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
 
-  // deploy the iHelp token
+  // deploy the swapper
   await catchUnknownSigner(
     deploy("swapper", {
       contract: 'Swapper',

@@ -85,37 +85,24 @@ const upkeep = async() => {
 
     let {
         deployer,
-        stakingPool,
-        developmentPool,
-        holdingPool,
     } = await hardhat.getNamedAccounts();
 
     signer = await hardhat.ethers.provider.getSigner(deployer);
 
-    // const charity1walletSigner = await hardhat.ethers.provider.getSigner(charity1wallet);
-    // const charity2walletSigner = await hardhat.ethers.provider.getSigner(charity2wallet);
-    // const charity3walletSigner = await hardhat.ethers.provider.getSigner(charity3wallet);
-    const developmentPoolSigner = await hardhat.ethers.provider.getSigner(developmentPool);
-    const stakingPoolSigner = await hardhat.ethers.provider.getSigner(stakingPool);
-    const holdingPoolSigner = await hardhat.ethers.provider.getSigner(holdingPool);
-
     console.log(`\nsigner: ${signer._address}`);
-    //console.log(`holder: ${holdingPool}`);
 
     // get the signer eth balance
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
-    // const startbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
-    // console.log(`start holding balance: ${fromBigNumber(startbalanceholding)}`);
-
-    // const currentBlock= await hardhat.ethers.provider.getBlockNumber()
-
     console.log('\nSTARTING UPKEEP...\n');
     
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
     ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
     
+    // console.log('\nsetting lower gas limit');
+    // await ihelp.setProcessingGasLimit('25000000');
+    // console.log('gas limit set\n');
     
     const upkeepStatusMapping = {
     0: "dripStage1",
@@ -125,26 +112,32 @@ const upkeep = async() => {
     4: "dump"
   };
 
-
+  let lastStep = 0;
+  
   // Incrementally go trough all upkeep steps
   const processUpkeep = async (upkeepStatus) => {
+    
+    lastStep = JSON.parse(JSON.stringify(upkeepStatus.toNumber()));
+    
     let newUpkeepstatus = upkeepStatus;
     const method = upkeepStatusMapping[upkeepStatus];
-    cyan("Processing upkeep, status ", method);
+    cyan("Processing upkeep, status ",lastStep,method);
     while (upkeepStatus == newUpkeepstatus) {
       await ihelp.functions[method]();
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
     }
-
+    
     green("New Upkeep status ", newUpkeepstatus.toNumber());
-
+    
     // Return when the upkeep status goes back to 0
-    if (newUpkeepstatus.toNumber() === 0) {
-      return;
+    if (newUpkeepstatus.toNumber() === 0 && lastStep !== 4) {
+      await processUpkeep(upkeepStatus);
+    } else if (newUpkeepstatus.toNumber() === 0 && lastStep == 4) {
+      return
     }
+    
     await processUpkeep(newUpkeepstatus);
   };
-
 
   const upkeepStep = async () => {
 

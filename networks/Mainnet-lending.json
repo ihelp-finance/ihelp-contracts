@@ -1,0 +1,16 @@
+{
+  "compound": {
+    "cDAI": {
+      "underlyingToken": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      "lendingAddress": "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",
+      "priceFeed": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9"
+    }
+  },
+  "aave": {
+    "aDAI": {
+      "underlyingToken": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      "lendingAddress": "0x028171bCA77440897B824Ca71D1c56caC55b68A3",
+      "priceFeed": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9"
+    }
+  }
+}
