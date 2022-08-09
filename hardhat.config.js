@@ -50,6 +50,16 @@ const reportGas = process.env.REPORT_GAS;
 const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER;
 const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
 
+let localAccountData = {
+  accountBalance: parseEther("1000000")
+}
+if (deployerPrivateKey != undefined && deployerPrivateKey != '') {
+  localAccountData = [{
+    privateKey:`0x${deployerPrivateKey}`, // deployer
+    balance: "10000000000000000000000"
+  }]
+}
+
 module.exports = {
 
   defaultNetwork,
@@ -57,10 +67,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: forkingData,
-      accounts: [{
-        privateKey:`0x${deployerPrivateKey}`, // deployer
-        balance: "10000000000000000000000"
-      }],
+      accounts: localAccountData,
       mining: {
         auto: true
       },
