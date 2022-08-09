@@ -53,7 +53,7 @@ const developmentPoolAddress = process.env.DEVELOPMENTPOOL_ADDRESS;
 let localAccountData = {
   accountBalance: parseEther("1000000")
 }
-if (deployerPrivateKey != undefined && deployerPrivateKey != '') {
+if (deployerPrivateKey != undefined && deployerPrivateKey != '' && deployerPrivateKey != new Array(64 + 1).join( '0' )) {
   localAccountData = [{
     privateKey:`0x${deployerPrivateKey}`, // deployer
     balance: "10000000000000000000000"
@@ -72,8 +72,8 @@ module.exports = {
         auto: true
       },
       loggingEnabled:true,
-      timeout: 10000000, // this is needed for forked chain timeouts and/or slow rpc endpoints
-      networkCheckTimeout: 1000000,
+      timeout: 300, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 300,
     },
     localhost: {
       url: "http://localhost:7545",
@@ -82,8 +82,8 @@ module.exports = {
       mining: {
         auto: true
       },
-      timeout: 10000000, // this is needed for forked chain timeouts and/or slow rpc endpoints
-      networkCheckTimeout: 1000000,
+      timeout: 300, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 300,
     },
     mainnet: {
       url: process.env.REACT_APP_RPC_URL || "",
