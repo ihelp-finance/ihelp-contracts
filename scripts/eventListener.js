@@ -25,9 +25,11 @@ let analytics = null;
 // The listener configuration
 const runListener = async() => {
 
-    
-    const nodeUrl = hardhat.network.config.url;
-    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://').replace('.infura.io/','.infura.io/ws/')
+    const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+    if (nodeUrlWs == '' || nodeUrlWs == undefined) {
+        console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
+        process.exit(1)
+    }
 
     // console.log(`Starting listener for ${hardhat.network.name} on ${nodeUrlWs}...`)
 

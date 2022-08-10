@@ -85,10 +85,13 @@ const upkeep = async() => {
     let {
         deployer
     } = await hardhat.getNamedAccounts();
-    
-    const nodeUrl = hardhat.network.config.url;
-    const nodeUrlWs = nodeUrl.replace('http://', 'ws://').replace('https://', 'wss://').replace('.infura.io/','.infura.io/ws/')
 
+    const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+    if (nodeUrlWs == '' || nodeUrlWs == undefined) {
+        console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
+        process.exit(1)
+    }
+    
     const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
 
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
