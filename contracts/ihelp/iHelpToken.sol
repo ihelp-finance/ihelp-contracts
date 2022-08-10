@@ -150,7 +150,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         address _priceFeedProviderAddress
     ) public initializer {
         __ERC20_init(_name, _symbol);
-        __ERC20Capped_init_unchained(20000000 * 1000000000000000000);
+        __ERC20Capped_init_unchained(20_000_000 * 1e18);
         __Ownable_init();
 
         operator = _operator;
@@ -158,7 +158,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         underlyingToken = IERC20(_underlyingToken);
         priceFeedProvider = PriceFeedProviderInterface(_priceFeedProviderAddress);
 
-        __tokensMintedPerPhase = 1000000;
+        __tokensMintedPerPhase = 1_000_000;
 
         // scale these later in the contract based on the charity pool decicals
         charityShareOfInterest = 800;
@@ -178,10 +178,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         // mint the initial HELP phase and premine tokens
         _mint(operator, __tokensMintedPerPhase * 1e18);
 
-        uint256 premineTokens = 7000000;
+        uint256 premineTokens = 7_000_000;
         _mint(_developmentPool, premineTokens * 1e18);
 
-        __processingGasLimit = 300_000 * 1e9;
+        __processingGasLimit = 20_000_000;
     }
 
 

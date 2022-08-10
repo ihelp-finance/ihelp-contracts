@@ -53,7 +53,7 @@
   },
   "scripts": {
     "prechain": "rimraf build/localhost_* && rimraf build/hardhat_*",
-    "chain": "hardhat node --no-deploy  --network hardhat  --hostname 0.0.0.0 --port 7545",
+    "chain": "hardhat node --max-memory 8096 --no-deploy  --network hardhat  --hostname 0.0.0.0 --port 7545",
     "fork": "hardhat node --no-deploy --network hardhat --fork https://mainnet.infura.io/v3/$INFURA_ID",
     "test": "hardhat test --network hardhat",
     "compile": "hardhat compile",

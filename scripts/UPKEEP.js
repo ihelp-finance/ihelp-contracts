@@ -95,13 +95,13 @@ const upkeep = async() => {
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
-    console.log('\nSTARTING UPKEEP...\n');
+    console.log('\nSTARTING UPKEEP...');
     
     const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
     ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
     
     // console.log('\nsetting lower gas limit');
-    // await ihelp.setProcessingGasLimit('25000000');
+    // await ihelp.setProcessingGasLimit('20000000');
     // console.log('gas limit set\n');
     
     const upkeepStatusMapping = {
@@ -121,22 +121,22 @@ const upkeep = async() => {
     
     let newUpkeepstatus = upkeepStatus;
     const method = upkeepStatusMapping[upkeepStatus];
-    cyan("Processing upkeep, status ",lastStep,method);
+    
+    cyan("\nProcessing upkeep:",method);
+    
     while (upkeepStatus == newUpkeepstatus) {
+      green("   running",method);
       await ihelp.functions[method]();
       newUpkeepstatus = await ihelp.processingState().then(data => data.status);
+      yellow('   new status:',upkeepStatusMapping[newUpkeepstatus]);
     }
-    
-    green("New Upkeep status ", newUpkeepstatus.toNumber());
-    
-    // Return when the upkeep status goes back to 0
-    if (newUpkeepstatus.toNumber() === 0 && lastStep !== 4) {
-      await processUpkeep(upkeepStatus);
-    } else if (newUpkeepstatus.toNumber() === 0 && lastStep == 4) {
-      return
+
+    // Return when the upkeep status goes back to dripStage1 step 0 from dump step 4
+    if (newUpkeepstatus.toNumber() == 0 && lastStep == 4) {
+        return
+    } else {
+        await processUpkeep(newUpkeepstatus);
     }
-    
-    await processUpkeep(newUpkeepstatus);
   };
 
   const upkeepStep = async () => {

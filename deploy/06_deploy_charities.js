@@ -80,7 +80,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
     const configurations = await getLendingConfigurations(chainId);
     for (const lender of Object.keys(configurations)) {
       for (const coin of Object.keys(configurations[lender])) {
-        if (coin.replace('c','').replace('j','').replace('a','') == holdingToken) {
+        if (coin.replace('.e','').replace('c','').replace('j','').replace('a','') == holdingToken) {
           holdingtokenAddress = configurations[lender][coin]['underlyingToken']
           break
         }

@@ -9,6 +9,8 @@ import "./AnalyticsUtils.sol";
 import "./IAnalytics.sol";
 import "../utils/IERC20.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Analytics
  */
@@ -31,7 +33,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             result += CharityPoolInterface(payable(_iHelp.charityAt(index))).calculateTotalInterestEarned();
         }
         return result;
@@ -49,7 +51,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result += charity.totalInterestEarned(_cTokenAddress);
         }
@@ -80,7 +82,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
 
             PriceFeedProviderInterface.DonationCurrency[] memory cTokens = PriceFeedProviderInterface(
@@ -177,7 +179,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result += charity.numberOfContributors();
         }
@@ -202,7 +204,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result += charity.totalDonationsUSD();
         }
@@ -221,7 +223,7 @@ contract Analytics is IAnalytics {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
 
         uint256 result;
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
             result += registry.totalContribUSD;
@@ -253,7 +255,7 @@ contract Analytics is IAnalytics {
         AnalyticsUtils.GeneralStats memory result;
         result.totalCharities = _limit;
         result.totalHelpers += _iHelp.numberOfContributors();
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result.totalValueLocked += charity.accountedBalanceUSD();
             result.totalInterestGenerated += charity.totalInterestEarnedUSD();
@@ -293,7 +295,7 @@ contract Analytics is IAnalytics {
 
         AnalyticsUtils.UserStats memory result;
 
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             CharityPoolUtils.DirectDonationsCounter memory registry = charity.donationsRegistry(_user);
 
@@ -334,7 +336,7 @@ contract Analytics is IAnalytics {
         AnalyticsUtils.IndividualCharityContributionInfo[]
             memory result = new AnalyticsUtils.IndividualCharityContributionInfo[](_limit);
 
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result[index] = AnalyticsUtils.IndividualCharityContributionInfo({
                 charityAddress: address(charity),
@@ -357,16 +359,17 @@ contract Analytics is IAnalytics {
         uint256 _limit
     ) external view returns (AnalyticsUtils.UserCharityContributions[] memory) {
         (_offset, _limit) = paginationChecks(_iHelp.numberOfCharities, _offset, _limit);
-
+        
         AnalyticsUtils.UserCharityContributions[] memory result = new AnalyticsUtils.UserCharityContributions[](_limit);
-
-        for (uint256 index = _offset; index < _limit; index++) {
+        
+        uint256 count = 0;
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             uint256 userDonations = charity.donationsRegistry(_user).totalContribUSD;
             uint256 normalContributions = charity.balanceOfUSD(_user);
             uint256 _yieldGenerated = _iHelp.contributorGeneratedInterest(_user, address(charity));
 
-            result[index] = AnalyticsUtils.UserCharityContributions({
+            result[count] = AnalyticsUtils.UserCharityContributions({
                 charityAddress: address(charity),
                 charityName: charity.name(),
                 totalContributions: normalContributions,
@@ -374,6 +377,8 @@ contract Analytics is IAnalytics {
                 yieldGenerated: _yieldGenerated,
                 tokenStatistics: getUserTokenContributionsPerCharity(charity, _user)
             });
+            
+            count+=1;
         }
         return result;
     }
@@ -473,7 +478,7 @@ contract Analytics is IAnalytics {
 
         AnalyticsUtils.CharityBalanceInfo[] memory result = new AnalyticsUtils.CharityBalanceInfo[](_limit);
 
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
 
             result[index] = AnalyticsUtils.CharityBalanceInfo({
@@ -572,7 +577,7 @@ contract Analytics is IAnalytics {
         require(address(_charity.ihelpToken()) != address(0), "not-found/iHelp");
         AnalyticsUtils.CharityContributor[] memory result = new AnalyticsUtils.CharityContributor[](_limit);
 
-        for (uint256 index = _offset; index < _limit; index++) {
+        for (uint256 index = _offset; index < _offset+_limit; index++) {
             address _user = _charity.contributorAt(index);
             CharityPoolUtils.DirectDonationsCounter memory registry = _charity.donationsRegistry(_user);
             result[index].contributorAddress = _user;

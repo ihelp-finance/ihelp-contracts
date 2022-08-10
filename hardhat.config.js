@@ -44,7 +44,7 @@ if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
 
 // signer accounts keys for transactions
 const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY || new Array(64 + 1).join( '0' );
-const reportGas = process.env.REPORT_GAS;
+const reportGas = process.env.REPORT_GAS || false;
 
 // gnosis-safe
 const proxyAdminOwner = process.env.PROXY_ADMIN_OWNER;
@@ -68,22 +68,16 @@ module.exports = {
     hardhat: {
       forking: forkingData,
       accounts: localAccountData,
-      mining: {
-        auto: true
-      },
-      loggingEnabled:true,
-      timeout: 300, // this is needed for forked chain timeouts and/or slow rpc endpoints
-      networkCheckTimeout: 300,
+      loggingEnabled: process.env.TEST_LOGGING == 'true' ? true : false,
+      timeout: 1200000, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 1200000,
     },
     localhost: {
       url: "http://localhost:7545",
       forking: forkingData,
-      loggingEnabled:true,
-      mining: {
-        auto: true
-      },
-      timeout: 300, // this is needed for forked chain timeouts and/or slow rpc endpoints
-      networkCheckTimeout: 300,
+      loggingEnabled:process.env.TEST_LOGGING == 'true' ? true : false,
+      timeout: 1200000, // this is needed for forked chain timeouts and/or slow rpc endpoints
+      networkCheckTimeout: 1200000,
     },
     mainnet: {
       url: process.env.REACT_APP_RPC_URL || "",
@@ -171,7 +165,7 @@ module.exports = {
     }
   },
   gasReporter: {
-    enabled: false,
+    enabled: reportGas,
     currency: 'USD',
     gasPrice: 30,
     excludeContracts: ["testing/"]
