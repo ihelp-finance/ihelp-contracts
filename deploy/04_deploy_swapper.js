@@ -21,17 +21,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
   
   let nativeTokenAddress = null;
-  if (isTestEnvironment && deployMockTokens == 'true') {
-    nativeTokenAddress = (await deployments.getOrNull('WETH')).address;
-  }
-  else {
-    const configurations = await getLendingConfigurations(chainId);
-    for (const lender of Object.keys(configurations)) {
-      for (const coin of Object.keys(configurations[lender])) {
-        if (coin.replace('c','').replace('j','').replace('a','') == 'WETH' || coin.replace('c','').replace('j','').replace('a','') == 'WAVAX') {
-          nativeTokenAddress = configurations[lender][coin]['underlyingToken']
-          break
-        }
+  const configurations = await getLendingConfigurations(chainId,forceLookup=true);
+  for (const lender of Object.keys(configurations)) {
+    for (const coin of Object.keys(configurations[lender])) {
+      if (coin.replace('c','').replace('j','').replace('a','') == 'WETH' || coin.replace('c','').replace('j','').replace('a','') == 'WAVAX') {
+        nativeTokenAddress = configurations[lender][coin]['underlyingToken']
+        break
       }
     }
   }

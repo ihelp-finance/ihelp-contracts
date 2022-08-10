@@ -129,7 +129,7 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
     return result;
 };
 
-module.exports.getLendingConfigurations = async (chainId) => {
+module.exports.getLendingConfigurations = async (chainId,forceLookup=false) => {
     let lendingConfiguration = fs.readFileSync(`./networks/${process.env.NETWORK_ADDRESSES || this.chainName(chainId)}-lending.json`, 'utf8');
     lendingConfiguration = JSON.parse(lendingConfiguration);
 
@@ -149,14 +149,12 @@ module.exports.getLendingConfigurations = async (chainId) => {
     const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
     const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
-    if (isTestEnvironment && deployMockTokens == 'true') {
+    if (isTestEnvironment && deployMockTokens == 'true' && forceLookup == false) {
         for (const lender of Object.keys(lendingConfiguration)) {
             for (const coin of Object.keys(lendingConfiguration[lender])) {
                 if (isTestEnvironment) {
                     lendingConfiguration[lender][coin].underlyingToken = (await deployments.getOrNull(coin.replace('c', '').replace('j', '').replace('a', ''))).address;
                     lendingConfiguration[lender][coin].lendingAddress = (await deployments.getOrNull(coin)).address;
-                    //TODO: Use real connector like aave lender later 
-                    lendingConfiguration[lender][coin].connector =  connectors['compound'];
                 }
             }
         }

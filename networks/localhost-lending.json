@@ -3,34 +3,40 @@
     "cDAI": {
       "underlyingToken": "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa",
       "lendingAddress": "0x6D7F0754FFeb405d23C51CE938289d4835bE3b14",
-      "priceFeed": "0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF"
+      "priceFeed": "0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF",
+      "connector": "compound"
     },
     "cUSDC": {
       "underlyingToken": "0x4DBCdF9B62e891a7cec5A2568C3F4FAF9E8Abe2b",
       "lendingAddress": "0x5B281A6DdA0B271e91ae35DE655Ad301C976edb1",
-      "priceFeed": "0xa24de01df22b63d23Ebc1882a5E3d4ec0d907bFB"
+      "priceFeed": "0xa24de01df22b63d23Ebc1882a5E3d4ec0d907bFB",
+      "connector": "compound"
     },
     "cUSDT": {
       "underlyingToken": "0xD9BA894E0097f8cC2BBc9D24D308b98e36dc6D02",
       "lendingAddress": "0x2fB298BDbeF468638AD6653FF8376575ea41e768",
-      "priceFeed": "0xa24de01df22b63d23Ebc1882a5E3d4ec0d907bFB"
+      "priceFeed": "0xa24de01df22b63d23Ebc1882a5E3d4ec0d907bFB",
+      "connector": "compound"
     }
   },
   "aave": {
     "aDAI": {
       "underlyingToken": "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa",
       "lendingAddress": "0xddea378A6dDC8AfeC82C36E9b0078826bf9e68B6",
-      "priceFeed": "0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF"
+      "priceFeed": "0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF",
+      "connector": "aave"
     },
     "aWBTC": {
       "underlyingToken": "0x577D296678535e4903D59A4C929B718e1D575e0A",
       "lendingAddress": "0x0014F450B8Ae7708593F4A46F8fa6E5D50620F96",
-      "priceFeed": "0xECe365B379E1dD183B20fc5f022230C044d51404"
+      "priceFeed": "0xECe365B379E1dD183B20fc5f022230C044d51404",
+      "connector": "aave"
     },
     "aWETH": {
-      "underlyingToken": "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa",
+      "underlyingToken": "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
       "lendingAddress": "0x6D7F0754FFeb405d23C51CE938289d4835bE3b14",
-      "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+      "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "connector": "aave"
     }
   }
 }

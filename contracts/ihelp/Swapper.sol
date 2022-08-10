@@ -56,7 +56,7 @@ contract Swapper is OwnableUpgradeable {
             path[1] = nativeToken();
             path[2] = _tokenOut;
         }
-
+        
         return _swapByPath(path, _amountIn, _amountOutMin, _to);
     }
 
