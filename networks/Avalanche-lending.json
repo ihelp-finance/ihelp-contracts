@@ -2,7 +2,7 @@
   "aave": {
     "aDAI.e": {
       "underlyingToken": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
-      "lendingAddress": "0x47AFa96Cdc9fAb46904A55a6ad4bf6660B53c38a",
+      "lendingAddress": "0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE",
       "priceFeed": "0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300",
       "connector": "aave"
     },
@@ -16,6 +16,18 @@
       "underlyingToken": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
       "lendingAddress": "0x6ab707Aca953eDAeFBc4fD23bA73294241490620",
       "priceFeed": "0xEBE676ee90Fe1112671f19b6B7459bC678B67e8a",
+      "connector": "aave"
+    },
+    "aWETH.e": {
+      "underlyingToken": "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab",
+      "lendingAddress": "0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c8",
+      "priceFeed": "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
+      "connector": "aave"
+    },
+    "aWBTC.e": {
+      "underlyingToken": "0x50b7545627a5162f82a992c33b87adc75187b218",
+      "lendingAddress": "0x078f358208685046a11C85e8ad32895DED33A249",
+      "priceFeed": "0x2779D32d5166BAaa2B2b658333bA7e6Ec0C65743",
       "connector": "aave"
     },
     "aWAVAX": {
@@ -36,6 +48,18 @@
       "underlyingToken": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
       "lendingAddress": "0x29472d511808ce925f501d25f9ee9effd2328db2",
       "priceFeed": "0xF096872672F44d6EBA71458D74fe67F9a77a23B9",
+      "connector": "compound"
+    },
+    "jWETH.e": {
+      "underlyingToken": "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab",
+      "lendingAddress": "0x929f5caB61DFEc79a5431a7734a68D714C4633fa",
+      "priceFeed": "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
+      "connector": "compound"
+    },
+    "jWBTC.e": {
+      "underlyingToken": "0x50b7545627a5162f82a992c33b87adc75187b218",
+      "lendingAddress": "0x3fE38b7b610C0ACD10296fEf69d9b18eB7a9eB1F",
+      "priceFeed": "0x2779D32d5166BAaa2B2b658333bA7e6Ec0C65743",
       "connector": "compound"
     },
     "jWAVAX": {

@@ -33,7 +33,7 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     }
 
     /**
-     * Get the donation currency at a speciffic index
+     * Get the donation currency at a specific index
      */
     function getDonationCurrencyAt(uint256 index) public view returns (DonationCurrency memory) {
         return getDonationCurrency(_donationCurrencyMapping.at(index));

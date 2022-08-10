@@ -133,6 +133,7 @@ const upkeep = async() => {
 
     // Return when the upkeep status goes back to dripStage1 step 0 from dump step 4
     if (newUpkeepstatus.toNumber() == 0 && lastStep == 4) {
+        cyan('\nProcessing complete...')
         return
     } else {
         await processUpkeep(newUpkeepstatus);

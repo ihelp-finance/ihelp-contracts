@@ -15,9 +15,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   dim(`chainId: ${chainId}`);
 
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
   
   // We deploy a mocked version of the price provider which will always return 1 as the price of any call
-  const contract = isTestEnvironment ? 'PriceFeedProviderMock' : 'PriceFeedProvider';
+  const contract = isTestEnvironment && deployMockTokens == 'true' ? 'PriceFeedProviderMock' : 'PriceFeedProvider';
+  
+  yellow(`\nDeploying ${contract} Contract\n`);
 
   // deploy the iHelp token
   await catchUnknownSigner(
