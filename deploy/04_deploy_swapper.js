@@ -1,4 +1,4 @@
-const { dim, green, getSwapAddresses, chainName, yellow, getLendingConfigurations } = require("../scripts/deployUtils");
+const { dim, green, getSwapAddresses, chainName, yellow, getLendingConfigurations, cyan } = require("../scripts/deployUtils");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
@@ -35,6 +35,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       }
     }
   }
+  
+  cyan(`\nNative Token Address: ${nativeTokenAddress}\n`);
 
   // deploy the swapper
   await catchUnknownSigner(
