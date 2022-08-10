@@ -90,7 +90,7 @@ module.exports.deployCharityPoolsToNetwork = async (configurations, network, fac
         const factoryDeployment = await deployments.get(factoryContractName);
         const factory = await ethers.getContractAt(factoryContractName, factoryDeployment.address);
 
-        const BATCH_SIZE = 30;
+        const BATCH_SIZE = 10;
         
         const groups = breakArrayIntoGroups(remaining, BATCH_SIZE);
         

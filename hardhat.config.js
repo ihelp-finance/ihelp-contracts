@@ -105,8 +105,7 @@ module.exports = {
       chainId: 43114,
       accounts: [
         `0x${deployerPrivateKey}`, // deployer
-      ],
-      
+      ]
     },
     fuji: {
       url: process.env.REACT_APP_RPC_URL || "",
