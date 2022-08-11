@@ -42,30 +42,30 @@ const runListener = async() => {
     analytics = new ethers.Contract(analyticsContract.address, analyticsContract.abi, provider);
 
     // Connect
-    const options = {
-        timeout: 30000, // ms
+    // const options = {
+    //     timeout: 30000, // ms
     
-        clientConfig: {
-            // Useful if requests are large
-            maxReceivedFrameSize: 100000000,   // bytes - default: 1MiB
-            maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
+    //     clientConfig: {
+    //         // Useful if requests are large
+    //         maxReceivedFrameSize: 100000000,   // bytes - default: 1MiB
+    //         maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
     
-            // Useful to keep a connection alive
-            keepalive: true,
-            keepaliveInterval: -1 // ms
-        },
+    //         // Useful to keep a connection alive
+    //         keepalive: true,
+    //         keepaliveInterval: -1 // ms
+    //     },
     
-        // Enable auto reconnection
-        reconnect: {
-            auto: true,
-            delay: 1000, // ms
-            maxAttempts: 10,
-            onTimeout: false
-        }
-    };
+    //     // Enable auto reconnection
+    //     reconnect: {
+    //         auto: true,
+    //         delay: 1000, // ms
+    //         maxAttempts: 10,
+    //         onTimeout: false
+    //     }
+    // };
     
     let providerWeb3, web3;
-    providerWeb3 = new Web3.providers.WebsocketProvider(nodeUrlWs, options);
+    providerWeb3 = new Web3.providers.WebsocketProvider(nodeUrlWs);
     web3 = new Web3(providerWeb3);
 
     // listen only from the latest block

@@ -64,6 +64,7 @@
     "run:tester:donationslistener": "node test/validation/mockDonations.js",
     "deploy": "hardhat deploy  --network localhost  --export-all ./build/localhost_contracts.json",
     "postdeploy": "hardhat run scripts/publish.js",
+    "flattenContracts": "./scripts/flattenContracts.sh",
     "updateCharities": "hardhat run  --network localhost  scripts/updateCharities.js",
     "addDonationCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",
     "watch": "node scripts/watch.js",
