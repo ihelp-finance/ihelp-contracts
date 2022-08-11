@@ -43,6 +43,15 @@ yarn test test/00_e2e-validation.test.js
 
 ```
 
+Updates the contracts can occuring using the below commands:
+```
+yarn deploy # this generates a deploy.log file
+
+yarn mockUpgrade # this generates the upgradeBatch.json file and applies the updates for the core contracts
+
+ yarn updateCharities # this specifically updates the charity beacon
+```
+
 ## Event Listeners
 
 We use event listeners to keep track of time-series-based on-chain events throughout the iHelp protocol. Start the listener after configuring your hardhat config (and running yarn chain if local) using the command below:

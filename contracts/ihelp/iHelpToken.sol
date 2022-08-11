@@ -181,7 +181,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 premineTokens = 7_000_000;
         _mint(_developmentPool, premineTokens * 1e18);
 
-        __processingGasLimit = 20_000_000;
+        __processingGasLimit = 7_000_000;
     }
 
 
