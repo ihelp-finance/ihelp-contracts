@@ -277,9 +277,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function getTotalCharityPoolInterest() external view returns (uint256) {
         uint256 totalInterest = 0;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
-            PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
             for (uint256 ii = 0; ii < cTokens.length; ii++) {
                 totalInterest += CharityPoolInterface(payable(charity)).totalInterestEarned(cTokens[ii].lendingAddress);
             }
@@ -302,7 +302,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("Intial gas,", initialGas);
 
         require(processingState.status == 0, "Invalid status");
-
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
@@ -326,9 +325,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 // get the total from each charity - this represents an accumulated value not just the current capital or interest
                 CharityPoolInterface(payable(charity)).calculateTotalIncrementalInterest(cTokens[ii].lendingAddress);
             }
-
-            uint256 totalInterestUSDofCharity = CharityPoolInterface(payable(charity)).newTotalInterestEarnedUSD();
-
+            
+            uint256 totalInterestUSDofCharity = CharityPoolInterface(payable(charity)).newTotalInterestEarnedUSDByCurrencies(cTokens);
+            if( totalInterestUSDofCharity == 0 ) {
+                continue;
+            }
             // capture the share
             // charityInterestShare[charity] += totalInterestUSDofCharity;
 
@@ -336,7 +337,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             processingState.newInterestUS += totalInterestUSDofCharity;
 
             // get the balance per user that has generated this new interest amount
-            uint256 charityAccountedBalance = CharityPoolInterface(payable(charity)).accountedBalanceUSD();
+            uint256 charityAccountedBalance = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
 
             processingState.totalCharityPoolContributions += charityAccountedBalance;
         }
@@ -467,6 +468,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
@@ -481,7 +484,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             address charity = charityPoolList.at(i);
             // console.log("pool:", charity);
 
-            uint256 poolContribution = CharityPoolInterface(payable(charity)).accountedBalanceUSD();
+            uint256 poolContribution = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
             // console.log("poolContribution", poolContribution);
 
             if (poolContribution > 0) {
@@ -512,7 +515,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     }
 
                     // get the contributors balance
-                    uint256 userContribution = CharityPoolInterface(payable(charity)).balanceOfUSD(contributorList[ii]);
+                    uint256 userContribution = CharityPoolInterface(payable(charity)).balanceOfUSDByCurrency(contributorList[ii], cTokens);
 
                     uint256 userShare = userContribution.div(poolContribution);
                     console.log("contributor", contributorList[ii], userContribution, userShare);

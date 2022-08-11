@@ -21,6 +21,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
   
   let nativeTokenAddress = null;
+  //TODO: ask matt, something maybe funky with setting ,the nativeToken
+  // We should use the router.WETH() method to get the official wrapped native asset 
   const configurations = await getLendingConfigurations(chainId,forceLookup=true);
   for (const lender of Object.keys(configurations)) {
     for (const coin of Object.keys(configurations[lender])) {
@@ -43,7 +45,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         execute: {
           init: {
             methodName: "initialize",
-            args: [swapperAddresses['router'],nativeTokenAddress]
+            args: [swapperAddresses['router'], nativeTokenAddress]
           }
         }
       },

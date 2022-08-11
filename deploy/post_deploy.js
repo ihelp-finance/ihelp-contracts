@@ -80,7 +80,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   console.log('factory', swapv2FactoryAddress);
 
   //const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
-  const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://eth-rinkeby.alchemyapi.io/v2/UipRFhJQbBiZ5j7lbcWt46ex5CBjVBpW");
+  const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.TEST_FORK);
   const swapv2Factory = new ethers.Contract(swapv2FactoryAddress, IUniswapV2Factory['abi'], mainnetInfura);
   const swapv2Router = new ethers.Contract(swapv2RouterAddress, IUniswapV2Router02['abi'], mainnetInfura);
 
