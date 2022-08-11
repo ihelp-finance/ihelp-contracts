@@ -296,6 +296,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("calculating incremental charity pool interest generation...");
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
+        
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
         console.log("Intial gas,", initialGas);
 
@@ -312,8 +314,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             console.log("");
             address charity = charityPoolList.at(i);
             console.log(charity);
-
-            PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+            
             for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                 consumedGas = initialGas - gasleft();
                 console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
