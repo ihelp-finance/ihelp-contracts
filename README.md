@@ -81,7 +81,7 @@ The Swapper contract is specifically designed to handle exchanges from CharityPo
 
 ## Off-Chain Processes
 
-The below processes are currently running off-chain in the Rinkeby demo app. The team is considering moving several of these processes to on-chain [Chainlink keeper services](https://docs.chain.link/docs/chainlink-keepers/introduction/).
+The below processes are currently running off-chain in the production app:
 
 ### Upkeep
 
