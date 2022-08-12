@@ -49,7 +49,7 @@ yarn deploy # this generates a deploy.log file
 
 yarn mockUpgrade # this generates the upgradeBatch.json file and applies the updates for the core contracts
 
- yarn updateCharities # this specifically updates the charity beacon
+yarn updateCharities # this specifically updates the charity beacon
 ```
 
 ## Event Listeners
