@@ -136,8 +136,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
         require(_newAddress != charityWallet, "charity-wallet/invalid-addr");
-        //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
-        // since the next rewards will go to the new wallets.
         charityWallet = _newAddress;
     }
 
@@ -225,8 +223,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
         // Allow connector to pull cTokens from this contracts
-
-        console.log("Approving", _cTokenAddress, _amount);
         require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
 
         // Reddem the underlying tokens for cTokens
@@ -292,7 +288,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         if (_amount == 0) {
             return;
         }
-
         require(
             priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)),
             "Donation/invalid-currency"
@@ -310,8 +305,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
-            console.log("holdingTokenAmount", tokenaddress, holdingToken);
-
+ 
             uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
 
             console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
@@ -323,10 +317,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             donationBalances[_account][address(_donationToken)] += _amount;
 
             if (tokenaddress != holdingToken) {
-                console.log("Swapping");
                 uint256 minAmount = (holdingTokenAmount * 95) / 100;
 
-                // TODO: This should enable support for tokens that have fee on transfer
                 uint256 receivedAmount = _donationToken.balanceOf(address(this));
 
                 require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
@@ -356,7 +348,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             if (charityWallet != address(0)) {
                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
-                console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
                 require(IERC20(holdingToken).transfer(charityWallet, charityDonation), "Funding/t-fail");
             } else {
                 console.log("direct to contract", address(this), charityDonation);
@@ -385,7 +376,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function claimInterest() external {
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
-        console.log("CHARITY_POOL::CLAIM:::", amount);
         if (amount == 0) {
             return;
         }
@@ -403,7 +393,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         ConnectorInterface connectorInstance = connector(_cTokenAddress);
-        console.log("redeemAmount", amount);
 
         if (amount > 0) {
             // Allow connector to pull cTokens from this contracts
@@ -427,19 +416,14 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
-                console.log("TOKEN::", tokenaddress, holdingToken);
                 amount = swapper.swap(tokenaddress, holdingToken, amount, 0, address(this));
             }
             (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
             uint256 devFeeShare = (amount * devFee) / 1000;
             uint256 stakeFeeShare = (amount * stakeFee) / 1000;
 
-            console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
-            console.log("Dev and stake fees::", devFee, stakeFee);
-
             (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
 
-            // TODO: @Matt maybe we can batch thease up and call transfer once for all of them 
             require(IERC20(holdingToken).transfer(_developmentPool, devFeeShare), "Funding/transfer");
             require(IERC20(holdingToken).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
 
@@ -447,7 +431,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             currentInterestEarned[_cTokenAddress] = 0;
             redeemableInterest[_cTokenAddress] = 0;
 
-            // TODO: Ask matt do we have to reset the interest after claiming?
             newTotalInterestEarned[_cTokenAddress] = 0;
 
             emit Rewarded(charityWallet, amount);
@@ -598,9 +581,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
         // in charityPool currency
         uint256 newEarned = interestEarned(_cTokenAddress);
-
-        console.log("newEarned", newEarned);
-        console.log("currentInterestEarned", currentInterestEarned[_cTokenAddress]);
 
         if (newEarned > currentInterestEarned[_cTokenAddress]) {
             newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];

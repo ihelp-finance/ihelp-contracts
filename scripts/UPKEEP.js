@@ -168,6 +168,7 @@ const upkeep = async() => {
     // console.log('\nresetting processing state');
     // await ihelp.setProcessingState(0,0,0,0,0,0,0);
     // console.log('processing state reset\n');
+    
     // process.exit(0)
     
     await processUpkeep(upkeepStatus);
