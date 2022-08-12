@@ -25,3 +25,4 @@ deployed-charities/hardhat.json
 .vscode/settings.json
 _hardhat.config.js
 contracts_flattened
+upgradeBatch.json

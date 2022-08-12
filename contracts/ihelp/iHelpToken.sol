@@ -76,6 +76,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     ProcessingState public processingState;
     IERC20 public underlyingToken;
     PriceFeedProviderInterface public priceFeedProvider;
+    
+    EnumerableSet.AddressSet private charitiesToProcess;
 
     function setTokenPhases() internal {
         uint256 numberPhases = 20;
@@ -107,7 +109,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         tokensPerInterestByPhase[_phase] = _newRate;
     }
 
-    function setProcessiongState(
+    function setProcessingState(
         uint256 newInterestUS,
         uint256 totalCharityPoolContributions,
         uint256 tokensToCirculate,
@@ -181,7 +183,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 premineTokens = 7_000_000;
         _mint(_developmentPool, premineTokens * 1e18);
 
-        __processingGasLimit = 20_000_000;
+        __processingGasLimit = 7_000_000;
     }
 
 
@@ -277,9 +279,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function getTotalCharityPoolInterest() external view returns (uint256) {
         uint256 totalInterest = 0;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
         for (uint256 i = 0; i < charityPoolList.length(); i++) {
             address charity = charityPoolList.at(i);
-            PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
             for (uint256 ii = 0; ii < cTokens.length; ii++) {
                 totalInterest += CharityPoolInterface(payable(charity)).totalInterestEarned(cTokens[ii].lendingAddress);
             }
@@ -297,13 +299,21 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
         
+        console.log("Initial gas,", initialGas);
+        
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
-        console.log("Intial gas,", initialGas);
-
         require(processingState.status == 0, "Invalid status");
-
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
+
+            address charity = charityPoolList.at(i);
+            console.log(charity);
+            
+            // if no active contributors pass over the charity for processing
+            if ( CharityPoolInterface(payable(charity)).numberOfContributors() == 0 ) {
+                continue;
+            }
+            
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
             console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
@@ -312,10 +322,13 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 return;
             }
             console.log("");
-            address charity = charityPoolList.at(i);
-            console.log(charity);
             
             for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
+                
+                if ( CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress) == 0 ) {
+                    continue;
+                }
+                
                 consumedGas = initialGas - gasleft();
                 console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
                 if (consumedGas >= __processingGasLimit) {
@@ -325,20 +338,24 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 }
                 // get the total from each charity - this represents an accumulated value not just the current capital or interest
                 CharityPoolInterface(payable(charity)).calculateTotalIncrementalInterest(cTokens[ii].lendingAddress);
+                
             }
-
-            uint256 totalInterestUSDofCharity = CharityPoolInterface(payable(charity)).newTotalInterestEarnedUSD();
-
+            
+            uint256 totalInterestUSDofCharity = CharityPoolInterface(payable(charity)).newTotalInterestEarnedUSDByCurrencies(cTokens);
+            if( totalInterestUSDofCharity == 0 ) {
+                continue;
+            }
             // capture the share
             // charityInterestShare[charity] += totalInterestUSDofCharity;
-
+            
             // this represents the totalInterest in USD
             processingState.newInterestUS += totalInterestUSDofCharity;
 
             // get the balance per user that has generated this new interest amount
-            uint256 charityAccountedBalance = CharityPoolInterface(payable(charity)).accountedBalanceUSD();
+            uint256 charityAccountedBalance = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
 
             processingState.totalCharityPoolContributions += charityAccountedBalance;
+            charitiesToProcess.add(charity);
         }
 
         __interestGenerated += processingState.newInterestUS;
@@ -364,7 +381,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         console.log("\nnewInterestUSD", newInterestUSD);
         console.log("totalCharityPoolContributions", totalCharityPoolContributions);
-        console.log("tokenPhase", __tokenPhase);
+        // console.log("tokenPhase", __tokenPhase);
 
         // based on the total generated interest in the timestep generate the tokens to drip
         uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
@@ -467,7 +484,17 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
+        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
+
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
+            
+            address charity = charityPoolList.at(i);
+            
+            // only process the charities initially considered in dripStage1
+            if ( charitiesToProcess.contains(charity) == false ) {
+                continue;
+            }
+            
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
             console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
@@ -477,11 +504,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 return false;
             }
 
-            console.log("");
-            address charity = charityPoolList.at(i);
-            // console.log("pool:", charity);
-
-            uint256 poolContribution = CharityPoolInterface(payable(charity)).accountedBalanceUSD();
+            uint256 poolContribution = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
             // console.log("poolContribution", poolContribution);
 
             if (poolContribution > 0) {
@@ -512,7 +535,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     }
 
                     // get the contributors balance
-                    uint256 userContribution = CharityPoolInterface(payable(charity)).balanceOfUSD(contributorList[ii]);
+                    uint256 userContribution = CharityPoolInterface(payable(charity)).balanceOfUSDByCurrency(contributorList[ii], cTokens);
 
                     uint256 userShare = userContribution.div(poolContribution);
                     console.log("contributor", contributorList[ii], userContribution, userShare);
@@ -554,16 +577,22 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 consumedGas = 0;
         if (processingState.newInterestUS > 0) {
             for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
+                
+                // redeem the charity interest to the holding pool
+                address charity = charityPoolList.at(i);
+                
+                // only process the charities initially considered in dripStage1
+                if ( charitiesToProcess.contains(charity) == false ) {
+                    continue;
+                }
+                
+                console.log(charity);
+
                 consumedGas = initialGas - gasleft();
                 if (consumedGas >= __processingGasLimit) {
                     processingState.i = i;
                     return;
                 }
-
-                // redeem the charity interest to the holding pool
-                console.log("\nREDEEM START");
-                address charity = charityPoolList.at(i);
-                console.log(charity);
 
                 PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
                 for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
@@ -577,8 +606,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
                     CharityPoolInterface(payable(charity)).redeemInterest(cTokens[ii].lendingAddress);
                 }
+                
+                charitiesToProcess.remove(charity);
 
-                console.log("REDEEM END\n");
             }
         }
         processingState.newInterestUS = 0;

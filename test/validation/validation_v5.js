@@ -151,12 +151,8 @@ const validate = async () => {
   green('CharityPool 1 Address:', charity1Address);
   green('CharityPool 2 Address:', charity2Address);
   green('CharityPool 3 Address:', charity3Address);
-  // green('CharityPool 4 Address:', charity4Address);
   green('Development Pool Address:', developmentPool);
-  green('Staking Pool Address:', stakingPool);
-  green('Holding Pool Address:', holdingPool);
   green('');
-  //green('');
 
   // get the contracts
   const mockDai = false;
@@ -541,7 +537,6 @@ const validate = async () => {
   INPUT = 1;
   console.log('\n*** INPUT', INPUT, '***');
 
-  yellow("Here");
   // make a deposit
   const approvalTx1u1 = await dai.connect(userSigner1).approve(charityPool1.address, web3.utils.toWei('100'));
   await approvalTx1u1.wait();

@@ -19,20 +19,59 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
   const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
+  const swapv2RouterAddress = swapperAddresses['router'];
+
+  const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.TEST_FORK);
+  
   
   let nativeTokenAddress = null;
-  const configurations = await getLendingConfigurations(chainId,forceLookup=true);
-  for (const lender of Object.keys(configurations)) {
-    for (const coin of Object.keys(configurations[lender])) {
-      if (coin.replace('c','').replace('j','').replace('a','') == 'WETH' || coin.replace('c','').replace('j','').replace('a','') == 'WAVAX') {
-        nativeTokenAddress = configurations[lender][coin]['underlyingToken']
-        break
+  if (process.env.SWAPPER_ADDRESSES == 'traderjoe') {
+    
+    const abi = [
+      {
+        "inputs": [],
+        "name": "WAVAX",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
       }
-    }
+    ]
+    
+    const swapv2Router = new ethers.Contract(swapv2RouterAddress, abi, mainnetInfura);
+    
+    nativeTokenAddress = await swapv2Router.WAVAX();
+  }
+  else {
+    
+    const abi = [
+      {
+        "inputs": [],
+        "name": "WETH",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+      }
+    ]
+    
+    const swapv2Router = new ethers.Contract(swapv2RouterAddress, abi, mainnetInfura);
+    
+    nativeTokenAddress = await swapv2Router.WETH();
   }
   
   cyan(`\nNative Token Address: ${nativeTokenAddress}\n`);
-
+  
   // deploy the swapper
   await catchUnknownSigner(
     deploy("swapper", {
@@ -43,7 +82,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         execute: {
           init: {
             methodName: "initialize",
-            args: [swapperAddresses['router'],nativeTokenAddress]
+            args: [swapperAddresses['router'], nativeTokenAddress]
           }
         }
       },

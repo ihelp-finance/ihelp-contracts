@@ -38,7 +38,8 @@ if (removeLogStatements && removeLogStatements == 'true') {
 let forkingData = undefined;
 if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
   forkingData = {
-    url: process.env.TEST_FORK
+    url: process.env.TEST_FORK,
+    // blockNumber: 18486761
   };
 }
 
@@ -71,6 +72,7 @@ module.exports = {
       loggingEnabled: process.env.TEST_LOGGING == 'true' ? true : false,
       timeout: 1200000, // this is needed for forked chain timeouts and/or slow rpc endpoints
       networkCheckTimeout: 1200000,
+      blockGasLimit: 8_000_000
     },
     localhost: {
       url: "http://localhost:7545",
@@ -120,7 +122,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
+        runs: 1000
       },
       outputSelection: {
         "*": {

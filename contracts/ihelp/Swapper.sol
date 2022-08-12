@@ -16,7 +16,7 @@ contract Swapper is OwnableUpgradeable {
 
     function initialize(address _swapRouter, address _nativeToken) public initializer {
         SWAP_ROUTER = IUniswapV2Router02(_swapRouter);
-        NATIVE_TOKEN = _nativeToken;
+        NATIVE_TOKEN =  _nativeToken;
     }
     
     function setRouter(address newRouter) external onlyOwner {

@@ -136,8 +136,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function setCharityWallet(address _newAddress) public onlyOperatorOrOwner {
         require(_newAddress != charityWallet, "charity-wallet/invalid-addr");
-        //TODO: Ask Mat, i dont think we still need to cleanup the holding pool before updating
-        // since the next rewards will go to the new wallets.
         charityWallet = _newAddress;
     }
 
@@ -178,18 +176,17 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function withdrawNative(address _cTokenAddress, uint256 _amount) external nonReentrant {
         require(_amount > 0, "Funding/small-amount");
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
-        
 
         ConnectorInterface connectorIntance = connector(_cTokenAddress);
         // Allow connector to pull cTokens from this contracts
         require(IERC20(_cTokenAddress).approve(address(connectorIntance), _amount), "Funding/approve");
-       
+
         // Redeem the underlying tokens
         require(connectorIntance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
 
         _withdraw(msg.sender, _cTokenAddress, _amount);
         wrappedNative.withdraw(_amount);
-       
+
         payable(msg.sender).transfer(_amount);
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
@@ -226,16 +223,13 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
         // Allow connector to pull cTokens from this contracts
-
-        console.log("Approving", _cTokenAddress, _amount);
         require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
-       
+
         // Reddem the underlying tokens for cTokens
         require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
-      
+
         require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
-
     }
 
     /**
@@ -284,8 +278,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             accountedBalances[_cTokenAddress] = 0;
         }
 
-        uint256 cumulativeBalance = cummulativeBalanceOf(_sender) ;
-        if(cumulativeBalance == 0 && _donationsRegistry[_sender].totalContribUSD == 0){
+        uint256 cumulativeBalance = cummulativeBalanceOf(_sender);
+        if (cumulativeBalance == 0 && _donationsRegistry[_sender].totalContribUSD == 0) {
             contributors.remove(_sender);
         }
     }
@@ -294,7 +288,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         if (_amount == 0) {
             return;
         }
-
         require(
             priceFeedProvider.allowedDirectDonationCurrencies(address(_donationToken)),
             "Donation/invalid-currency"
@@ -312,8 +305,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
-            console.log("holdingTokenAmount", tokenaddress, holdingToken);
-
+ 
             uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
 
             console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
@@ -325,10 +317,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             donationBalances[_account][address(_donationToken)] += _amount;
 
             if (tokenaddress != holdingToken) {
-                console.log("Swapping");
                 uint256 minAmount = (holdingTokenAmount * 95) / 100;
 
-                // TODO: This should enable support for tokens that have fee on transfer
                 uint256 receivedAmount = _donationToken.balanceOf(address(this));
 
                 require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
@@ -358,7 +348,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             if (charityWallet != address(0)) {
                 // deposit the charity share directly to the charities wallet address
                 console.log("Charity Donation::", charityDonation);
-                console.log("Underlying Balance:: ", _donationToken.balanceOf(_account));
                 require(IERC20(holdingToken).transfer(charityWallet, charityDonation), "Funding/t-fail");
             } else {
                 console.log("direct to contract", address(this), charityDonation);
@@ -387,7 +376,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function claimInterest() external {
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
-        console.log("CHARITY_POOL::CLAIM:::", amount);
         if (amount == 0) {
             return;
         }
@@ -405,13 +393,14 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         ConnectorInterface connectorInstance = connector(_cTokenAddress);
-        console.log("redeemAmount", amount);
 
         if (amount > 0) {
-         
             // Allow connector to pull cTokens from this contracts
             uint256 cTokenValueOfInterest = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, amount);
-            require(IERC20(_cTokenAddress).approve(address(connectorInstance), cTokenValueOfInterest), "Funding/approve");
+            require(
+                IERC20(_cTokenAddress).approve(address(connectorInstance), cTokenValueOfInterest),
+                "Funding/approve"
+            );
             connectorInstance.redeemUnderlying(_cTokenAddress, amount);
 
             // Get The underlying token for this cToken
@@ -423,20 +412,18 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
                 // ensure minimum of 50% redeemed
                 uint256 minAmount = (amount * 50) / 100;
+                minAmount = toHoldingTokenScale(_cTokenAddress, minAmount);
 
                 require(underlyingToken.approve(swapperPool, amount), "Funding/approve");
 
-                console.log("TOKEN::", tokenaddress, holdingToken);
-                amount = swapper.swap(tokenaddress, holdingToken, amount, minAmount, address(this));
+                amount = swapper.swap(tokenaddress, holdingToken, amount, 0, address(this));
             }
             (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
             uint256 devFeeShare = (amount * devFee) / 1000;
             uint256 stakeFeeShare = (amount * stakeFee) / 1000;
 
-            console.log("Dev and stake amounts::", devFeeShare, stakeFeeShare, amount);
-            console.log("Dev and stake fees::", devFee, stakeFee);
-
             (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
+
             require(IERC20(holdingToken).transfer(_developmentPool, devFeeShare), "Funding/transfer");
             require(IERC20(holdingToken).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
 
@@ -444,7 +431,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             currentInterestEarned[_cTokenAddress] = 0;
             redeemableInterest[_cTokenAddress] = 0;
 
-            // TODO: Ask matt do we have to reset the interest after claiming?
             newTotalInterestEarned[_cTokenAddress] = 0;
 
             emit Rewarded(charityWallet, amount);
@@ -565,21 +551,26 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     function convertToUsd(address _cTokenAddress, uint256 _value) internal view returns (uint256) {
-        if( _value == 0 ) {
+        if (_value == 0) {
             return 0;
         }
-        
+
         (uint256 tokenPrice, uint256 priceDecimals) = getUnderlyingTokenPrice(_cTokenAddress);
         uint256 valueUSD = _value * tokenPrice;
         valueUSD = valueUSD / safepow(10, priceDecimals);
+
+        return toHoldingTokenScale(_cTokenAddress, valueUSD);
+    }
+
+    function toHoldingTokenScale(address _cTokenAddress, uint256 amount) internal view returns (uint256) {
         uint256 _decimals = decimals(_cTokenAddress);
 
         if (_decimals < holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, holdingDecimals - _decimals);
+            amount = amount * safepow(10, holdingDecimals - _decimals);
         } else if (_decimals > holdingDecimals) {
-            valueUSD = valueUSD * safepow(10, _decimals - holdingDecimals);
+            amount = amount * safepow(10, _decimals - holdingDecimals);
         }
-        return valueUSD;
+        return amount;
     }
 
     // increment and return the total interest generated
@@ -590,9 +581,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
         // in charityPool currency
         uint256 newEarned = interestEarned(_cTokenAddress);
-
-        console.log("newEarned", newEarned);
-        console.log("currentInterestEarned", currentInterestEarned[_cTokenAddress]);
 
         if (newEarned > currentInterestEarned[_cTokenAddress]) {
             newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];
@@ -625,12 +613,60 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     /**
      *  Expensive function should be called by offchain process
      */
+    function accountedBalanceUSDOfCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, accountedBalances[cTokenAddress]);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function newTotalInterestEarnedUSDOfCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, newTotalInterestEarned[cTokenAddress]);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
     function newTotalInterestEarnedUSD() public view returns (uint256) {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
-            result += newCTokenTotalUSDInterest(cTokenAddress);
+            result += convertToUsd(cTokenAddress, newTotalInterestEarned[cTokenAddress]);
+        }
+        return result;
+    }
+
+    /**
+     *  Expensive function should be called by offchain process
+     */
+    function newTotalInterestEarnedUSDByCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 result;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, newTotalInterestEarned[cTokenAddress]);
         }
         return result;
     }
@@ -682,6 +718,19 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function balanceOfUSD(address _addr) public view returns (uint256) {
         uint256 result;
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            address cTokenAddress = cTokens[i].lendingAddress;
+            result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
+        }
+        return result;
+    }
+
+    function balanceOfUSDByCurrency(address _addr, PriceFeedProviderInterface.DonationCurrency[] memory cTokens)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
             address cTokenAddress = cTokens[i].lendingAddress;
             result += convertToUsd(cTokenAddress, balances[_addr][cTokenAddress]);
