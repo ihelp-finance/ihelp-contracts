@@ -3,12 +3,14 @@
 pragma solidity ^0.8.9;
 
 import "../utils/IERC20.sol";
+import "./SwapperInterface.sol";
+
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "hardhat/console.sol";
 
-contract Swapper is OwnableUpgradeable {
+contract Swapper is SwapperInterface, OwnableUpgradeable {
     //address of the swap router (uniswap v2 format)
     IUniswapV2Router02 public SWAP_ROUTER;
 

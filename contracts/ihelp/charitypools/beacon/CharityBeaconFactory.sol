@@ -19,15 +19,14 @@ contract CharityBeaconFactory is OwnableUpgradeable {
         string name;
         address addr;
     }
-    event Created(DeployedCharity[] newCharities);
 
+    event Created(DeployedCharity[] newCharities);
     function initialize(address _charityImpl) public initializer {
         __Ownable_init();
         beacon = new UpgradeableBeacon(_charityImpl);
     }
-
     function createCharityPool(CharityPoolUtils.CharityPoolConfiguration[] memory configurations)
-        external
+        external onlyOwner
     {
         DeployedCharity[] memory result = new DeployedCharity[](configurations.length);
         for (uint256 i = 0; i < configurations.length; i++) {
@@ -43,7 +42,6 @@ contract CharityBeaconFactory is OwnableUpgradeable {
         }
         emit Created(result);
     }
-
     function getImplementation() public view returns (address) {
         return beacon.implementation();
     }

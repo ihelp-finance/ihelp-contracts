@@ -2,9 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@aave/core-v3/contracts/interfaces/IPool.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {AToken} from "@aave/core-v3/contracts/protocol/tokenization/AToken.sol";
 
 import "./ConnectorInterface.sol";
 import "../utils/ICErc20.sol";
