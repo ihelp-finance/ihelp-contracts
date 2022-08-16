@@ -3,12 +3,14 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "./ConnectorInterface.sol";
 import "../utils/ICErc20.sol";
 
 contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
+    using PRBMathUD60x18 for uint256;
 
     function initialize() public initializer {
         __Ownable_init();
@@ -23,7 +25,7 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        uint256 cTokens = ICErc20(cToken).cTokenValueOf(redeemAmount);
+        uint256 cTokens = redeemAmount.div(ICErc20(cToken).exchangeRateStored());
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
@@ -33,7 +35,7 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function cTokenValueOfUnderlying(address cToken, uint256 amount) external view returns (uint256) {
-        return ICErc20(cToken).cTokenValueOf(amount);
+        return amount.div(ICErc20(cToken).exchangeRateStored());
     }
 
     function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {

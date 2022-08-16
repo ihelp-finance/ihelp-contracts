@@ -34,7 +34,7 @@ contract CTokenMock is ERC20Upgradeable {
     }
 
     function redeemUnderlying(uint256 requestedAmount) external returns (uint256) {
-        uint256 cTokens = cTokenValueOf(requestedAmount);
+        uint256 cTokens = requestedAmount.div(exchangeRateCurrent());
         _burn(msg.sender, cTokens);
         require(underlying.transfer(msg.sender, requestedAmount), "could not transfer tokens");
         return 0;
@@ -49,12 +49,17 @@ contract CTokenMock is ERC20Upgradeable {
         underlying.mint(address(this), amount);
     }
 
-    function cTokenValueOf(uint256 tokens) public view returns (uint256) {
-        return tokens.div(exchangeRateCurrent());
-    }
-
     function balanceOfUnderlying(address account) public view returns (uint256) {
         return balanceOf(account).mul(exchangeRateCurrent());
+    }
+    
+    function exchangeRateStored() public view returns (uint256) {
+        // console.log(totalSupply(), underlying.balanceOf(address(this)));
+        if (totalSupply() == 0) {
+            return 1e18;
+        } else {
+            return underlying.balanceOf(address(this)).div(totalSupply());
+        }
     }
 
     function exchangeRateCurrent() public view returns (uint256) {
