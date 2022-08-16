@@ -7,4 +7,4 @@ fi
 
 network="$1"
 
-npx hardhat deploy  --network $network  --export-all ./build/${network}_contracts.json
+script -efq -c "npx hardhat deploy  --network $network  --export-all ./build/${network}_contracts.json" deploy.log

@@ -13,6 +13,8 @@ interface ICErc20 {
     function getCash() external view returns (uint256);
 
     function supplyRatePerBlock() external view returns (uint256);
+    
+    function exchangeRateStored() external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
 
@@ -25,5 +27,4 @@ interface ICErc20 {
     // Links to public address variable from CERC200Storage
     function underlying() external view returns (address);
 
-    function cTokenValueOf(uint256 amount) external view returns (uint256);
 }
