@@ -4,6 +4,7 @@ const { smock } = require("@defi-wonderland/smock");
 const {
     constants,
 } = require('@openzeppelin/test-helpers');
+const { BigNumber } = require('ethers');
 
 use(smock.matchers);
 
@@ -34,16 +35,18 @@ describe("PriceFeedProvider", function () {
         cTokenMock1 = await CTokenMock.deploy(underlyingMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(underlyingMock1.address, 1000);
 
-        mockConnector = await smock.fake('CompoundConnector');
+        mockConnector = await smock.mock('CompoundConnector');
+        mockConnector = await mockConnector.deploy();
 
         priceFeedProvider = await PriceFeedProvider.deploy();
 
+        console.log(mockConnector.address)
         donationCurrencies = [{
             provider: "Provider1",
             currency: "ETH",
             underlyingToken: underlyingMock1.address,
             lendingAddress: cTokenMock1.address,
-            currency: "currency1",
+            priceFeed: chainLinkAggretator.address,
             connector: mockConnector.address
         }, {
             provider: "Provider2",
@@ -52,8 +55,8 @@ describe("PriceFeedProvider", function () {
             lendingAddress: cTokenMock2.address,
             priceFeed: chainLinkAggretator.address,
             connector: mockConnector.address
+            
         }];
-
         await priceFeedProvider.initialize(donationCurrencies);
     });
 
@@ -236,7 +239,17 @@ describe("PriceFeedProvider", function () {
             const [price, decimals] = await priceFeedProvider.getUnderlyingTokenPrice(cTokenMock2.address);
             expect(price).to.equal(100);
             expect(decimals).to.equal(8);
-
         })
     })
+
+    describe("Currency Data", async () => {
+        it("should calculated currency APY", async () => {
+            const SUPPLY_RATE = await cTokenMock1.supplyRatePerBlock();
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[0].lendingAddress, 13.5 * 1000);
+            const blocksPerDay = 86_400 / 13.5;
+            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(100 * blocksPerDay * 365);
+            expect(apr).to.equal(expectedAPR);
+        })
+    })
+
 });

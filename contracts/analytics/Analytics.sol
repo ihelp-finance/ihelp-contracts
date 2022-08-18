@@ -534,14 +534,18 @@ contract Analytics is IAnalytics {
     /**
      * Get all the configured donation currencies
      */
-    function getSupportedCurrencies(iHelpTokenInterface _iHelp)
+    function getSupportedCurrencies(iHelpTokenInterface _iHelp, uint256 _blockTime)
         public
         view
         returns (AnalyticsUtils.DonationCurrencyDetails[] memory)
     {
-        PriceFeedProviderInterface.DonationCurrency[] memory currencies = PriceFeedProviderInterface(
+
+        PriceFeedProviderInterface priceFeedProvider = PriceFeedProviderInterface(
             _iHelp.priceFeedProvider()
-        ).getAllDonationCurrencies();
+        );
+
+        PriceFeedProviderInterface.DonationCurrency[] memory currencies = priceFeedProvider.getAllDonationCurrencies();
+
         AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](
             currencies.length
         );
@@ -559,6 +563,8 @@ contract Analytics is IAnalytics {
             result[i].priceFeed = currencies[i].priceFeed;
             result[i].price = price;
             result[i].priceDecimals = priceDecimals;
+             
+            result[i].apr = priceFeedProvider.getCurrencyApr(currencies[i].lendingAddress, _blockTime);
         }
 
         return result;

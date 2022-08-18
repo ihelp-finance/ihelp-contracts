@@ -94,5 +94,6 @@ library AnalyticsUtils {
         uint256 price;
         uint256 priceDecimals;
         uint256 decimals;
+        uint256 apr;
     }
 }
