@@ -31,7 +31,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @param sender The purchaser of the tickets
      * @param amount The size of the deposit
      */
-    event Deposited(address indexed sender, address indexed cTokenAddress, uint256 amount);
+    event Deposited(address indexed sender, address indexed cTokenAddress, uint256 amount, string memo);
 
     /**
      * Emitted when a user withdraws from the pool.
@@ -53,7 +53,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      * @param receiver The address of the reward receiver
      * @param amount The amount of the win
      */
-    event DirectDonation(address indexed sender, address indexed receiver, uint256 amount);
+    event DirectDonation(address indexed sender, address indexed receiver, uint256 amount,  string memo);
 
     /**
      * Emitted when an offchain claim is made.
@@ -158,7 +158,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     /**
      * Allows depositing native tokens to the charity contract
      */
-    function depositNative(address _cTokenAddress) public payable {
+    function depositNative(address _cTokenAddress, string memory _memo) public payable {
         require(msg.value > 0, "Native-Funding/small-amount");
         require(address(getUnderlying(_cTokenAddress)) == address(wrappedNative), "Native-Funding/invalid-addr");
         wrappedNative.deposit{value: msg.value}();
@@ -166,7 +166,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         // Deposit the funds
         _depositFrom(msg.sender, _cTokenAddress, msg.value);
 
-        emit Deposited(msg.sender, _cTokenAddress, msg.value);
+        emit Deposited(msg.sender, _cTokenAddress, msg.value, _memo);
     }
 
     /**
@@ -190,7 +190,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         emit Withdrawn(msg.sender, _cTokenAddress, _amount);
     }
 
-    function depositTokens(address _cTokenAddress, uint256 _amount) public {
+    function depositTokens(address _cTokenAddress, uint256 _amount, string memory _memo) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
@@ -198,7 +198,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         // Deposit the funds
         _depositFrom(msg.sender, _cTokenAddress, _amount);
 
-        emit Deposited(msg.sender, _cTokenAddress, _amount);
+        emit Deposited(msg.sender, _cTokenAddress, _amount, _memo);
     }
 
     /**
@@ -283,7 +283,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         }
     }
 
-    function directDonation(IERC20 _donationToken, uint256 _amount) public {
+    function directDonation(IERC20 _donationToken, uint256 _amount, string memory _memo) public {
         if (_amount == 0) {
             return;
         }
@@ -293,6 +293,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         );
         require(_donationToken.transferFrom(msg.sender, address(this), _amount), "Funding/staking swap transfer");
         _directDonation(_donationToken, msg.sender, _amount);
+
+        emit DirectDonation(msg.sender, charityWallet, _amount, _memo);
     }
 
     function _directDonation(
@@ -300,14 +302,12 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         address _account,
         uint256 _amount
     ) internal {
-        console.log("directDonationAmount", _amount);
+
         // transfer the tokens to the charity contract
         if (_amount > 0) {
             address tokenaddress = address(_donationToken);
  
             uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, _amount);
-
-            console.log("holdingTokenAmount", holdingTokenAmount, tokenaddress, holdingToken);
 
             // Add up the donation amount before the swap
             _donationsRegistry[_account].totalContribUSD += holdingTokenAmount;
@@ -321,7 +321,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
                 uint256 receivedAmount = _donationToken.balanceOf(address(this));
 
                 require(_donationToken.approve(swapperPool, receivedAmount), "Funding/staking swapper approve");
-                console.log("Current Token Balance::", receivedAmount);
                 _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
             }
 
@@ -342,11 +341,9 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
             // if charityWallet uses address(0) (for off-chain transfers) then deposit the direction donation amount to this contract
             // all of the direct donation amount in this contract will then be distributed off-chain to the charity
-            console.log("Charity Wallet::", charityWallet);
-
             if (charityWallet != address(0)) {
                 // deposit the charity share directly to the charities wallet address
-                console.log("Charity Donation::", charityDonation);
+                // console.log("Charity Donation::", charityDonation);
                 require(IERC20(holdingToken).transfer(charityWallet, charityDonation), "Funding/t-fail");
             } else {
                 console.log("direct to contract", address(this), charityDonation);
@@ -361,8 +358,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             totalDonationsUSD += _amount;
 
             contributors.add(_account);
-
-            emit DirectDonation(_account, charityWallet, _amount);
         }
     }
 
@@ -407,7 +402,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
             address tokenaddress = address(underlyingToken);
             if (tokenaddress != holdingToken) {
-                console.log("\nSWAPPING", swapperPool, amount);
+                // console.log("\nSWAPPING", swapperPool, amount);
 
                 // ensure minimum of 50% redeemed
                 uint256 minAmount = (amount * 50) / 100;
@@ -747,15 +742,16 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     receive() external payable {}
 
-    function directDonationNative() public payable {
+    function directDonationNative(string memory _memo) public payable {
         uint256 amount = msg.value;
         wrappedNative.deposit{value: amount}();
         wrappedNative.approve(address(this), amount);
         _directDonation(wrappedNative, msg.sender, amount);
+        emit DirectDonation(msg.sender, charityWallet, amount, _memo);
     }
 
     function version() public pure virtual returns (uint256) {
-        return 1;
+        return 2;
     }
 
     uint256[27] private __gap;
