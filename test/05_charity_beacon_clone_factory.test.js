@@ -9,7 +9,7 @@ use(smock.matchers);
 describe('Charity Beacon Factory Deployment', function () {
     let addr2;
     let addrs;
-    let stakingPool, cTokenUnderlyingMock, developmentPool, holdingPool, cTokenMock, iHelpMock, holdingMock;
+    let cTokenUnderlyingMock, cTokenMock, iHelpMock, holdingMock, operator;
     beforeEach(async function () {
 
         const CharityPool = await smock.mock("CharityPool");
@@ -33,7 +33,6 @@ describe('Charity Beacon Factory Deployment', function () {
 
         this.factory = await CharityBeaconFactory.deploy();
         await this.factory.initialize(charityPool.address);
-
     });
 
     it('should deploy a factory ', async function () {
@@ -48,7 +47,6 @@ describe('Charity Beacon Factory Deployment', function () {
             charityName: "TestCharity",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
-            lendingTokenAddress: cTokenMock.address,
             holdingTokenAddress: holdingMock.address,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
@@ -65,7 +63,7 @@ describe('Charity Beacon Factory Deployment', function () {
         expect(await charityPoolInstance.name()).to.equal("TestCharity");
     });
 
-    it('should  deploy 2 charity contrcats and update the implementation ', async function () {
+    it('should  deploy 2 charity contracts and update the implementation ', async function () {
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
 
@@ -73,7 +71,6 @@ describe('Charity Beacon Factory Deployment', function () {
             charityName: "TestCharity1",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
-            lendingTokenAddress: cTokenMock.address,
             holdingTokenAddress: holdingMock.address,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
@@ -83,15 +80,12 @@ describe('Charity Beacon Factory Deployment', function () {
             charityName: "TestCharity2",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
-            lendingTokenAddress: cTokenMock.address,
             holdingTokenAddress: holdingMock.address,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,
             priceFeedProvider: priceFeedProviderMock.address,
             wrappedNativeAddress: cTokenMock.address,
         }], { from: this.accounts[0].address });
-
-
 
         const { events } = await tx1.wait();
         const { args } = events.find(item => item.event === 'Created');
@@ -110,18 +104,71 @@ describe('Charity Beacon Factory Deployment', function () {
         const charityPoolV2 = await CharityPoolV2Factory.deploy();
 
         expect(await charityPool1Instance.name()).to.equal("TestCharity1");
-        expect(await charityPool1Instance.version()).to.equal(1);
-
-        expect(await charityPool2Instance.name()).to.equal("TestCharity2");
-        expect(await charityPool2Instance.version()).to.equal(1);
-
-        await this.factory.update(charityPoolV2.address);
-
-        expect(await charityPool1Instance.name()).to.equal("TestCharity1");
         expect(await charityPool1Instance.version()).to.equal(2);
 
         expect(await charityPool2Instance.name()).to.equal("TestCharity2");
         expect(await charityPool2Instance.version()).to.equal(2);
 
+        await this.factory.update(charityPoolV2.address);
+
+        expect(await charityPool1Instance.name()).to.equal("TestCharity1");
+        expect(await charityPool1Instance.version()).to.equal(3);
+
+        expect(await charityPool2Instance.name()).to.equal("TestCharity2");
+        expect(await charityPool2Instance.version()).to.equal(3);
     });
+
+    describe('Client Deployments', () => {
+        it('should set the default charity configuration', async function () {
+            const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
+            priceFeedProviderMock = await PriceFeedProvider.deploy();
+
+            await this.factory.setDefaultCharityConfiguration({
+                charityName: "TestCharity1",
+                operatorAddress: operator.address,
+                charityWalletAddress: cTokenUnderlyingMock.address,
+                holdingTokenAddress: holdingMock.address,
+                ihelpAddress: iHelpMock.address,
+                swapperAddress: swapperMock.address,
+                priceFeedProvider: priceFeedProviderMock.address,
+                wrappedNativeAddress: cTokenMock.address,
+            });
+
+            const result = await this.factory.defaultCharityConfiguration();
+            expect(result.charityName).to.equal('TestCharity1');
+        })
+
+        it('should revert if default is not configured', async function () {
+            await expect(this.factory.createCharityPoolFromClient("Test")).to.be.revertedWith('config/not-set');
+        })
+
+        it('should revert if charity name is blank', async function () {
+            await expect(this.factory.createCharityPoolFromClient("")).to.be.revertedWith('params/invalid-length');
+        })
+
+        it('should add a new charity', async function () {
+            const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
+            priceFeedProviderMock = await PriceFeedProvider.deploy();
+
+             await this.factory.setDefaultCharityConfiguration({
+                charityName: "TestCharity1",
+                operatorAddress: operator.address,
+                charityWalletAddress: cTokenUnderlyingMock.address,
+                holdingTokenAddress: holdingMock.address,
+                ihelpAddress: iHelpMock.address,
+                swapperAddress: swapperMock.address,
+                priceFeedProvider: priceFeedProviderMock.address,
+                wrappedNativeAddress: cTokenMock.address
+            });
+
+            const tx1 = await this.factory.createCharityPoolFromClient("CustomName");
+            const { events } = await tx1.wait();
+            const { args } = events.find(item => item.event === 'Created');
+
+            const { addr: address } = args.newCharities[0];
+            const { interface } = await ethers.getContractFactory('CharityPool');
+            const charityPoolInstance = new ethers.Contract(address, interface, this.accounts[0]);
+            expect(await charityPoolInstance.name()).to.equal("CustomName");
+        })
+    })
 });

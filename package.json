@@ -67,6 +67,7 @@
     "postdeploy": "hardhat run scripts/publish.js",
     "flattenContracts": "./scripts/flattenContracts.sh",
     "updateCharities": "hardhat run  --network localhost  scripts/updateCharities.js",
+    "updateCharitiesDefaultConfiguration": "hardhat run  --network localhost  scripts/updateCharitiesDefaultConfig.js",
     "addDonationCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",
     "mockUpgrade": "node scripts/generateUpgradeBatch.js && node scripts/mockUpgrade.js upgradeBatch.json ",
     "generateUpgradeBatch": "node scripts/generateUpgradeBatch.js",
