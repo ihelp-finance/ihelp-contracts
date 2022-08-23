@@ -45,7 +45,7 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function supplyRatePerBlock(address cToken) external view override returns (uint256) {
-        return TJErc20(cToken).supplyRatePerSecond() * blockTime;
+        return (TJErc20(cToken).supplyRatePerSecond() * blockTime) / 1000;
     }
 
     function totalSupply(address cToken) external view override returns (uint256) {
