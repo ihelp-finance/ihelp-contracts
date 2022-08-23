@@ -75,12 +75,17 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
     for (let ci = 0; ci < mockCurrenciesToDeploy.length; ci++) {
 
       const c = mockCurrenciesToDeploy[ci];
+      
+      let tokenType = 'CTokenMock';
+      if (c['currency'][0] == 'a') {
+        tokenType = 'ATokenMock';
+      }
 
       let result = await deployments.getOrNull(c['currency'].replace('c','').replace('a',''));
       if (result == null) {
 
         cyan(`Deploying ${c['currency'].replace('c','').replace('a','')}...`);
-
+        
         let args = null;
         if (c['contract'] != 'WTokenMock') {
           args = [
@@ -106,17 +111,41 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
       if (cresult == null) {
 
         cyan(`Deploying ${c['currency']}...`);
-        // should be about 20% APR
-        let supplyRate = '8888888888888';
-        cresult = await deploy(`${c['currency']}`, {
-          args: [
-            result.address,
-            supplyRate
-          ],
-          contract: 'CTokenMock',
-          from: deployer,
-          skipIfAlreadyDeployed: true
-        });
+        
+        if (tokenType == 'CTokenMock') {
+          
+          // should be about 20% APR
+          let supplyRate = '8888888888888';
+          cresult = await deploy(`${c['currency']}`, {
+            args: [
+              result.address,
+              supplyRate
+            ],
+            contract: tokenType,
+            from: deployer,
+            skipIfAlreadyDeployed: true
+          });
+        
+        }
+        else if (tokenType == 'ATokenMock') {
+          
+          const poolresult = await deploy('APoolMock', {
+            args: [],
+            contract: 'APoolMock',
+            from: deployer,
+            skipIfAlreadyDeployed: true
+          });
+          
+          cresult = await deploy(`${c['currency']}`, {
+            args: [
+              poolresult.address
+            ],
+            contract: tokenType,
+            from: deployer,
+            skipIfAlreadyDeployed: true
+          });
+          
+        }
 
       }
 
