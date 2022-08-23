@@ -114,7 +114,7 @@ describe('Charity Factory Deployment', function () {
 
         });
 
-        it("should withdarw tokens", async function () {
+        it("should withdraw tokens", async function () {
             await charityPool.depositTokens(aTokenMock.address, 15);
             console.log(await aTokenMock.balanceOf(charityPool.address), "Balance");
             await charityPool.withdrawTokens(aTokenMock.address, 10);
@@ -123,6 +123,4 @@ describe('Charity Factory Deployment', function () {
             expect(await uMock.balanceOf(owner.address)).to.equal(10);
         });
     })
-
-
 });
