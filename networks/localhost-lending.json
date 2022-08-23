@@ -24,19 +24,19 @@
       "underlyingToken": "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa",
       "lendingAddress": "0xddea378A6dDC8AfeC82C36E9b0078826bf9e68B6",
       "priceFeed": "0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF",
-      "connector": "aave"
+      "connector": "compound"
     },
     "aWBTC": {
       "underlyingToken": "0x577D296678535e4903D59A4C929B718e1D575e0A",
       "lendingAddress": "0x0014F450B8Ae7708593F4A46F8fa6E5D50620F96",
       "priceFeed": "0xECe365B379E1dD183B20fc5f022230C044d51404",
-      "connector": "aave"
+      "connector": "compound"
     },
     "aWETH": {
       "underlyingToken": "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
       "lendingAddress": "0x6D7F0754FFeb405d23C51CE938289d4835bE3b14",
       "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
-      "connector": "aave"
+      "connector": "compound"
     }
   }
 }
