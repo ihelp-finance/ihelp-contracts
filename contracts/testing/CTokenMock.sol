@@ -14,6 +14,7 @@ contract CTokenMock is ERC20Upgradeable {
     ERC20PresetMinterPauser public underlying;
 
     uint256 internal __supplyRatePerBlock;
+    uint256 internal __supplyRatePerSecond;
 
     constructor(ERC20PresetMinterPauser _token, uint256 _supplyRatePerBlock) {
         require(address(_token) != address(0), "token is not defined");
@@ -73,6 +74,10 @@ contract CTokenMock is ERC20Upgradeable {
 
     function supplyRatePerBlock() external view returns (uint256) {
         return __supplyRatePerBlock;
+    }
+
+     function supplyRatePerSecond() external view returns (uint256) {
+        return __supplyRatePerSecond;
     }
 
     function setSupplyRateMantissa(uint256 _supplyRatePerBlock) external {

@@ -54,7 +54,7 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
         uint256 supplyRatePerBlock = connector.supplyRatePerBlock(_lendingAddress);        
         uint256 blocksPerDay = (86_400 * 1000) / _blockTime;
         uint256 supplyRatePerDay = supplyRatePerBlock * blocksPerDay;
-        return supplyRatePerDay * 100 * 365;
+        return supplyRatePerDay * 365;
     }
 
     /**

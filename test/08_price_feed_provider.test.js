@@ -38,6 +38,9 @@ describe("PriceFeedProvider", function () {
         mockConnector = await smock.mock('CompoundConnector');
         mockConnector = await mockConnector.deploy();
 
+        let tjMockConnector =  await smock.mock('TraderJoeConnector');
+        tjMockConnector =  await tjMockConnector.deploy();
+        
         priceFeedProvider = await PriceFeedProvider.deploy();
 
         console.log(mockConnector.address)
@@ -54,7 +57,7 @@ describe("PriceFeedProvider", function () {
             underlyingToken: underlyingMock2.address,
             lendingAddress: cTokenMock2.address,
             priceFeed: chainLinkAggretator.address,
-            connector: mockConnector.address
+            connector: tjMockConnector.address
             
         }];
         await priceFeedProvider.initialize(donationCurrencies);
@@ -243,11 +246,31 @@ describe("PriceFeedProvider", function () {
     })
 
     describe("Currency Data", async () => {
-        it("should calculated currency APY", async () => {
+        it("should calculated currency APY for compound protocol", async () => {
+            await  cTokenMock1.setVariable('__supplyRatePerBlock', 1152785640)
+            
             const SUPPLY_RATE = await cTokenMock1.supplyRatePerBlock();
-            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[0].lendingAddress, 13.5 * 1000);
-            const blocksPerDay = 86_400 / 13.5;
-            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(100 * blocksPerDay * 365);
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[0].lendingAddress, 4 * 1000);
+            const blocksPerDay = 86_400 / 4;
+            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(blocksPerDay * 365);
+            
+            const formatedApr =  apr/1e18;
+            console.log('APR', formatedApr);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+            
+            expect(apr).to.equal(expectedAPR);
+        })
+
+        it("should calculated currency APY for traderjoe protocol ", async () => {
+            await  cTokenMock2.setVariable('__supplyRatePerSecond', 288196410)
+            
+            const SUPPLY_RATE = await cTokenMock2.supplyRatePerSecond();
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[1].lendingAddress, 4 * 1000);
+            const blocksPerDay = 86_400 / 4;
+            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(4  * blocksPerDay * 365);
+            console.log('APR', apr/1e18);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+        
             expect(apr).to.equal(expectedAPR);
         })
     })
