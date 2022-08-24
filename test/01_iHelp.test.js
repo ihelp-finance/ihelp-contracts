@@ -209,7 +209,8 @@ describe("iHelp", function () {
                 underlyingToken: cTokenUnderlyingMock.address,
                 lendingAddress: cTokenMock.address,
                 currency: "currency1",
-                priceFeed: addrs[5].address
+                priceFeed: addrs[5].address,
+                connector: addrs[6].address 
             }]
 
             priceFeedProvider.getAllDonationCurrencies.returns(donationCurrencies);

@@ -42,8 +42,14 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         return ICErc20(cToken).balanceOfUnderlying(owner);
     }
 
-    function supplyRatePerBlock(address cToken) external view override returns (uint256) {
+    function supplyRatePerBlock(address cToken) public view override returns (uint256) {
         return ICErc20(cToken).supplyRatePerBlock();
+    }
+
+    function supplyAPR(address cToken, uint256 _blockTime) external view override returns (uint256) {
+        uint256 blocksPerDay = (86_400 * 1000) / _blockTime;
+        uint256 supplyRatePerDay = supplyRatePerBlock(cToken) * blocksPerDay;
+        return supplyRatePerDay * 365;
     }
 
     function totalSupply(address cToken) external view override returns (uint256) {

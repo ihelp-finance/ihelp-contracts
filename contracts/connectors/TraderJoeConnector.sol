@@ -44,8 +44,14 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
         return TJErc20(cToken).balanceOfUnderlying(owner);
     }
 
-    function supplyRatePerBlock(address cToken) external view override returns (uint256) {
+    function supplyRatePerBlock(address cToken) public view override returns (uint256) {
         return (TJErc20(cToken).supplyRatePerSecond() * blockTime) / 1000;
+    }
+
+    function supplyAPR(address cToken, uint256 _blockTime) external view override returns (uint256) {
+        uint256 blocksPerDay = (86_400 * 1000) / _blockTime;
+        uint256 supplyRatePerDay = supplyRatePerBlock(cToken) * blocksPerDay;
+        return supplyRatePerDay * 365;
     }
 
     function totalSupply(address cToken) external view override returns (uint256) {
@@ -68,7 +74,7 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
      * Sets blocktime
      */
     function setBlockTime(uint256 _blockTimeInMilli) external onlyOwner {
-        require(_blockTimeInMilli > 0, 'invalid/cannot-be-0');
+        require(_blockTimeInMilli > 0, "invalid/cannot-be-0");
         blockTime = _blockTimeInMilli;
     }
 

@@ -51,10 +51,7 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
      */
     function getCurrencyApr(address _lendingAddress, uint256 _blockTime) public view returns (uint256) {
         ConnectorInterface connector = ConnectorInterface(_donationCurrencies[_lendingAddress].connector);
-        uint256 supplyRatePerBlock = connector.supplyRatePerBlock(_lendingAddress);        
-        uint256 blocksPerDay = (86_400 * 1000) / _blockTime;
-        uint256 supplyRatePerDay = supplyRatePerBlock * blocksPerDay;
-        return supplyRatePerDay * 365;
+        return connector.supplyAPR(_lendingAddress, _blockTime);
     }
 
     /**

@@ -5,6 +5,7 @@ const {
     constants,
 } = require('@openzeppelin/test-helpers');
 const { BigNumber } = require('ethers');
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
 use(smock.matchers);
 
@@ -15,9 +16,9 @@ describe("PriceFeedProvider", function () {
     let addr2;
     let addrs;
     let CTokenMock;
-    let underlyingMock1, underlyingMock2, cTokenMock1, cTokenMock2;
+    let underlyingMock1, underlyingMock2, cTokenMock1, cTokenMock2, ATokenMock, aTokenMock;
     let donationCurrencies, chainLinkAggretator;
-    let mockConnector
+    let mockConnector, aaveMockConnector;
 
     beforeEach(async function () {
         const Mock = await smock.mock("ERC20MintableMock");
@@ -25,6 +26,13 @@ describe("PriceFeedProvider", function () {
 
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
+        ATokenMock = await smock.mock("ATokenMock");
+        const APool = await smock.mock("APoolMock");
+
+        aTokenPoolMock = await APool.deploy();
+        aTokenMock = await ATokenMock.deploy(aTokenPoolMock.address);
+
+        await aTokenPoolMock.setAToken(aTokenMock.address);
         const PriceFeedProvider = await smock.mock("PriceFeedProvider", {
             signer: owner
         });
@@ -35,15 +43,27 @@ describe("PriceFeedProvider", function () {
         cTokenMock1 = await CTokenMock.deploy(underlyingMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(underlyingMock1.address, 1000);
 
+
+        await aTokenMock.initialize(
+            aTokenPoolMock.address,
+            addrs[6].address,
+            underlyingMock1.address,
+            ZERO_ADDRESS,
+            18,
+            "aTokenMock",
+            "ATKNM",
+            Buffer.from("0")
+        );
+
         mockConnector = await smock.mock('CompoundConnector');
         mockConnector = await mockConnector.deploy();
 
         let tjMockConnector =  await smock.mock('TraderJoeConnector');
         tjMockConnector =  await tjMockConnector.deploy();
-        
+
+        aaveMockConnector =  await smock.fake('AAVEConnector');
         priceFeedProvider = await PriceFeedProvider.deploy();
 
-        console.log(mockConnector.address)
         donationCurrencies = [{
             provider: "Provider1",
             currency: "ETH",
@@ -58,6 +78,14 @@ describe("PriceFeedProvider", function () {
             lendingAddress: cTokenMock2.address,
             priceFeed: chainLinkAggretator.address,
             connector: tjMockConnector.address
+            
+        },{
+            provider: "Provider3",
+            currency: "ETH",
+            underlyingToken: underlyingMock1.address,
+            lendingAddress: aTokenMock.address,
+            priceFeed: chainLinkAggretator.address,
+            connector: aaveMockConnector.address
             
         }];
         await priceFeedProvider.initialize(donationCurrencies);
@@ -272,6 +300,19 @@ describe("PriceFeedProvider", function () {
             console.log("APY", (1+(apr/1e18)/365)**365 - 1);
         
             expect(apr).to.equal(expectedAPR);
+        })
+
+        it("should calculated currency APY for AAVE protocol ", async () => {
+            
+            const SUPPLY_RATE = BigNumber.from('12992135704928158729527564').div(1e9);
+            aaveMockConnector.supplyAPR.returns(SUPPLY_RATE)
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[2].lendingAddress, 4 * 1000);
+            
+            console.log('APR', apr/1e18);
+            console.log((apr/1e18)/365);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+        
+            expect(apr).to.equal(SUPPLY_RATE);
         })
     })
 
