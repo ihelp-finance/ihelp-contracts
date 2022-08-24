@@ -92,7 +92,7 @@ const adjustPremine = async() => {
     ihelp = await hardhat.ethers.getContractAt("iHelpToken", ihelpContract.address, signer);
 
     console.log('\nCALLING PREMINE ADJUSTMENT.\n');
-    // await ihelp.premineAdjustment();
+    await ihelp.premineAdjustment();
 
     console.log('\nPREMINE ADJUSTMENT COMPLETE.\n');
 
