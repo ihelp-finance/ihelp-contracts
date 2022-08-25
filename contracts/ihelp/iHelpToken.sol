@@ -186,24 +186,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __processingGasLimit = 7_000_000;
     }
 
-    function premineAdjustment() public onlyOperatorOrOwner {
-
-        // delete the previous 20 drip rates per phase
-        uint256 previousPhases = 20;
-        for (uint256 phase = 1; phase <= previousPhases; phase++) {
-            delete cumulativeInterestByPhase[phase];
-            delete tokensPerInterestByPhase[phase];
-        }
-
-        // regenerate the drip rates with 10 phases
-        setTokenPhases();
-
-        // mint an additional 3m HELP tokens to correct to 10m total premine tokens
-        uint256 additionalPremineTokens = 3_000_000;
-       _mint(developmentPool, additionalPremineTokens * 1e18);
-
-    }
-
     function notifyBalanceUpdate(address _account, uint256 _amount, bool _increased) public  {
         require(hasCharity(msg.sender), 'iHelp/not-alloweds');
         if(_increased) {
