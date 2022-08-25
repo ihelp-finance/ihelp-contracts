@@ -86,8 +86,8 @@ describe("PriceFeedProvider", function () {
             lendingAddress: aTokenMock.address,
             priceFeed: chainLinkAggretator.address,
             connector: aaveMockConnector.address
-            
         }];
+
         await priceFeedProvider.initialize(donationCurrencies);
     });
 
@@ -98,7 +98,7 @@ describe("PriceFeedProvider", function () {
 
         it("should set initial list of donation currencies", async function () {
             const currencies = await priceFeedProvider.getAllDonationCurrencies();
-            expect(currencies.length).to.equal(2);
+            expect(currencies.length).to.equal(3);
             expect(currencies[0].provider).to.equal(donationCurrencies[0].provider);
         });
     });
@@ -165,11 +165,11 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(3);
-                expect(currencies[2].provider).to.equal("Provider3");
-                expect(currencies[2].underlyingToken).to.equal(addrs[5].address);
-                expect(currencies[2].lendingAddress).to.equal(addrs[6].address);
-                expect(currencies[2].priceFeed).to.equal(addrs[7].address);
+                expect(currencies.length).to.equal(4);
+                expect(currencies[3].provider).to.equal("Provider3");
+                expect(currencies[3].underlyingToken).to.equal(addrs[5].address);
+                expect(currencies[3].lendingAddress).to.equal(addrs[6].address);
+                expect(currencies[3].priceFeed).to.equal(addrs[7].address);
             });
         })
 
@@ -183,11 +183,11 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(1);
-                expect(currencies[0].provider).to.equal("Provider2");
-                expect(currencies[0].underlyingToken).to.equal(donationCurrencies[1].underlyingToken);
-                expect(currencies[0].lendingAddress).to.equal(donationCurrencies[1].lendingAddress);
-                expect(currencies[0].priceFeed).to.equal(donationCurrencies[1].priceFeed);
+                expect(currencies.length).to.equal(2);  
+                expect(currencies[0].provider).to.equal("Provider3");
+                expect(currencies[0].underlyingToken).to.equal(donationCurrencies[2].underlyingToken);
+                expect(currencies[0].lendingAddress).to.equal(donationCurrencies[2].lendingAddress);
+                expect(currencies[0].priceFeed).to.equal(donationCurrencies[2].priceFeed);
             });
         })
 
@@ -253,7 +253,7 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(2);
+                expect(currencies.length).to.equal(3);
                 expect(currencies[1].provider).to.equal("Provider3");
                 expect(currencies[1].underlyingToken).to.equal(addrs[5].address);
                 expect(currencies[1].lendingAddress).to.equal(cTokenMock2.address);

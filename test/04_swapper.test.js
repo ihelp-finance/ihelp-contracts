@@ -10,7 +10,7 @@ describe("Swapper", function () {
     let addr1;
     let addr2;
     let addrs;
-    let mockToken1, mockToken2, routerFake;
+    let mockToken1, mockToken2, routerFake, mockNative;
 
 
     beforeEach(async function () {
@@ -19,6 +19,8 @@ describe("Swapper", function () {
 
         mockToken1 = await Mock.deploy("Mock1", "MOK1", 18);
         mockToken2 = await Mock.deploy("Mock2", "MOK2", 18);
+        mockNative = await Mock.deploy("Native", "MNative", 18);
+
 
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
         routerFake = await smock.fake([
@@ -32,15 +34,19 @@ describe("Swapper", function () {
         ], { address: addr1.address });
 
         swapper = await Swapper.deploy();
-        await swapper.initialize(routerFake.address);
+        await swapper.initialize(routerFake.address, mockNative.address);
         await mockToken1.mint(owner.address, parseEther('1000000000000000000'));
         
         await mockToken1.approve(swapper.address, parseEther('1000000000000000000'));
     });
 
     describe("Deployment", function () {
-        it("Initialize the swapper", async function () {
+        it("Should initialize the swapper", async function () {
             expect(await swapper.SWAP_ROUTER()).to.equal(addr1.address);
+        });
+
+        it("Should Set the native token", async function () {
+            expect(await swapper.nativeToken()).to.equal(mockNative.address);
         });
     });
 

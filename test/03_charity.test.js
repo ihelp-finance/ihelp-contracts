@@ -196,7 +196,7 @@ describe("Charity Pool", function () {
     describe("Withdraw", function () {
         beforeEach(async function () {
             await cTokenMock.setVariable("underlying", wTokenMock.address);
-            await charityPool.depositNative(cTokenMock.address, { value: 100 });
+            await charityPool.depositNative(cTokenMock.address, "Test Memo", { value: 100 });
         });
 
         it("Should withdraw all balance", async function () {
