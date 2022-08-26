@@ -563,6 +563,9 @@ contract Analytics is IAnalytics {
             result[i].priceFeed = currencies[i].priceFeed;
             result[i].price = price;
             result[i].priceDecimals = priceDecimals;
+            
+            console.log('\nlendingAddress',currencies[i].lendingAddress);
+            console.log('underlyingToken',currencies[i].underlyingToken);
              
             result[i].apr = priceFeedProvider.getCurrencyApr(currencies[i].lendingAddress, _blockTime);
         }

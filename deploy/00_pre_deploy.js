@@ -107,7 +107,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers, upgr
 
         cyan(`Deploying ${c['currency']}...`);
         // should be about 20% APR
-        let supplyRate = '8888888888888';
+        let supplyRate = '25367833587011';
         cresult = await deploy(`${c['currency']}`, {
           args: [
             result.address,

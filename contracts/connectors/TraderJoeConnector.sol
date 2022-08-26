@@ -12,8 +12,6 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using PRBMathUD60x18 for uint256;
 
-    uint256 public blockTime = 4000;
-
     function initialize() public initializer {
         __Ownable_init();
     }
@@ -45,6 +43,7 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function supplyRatePerBlock(address cToken) public view override returns (uint256) {
+        uint256 blockTime = 4000;
         return (TJErc20(cToken).supplyRatePerSecond() * blockTime) / 1000;
     }
 
@@ -70,15 +69,7 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
         return TJErc20(cToken).underlying();
     }
 
-    /**
-     * Sets blocktime
-     */
-    function setBlockTime(uint256 _blockTimeInMilli) external onlyOwner {
-        require(_blockTimeInMilli > 0, "invalid/cannot-be-0");
-        blockTime = _blockTimeInMilli;
-    }
-
     function lender() external pure returns (string memory) {
-        return "bankerjoe";
+        return "traderjoe";
     }
 }
