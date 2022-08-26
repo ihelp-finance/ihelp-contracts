@@ -78,7 +78,7 @@ const chainName = (chainId) => {
     }
 }
 
-const adjustPremine = async() => {
+const testApy = async() => {
     
     let {
         deployer
@@ -106,4 +106,4 @@ const adjustPremine = async() => {
 
 }
 
-adjustPremine();
+testApy();

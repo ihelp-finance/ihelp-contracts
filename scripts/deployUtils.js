@@ -162,7 +162,7 @@ module.exports.getLendingConfigurations = async (chainId, forceLookup = false) =
     }
   }
   
-  console.log('lendingConfiguration',lendingConfiguration)
+  // console.log('lendingConfiguration',lendingConfiguration)
   
   return lendingConfiguration;
 };
