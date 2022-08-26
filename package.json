@@ -66,6 +66,7 @@
     "deploy": "script -efq -c 'hardhat deploy  --network localhost  --export-all ./build/localhost_contracts.json' deploy.log",
     "postdeploy": "hardhat run scripts/publish.js",
     "flattenContracts": "./scripts/flattenContracts.sh",
+    "updateFees": "hardhat run  --network localhost  scripts/updateFees.js",
     "updateCharities": "hardhat run  --network localhost  scripts/updateCharities.js",
     "updateCharitiesDefaultConfiguration": "hardhat run  --network localhost  scripts/updateCharitiesDefaultConfig.js",
     "addDonationCurrencies": "hardhat run  --network localhost  scripts/addDonationsCurrencies.js",

@@ -7,7 +7,7 @@ const chalk = require('chalk')
 const ethers = require('ethers')
 const axios = require('axios')
 const { getChainId, network } = require('hardhat');
-const { yellow, dim, fromBigNumber, getLendingConfigurations, cyan } = require("./deployUtils");
+const { green, yellow, dim, fromBigNumber, getLendingConfigurations, cyan } = require("./deployUtils");
 
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../../env/.env') })
@@ -26,39 +26,58 @@ const updateFees = async() => {
     signer = await hardhat.ethers.provider.getSigner(deployer);
     console.log('signer', signer._address);
 
-    const pfpContract = (await hardhat.deployments.get('priceFeedProvider'));
-    priceFeed = await hardhat.ethers.getContractAt("PriceFeedProvider", pfpContract.address, signer);
+    const ihelpContract = (await hardhat.deployments.get('iHelp'));
+    ihelp = await hardhat.ethers.getContractAt("iHelpToken", ihelpContract.address, signer);
 
-    const configurations = await getLendingConfigurations(chainId);
-    const currencies = [];
+    const currentLendingFees = await ihelp.getFees();
+    cyan(`\ncurrent lending fees on protocol:`, currentLendingFees);
 
-    for (const lender of Object.keys(configurations)) {
-        for (const token of Object.keys(configurations[lender])) {
-            currencies.push({
-                "currency": token.replace('c', '').replace('a', '').replace('j', ''),
-                "provider": lender,
-                "underlyingToken": configurations[lender][token].underlyingToken,
-                "lendingAddress": configurations[lender][token].lendingAddress,
-                "priceFeed": configurations[lender][token].priceFeed,
-                "connector": configurations[lender][token].connector
-            })
-        }
+    const currentLendingFeesClean = currentLendingFees.map((c) => {
+        return parseInt(c)
+    })
+
+    // format: _dev, _stake, _charity * 1000
+    const newLendingFees = [100, 100, 800];
+
+    if (JSON.stringify(currentLendingFeesClean) != JSON.stringify(newLendingFees)) {
+
+        yellow(`\nupdating lending fees on protocol:`, newLendingFees);
+        const tx = await ihelp.setDirectDonationFees(...newLendingFees);
+        const events = tx.wait();
+
+        const newLendingFeesSet = await ihelp.getFees();
+        cyan(`\nnew lending fees on protocol:`, newLendingFeesSet);
+
+    }
+    else {
+        green('lending fees already set properly...')
     }
 
-    cyan(`\nupdating ${currencies.length} supported currencies to the protocol...`);
+    const currentDirectLendingFees = await ihelp.getDirectDonationFees();
+    cyan(`\ncurrent direct donation fees on protocol:`, currentDirectLendingFees);
 
-    for (const currency of currencies) {
-        
-        yellow('   updating',currency['currency'],'on',currency['provider']+'...');
-        
-        console.log(currency);
-        
-        const tx = await priceFeed.updateDonationCurrency(currency);
-        
-        const { events } = await tx.wait();
-        
+    const currentDirectLendingFeesClean = currentDirectLendingFees.map((c) => {
+        return parseInt(c)
+    })
+
+    // format: _dev, _stake, _charity * 1000
+    const newDirectionDonationFees = [25, 25, 950];
+
+    if (JSON.stringify(currentDirectLendingFeesClean) != JSON.stringify(newDirectionDonationFees)) {
+
+        yellow(`updating direct donation fees on protocol:`, newDirectionDonationFees);
+        const tx = await ihelp.setDirectDonationFees(...newDirectionDonationFees);
+        const events = tx.wait();
+
+        const newDirectLendingFeesSet = await ihelp.getDirectDonationFees();
+        cyan(`new direct donation fees on protocol:`, newDirectLendingFeesSet);
+
     }
-
+    else {
+        green('direct donation fees already set properly...')
+    }
+    
+    console.log();
     process.exit(0)
 
 }
