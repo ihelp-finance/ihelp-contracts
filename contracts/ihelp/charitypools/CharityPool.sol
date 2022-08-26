@@ -324,7 +324,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
                 _amount = swapper.swap(tokenaddress, holdingToken, receivedAmount, minAmount, address(this));
             }
 
-            (uint256 devFee, uint256 stakingFee, ) = ihelpToken.getFees();
+            (uint256 devFee, uint256 stakingFee, ) = ihelpToken.getDirectDonationFees();
             // 2.5% to developer pool as native currency of pool
             uint256 developerFeeAmount = (_amount * devFee) / 1000;
 

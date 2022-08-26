@@ -78,6 +78,10 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     PriceFeedProviderInterface public priceFeedProvider;
     
     EnumerableSet.AddressSet private charitiesToProcess;
+    
+    uint256 public directDonationCharityShareOfInterest;
+    uint256 public directDonationDevelopmentShareOfInterest;
+    uint256 public directDonationStakingShareOfInterest;
 
     function setTokenPhases() internal {
         uint256 numberPhases = 20;
@@ -163,9 +167,13 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __tokensMintedPerPhase = 1_000_000;
 
         // scale these later in the contract based on the charity pool decicals
-        charityShareOfInterest = 800;
-        developmentShareOfInterest = 100;
-        stakingShareOfInterest = 100;
+        charityShareOfInterest = 800; // 80%
+        developmentShareOfInterest = 100; // 10%
+        stakingShareOfInterest = 100; // 10%
+        
+        directDonationCharityShareOfInterest = 950; // 95%
+        directDonationDevelopmentShareOfInterest = 25; // 2.5%
+        directDonationStakingShareOfInterest = 25; // 2.5%
 
         __totalSupply = __tokensMintedPerPhase * 1e18;
         __totalCirculating = 0;
@@ -641,6 +649,29 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         )
     {
         return (developmentShareOfInterest, stakingShareOfInterest, charityShareOfInterest);
+    }
+    
+    function setDirectDonationFees(
+        uint256 _dev,
+        uint256 _stake,
+        uint256 _charity
+    ) public onlyOperatorOrOwner {
+        require(_dev + _stake + _charity <= 1000, "Invalid fees");
+        directDonationDevelopmentShareOfInterest = _dev;
+        directDonationStakingShareOfInterest = _stake;
+        directDonationCharityShareOfInterest = _charity;
+    }
+
+    function getDirectDonationFees()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (directDonationDevelopmentShareOfInterest, directDonationStakingShareOfInterest, directDonationCharityShareOfInterest);
     }
 
     function totalCirculating() public view returns (uint256) {
