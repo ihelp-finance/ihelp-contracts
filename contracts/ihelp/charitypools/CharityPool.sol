@@ -578,12 +578,11 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
         if (newEarned > currentInterestEarned[_cTokenAddress]) {
             newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];
-            console.log("__newTotalInterestEarned", newTotalInterestEarned[_cTokenAddress]);
+            console.log("    newTotalInterestEarned", newTotalInterestEarned[_cTokenAddress]);
             currentInterestEarned[_cTokenAddress] = newTotalInterestEarned[_cTokenAddress];
 
             // keep track of the total interest earned as USD
             totalInterestEarned[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
-            console.log("totalInterestEarned", totalInterestEarned[_cTokenAddress]);
 
             redeemableInterest[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
         } else {

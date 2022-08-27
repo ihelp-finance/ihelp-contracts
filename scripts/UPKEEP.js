@@ -6,99 +6,70 @@ const csv = require('csvtojson');
 const fs = require('fs');
 const chalk = require('chalk')
 const ethers = require('ethers')
-// const externalContracts = require('../../ihelp-app/client/src/contracts/external_contracts');
 
-function dim() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.dim.call(chalk, ...arguments));
-  }
-}
-
-function cyan() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.cyan.call(chalk, ...arguments));
-  }
-}
-
-function yellow() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.yellow.call(chalk, ...arguments));
-  }
-}
-
-function green() {
-  if (!process.env.HIDE_DEPLOY_LOG) {
-    console.log(chalk.green.call(chalk, ...arguments));
-  }
-}
-
-let userAccount, userSigner;
-let signer;
-let ihelp;
-
-const fromBigNumber = (number) => {
-  return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)))
-}
-
-
-const chainName = (chainId) => {
-  switch (chainId) {
-    case 1:
-      return 'Mainnet';
-    case 3:
-      return 'Ropsten';
-    case 4:
-      return 'Rinkeby';
-    case 5:
-      return 'Goerli';
-    case 42:
-      return 'Kovan';
-    case 56:
-      return 'Binance Smart Chain';
-    case 77:
-      return 'POA Sokol';
-    case 97:
-      return 'Binance Smart Chain (testnet)';
-    case 99:
-      return 'POA';
-    case 100:
-      return 'xDai';
-    case 137:
-      return 'Matic';
-    case 31337:
-      return 'HardhatEVM';
-    case 43113:
-      return 'Fuji';
-    case 43114:
-      return 'Avalanche';
-    case 80001:
-      return 'Matic (Mumbai)';
-    default:
-      return 'Unknown';
-  }
-}
-
+const { getChainId, network } = require('hardhat');
+const { chainName, green, yellow, dim, fromBigNumber, getLendingConfigurations, cyan } = require("./deployUtils");
 
 const upkeep = async() => {
 
   const { deploy } = hardhat.deployments;
 
   let {
-    deployer,
+    deployer
   } = await hardhat.getNamedAccounts();
 
   signer = await hardhat.ethers.provider.getSigner(deployer);
 
   console.log(`\nsigner: ${signer._address}`);
 
-  // get the signer eth balance
-  const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
-  console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
+  const daiAbi = require('./utils/dai.abi.json');
+  const configs = await getLendingConfigurations();
+  let daiAddress = null;
+  Object.keys(configs).map((c)=>{
+    Object.keys(configs[c]).map((cc)=>{
+      if (cc.indexOf('DAI') > -1) {
+        daiAddress = configs[c][cc]['underlyingToken'];
+      }
+    })
+  })
 
-  console.log('\nSTARTING UPKEEP...');
+  const DAI = new ethers.Contract(daiAddress, daiAbi, hardhat.ethers.provider);
 
   const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
   ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
+  
+  const developmentPool = await ihelp.developmentPool();
+  const stakingPool = await ihelp.stakingPool();
+  console.log('devpool:',developmentPool)
+  console.log('stakingpool:',stakingPool)
+
+  const analyticsAddress = (await hardhat.deployments.get('analytics')).address;
+  analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
+
+  // get the signer eth balance
+  const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
+  console.log(`\nstart signer balance: ${fromBigNumber(startbalance)}`);
+
+  const numberOfCharities = await ihelp.numberOfCharities();
+  const BATCH_SIZE = 30;
+
+  let index = 0;
+  let startinterest = 0;
+  for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
+    console.log(i,'/',parseInt(numberOfCharities));
+    const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
+    startinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
+  }
+
+  console.log(`start interest gen: ${startinterest}`);
+
+  const daiDevBalanceStart = await DAI.balanceOf(developmentPool);
+  console.log(`start dai dev balance: ${fromBigNumber(daiDevBalanceStart)}`);
+
+  const daiStakingBalanceStart = await DAI.balanceOf(stakingPool);
+  console.log(`start dai stake balance: ${fromBigNumber(daiStakingBalanceStart)}`);
+
+  console.log('\nSTARTING UPKEEP...');
 
   // console.log('\nsetting lower gas limit');
   // await ihelp.setProcessingGasLimit('7000000');
@@ -125,6 +96,8 @@ const upkeep = async() => {
     const numberOfCharities = await ihelp.numberOfCharities()
 
     cyan("\nProcessing upkeep:", method);
+    console.log(await ihelp.processingState());
+   //console.log();
 
     while (upkeepStatus == newUpkeepstatus) {
       
@@ -180,12 +153,37 @@ const upkeep = async() => {
   const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
-  // const endbalanceholding = await hardhat.ethers.provider.getBalance(holdingPool);
-  // console.log(`end holding balance: ${fromBigNumber(endbalanceholding)}`);
-
   const signerCost = fromBigNumber(startbalance) - fromBigNumber(balanceend);
 
   console.log(`signer cost:`, signerCost);
+  console.log();
+
+  index = 0;
+  let endinterest = 0;
+  for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
+    console.log(i,'/',parseInt(numberOfCharities));
+    const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
+    endinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
+  }
+  console.log(`end interest gen: ${endinterest}`);
+
+  const daiDevBalanceEnd = await DAI.balanceOf(developmentPool);
+  console.log(`end dai dev balance: ${fromBigNumber(daiDevBalanceEnd)}`);
+
+  const daiStakingBalanceEnd = await DAI.balanceOf(stakingPool);
+  console.log(`end dai stake balance: ${fromBigNumber(daiStakingBalanceEnd)}`);
+  console.log();
+  
+  const totalGenerated = endinterest - startinterest;
+  console.log(`total interest generated:`, totalGenerated);
+
+  const devGenerated = fromBigNumber(daiDevBalanceEnd) - fromBigNumber(daiDevBalanceStart);
+  const stakeGenerated = fromBigNumber(daiStakingBalanceEnd) - fromBigNumber(daiStakingBalanceStart);
+  const charityGenerated = totalGenerated - devGenerated - stakeGenerated;
+  
+  console.log(`charity interest generated:`, charityGenerated, '->',((charityGenerated/totalGenerated)*100).toFixed(3)+'%');
+  console.log(`dev interest generated:`, devGenerated, '->',((devGenerated/totalGenerated)*100).toFixed(3)+'%');
+  console.log(`stake interest generated:`,stakeGenerated, '->' ,((stakeGenerated/totalGenerated)*100).toFixed(3)+'%');
 
   console.log('\nUPKEEP COMPLETE.\n');
 

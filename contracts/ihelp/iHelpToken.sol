@@ -315,34 +315,37 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
-            console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
+            // console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
             if (consumedGas >= __processingGasLimit) {
                 processingState.i = i;
                 return;
             }
 
             address charity = charityPoolList.at(i);
-            console.log(charity);
-            
+
             // if no active contributors pass over the charity for processing
             if (CharityPoolInterface(payable(charity)).numberOfContributors() == 0) {
                 continue;
             }
+            
+            console.log('charity',charity);
 
             for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                 // We need to check for gas at the start of each iteration
                 consumedGas = initialGas - gasleft();
-                console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
+                // console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
                 if (consumedGas >= __processingGasLimit) {
                     processingState.i = i;
                     processingState.ii = ii;
                     return;
                 }
-                console.log("INTEREST INC FOR CHARITY");
 
-                if (CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress) == 0) {
+                uint256 balanceInLender = CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress);
+                if (balanceInLender == 0) {
                     continue;
                 }
+
+                console.log('  lender',cTokens[ii].lendingAddress,balanceInLender);
 
                 // get the total from each charity - this represents an accumulated value not just the current capital or interest
                 CharityPoolInterface(payable(charity)).calculateTotalIncrementalInterest(cTokens[ii].lendingAddress);
