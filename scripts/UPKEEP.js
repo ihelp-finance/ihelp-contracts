@@ -56,7 +56,7 @@ const upkeep = async() => {
   let index = 0;
   let startinterest = 0;
   for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
-    console.log(i,'/',parseInt(numberOfCharities));
+    // console.log(i,'/',parseInt(numberOfCharities));
     const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
     startinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
   }
@@ -71,9 +71,9 @@ const upkeep = async() => {
 
   console.log('\nSTARTING UPKEEP...');
 
-  console.log('\nsetting lower gas limit to 6.5m');
-  await ihelp.setProcessingGasLimit('6500000');
-  console.log('gas limit set\n');
+  // console.log('\nsetting lower gas limit to 6.5m');
+  // await ihelp.setProcessingGasLimit('6500000');
+  // console.log('gas limit set\n');
 
   const upkeepStatusMapping = {
     0: "dripStage1",
@@ -161,7 +161,7 @@ const upkeep = async() => {
   index = 0;
   let endinterest = 0;
   for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
-    console.log(i,'/',parseInt(numberOfCharities));
+    // console.log(i,'/',parseInt(numberOfCharities));
     const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
     endinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
   }

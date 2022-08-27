@@ -22,6 +22,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
 const defaultNetwork = process.env.REACT_APP_NETWORK || "localhost";
 
+console.log('NETWORK:',defaultNetwork);
 
 // OPTIONAL FLAG TO REMOVE LOG STATEMENTS FROM THE CONTRACTS
 // can issue "npx hardhat flatten ./contracts/ihelp/iHelpToken.sol > iHelpTokenFlat.sol" to create single flatten source files for bytecode validation
@@ -39,7 +40,7 @@ let forkingData = undefined;
 if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
   forkingData = {
     url: process.env.TEST_FORK,
-    blockNumber: 19126828
+    // blockNumber: 19126828
   };
 }
 
