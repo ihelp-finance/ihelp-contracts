@@ -191,9 +191,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 premineTokens = 7_000_000;
         _mint(_developmentPool, premineTokens * 1e18);
 
-        __processingGasLimit = 7_000_000;
+        __processingGasLimit = 6_000_000;
     }
-
 
     function notifyBalanceUpdate(address _account, uint256 _amount, bool _increased) public  {
         require(hasCharity(msg.sender), 'iHelp/not-alloweds');
@@ -340,6 +339,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     return;
                 }
 
+                // skip over uncontributed lenders to save on gas
                 uint256 balanceInLender = CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress);
                 if (balanceInLender == 0) {
                     continue;
@@ -499,7 +499,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
             // Check how much gas was used and break
             consumedGas = initialGas - gasleft();
-            console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
+            // console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
 
             if (consumedGas >= __processingGasLimit) {
                 processingState.i = i;
@@ -534,7 +534,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 for (uint256 ii = processingState.ii; ii < charityContract.numberOfContributors(); ii++) {
                     // Check how much gas was used and break
                     consumedGas = initialGas - gasleft();
-                    console.log("Consumed gas L2,", consumedGas, "limit", __processingGasLimit);
+                    // console.log("Consumed gas L2,", consumedGas, "limit", __processingGasLimit);
 
                     if (consumedGas >= __processingGasLimit) {
                         processingState.i = i;
@@ -588,9 +588,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         console.log("\ndumping interest...\n");
 
         console.log("perfectRedeemedInterest", processingState.newInterestUS);
+
         uint256 initialGas = gasleft();
         uint256 consumedGas = 0;
         if (processingState.newInterestUS > 0) {
+
             PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
             for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
@@ -607,7 +609,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                     continue;
                 }
                 
-                console.log(charity);
+                console.log('charity',charity);
 
                 for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
                     consumedGas = initialGas - gasleft();
@@ -617,14 +619,25 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                         return;
                     }
 
+                    // skip over uncontributed lenders to save on gas
+                    uint256 balanceInLender = CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress);
+                    if (balanceInLender == 0) {
+                        continue;
+                    }
+
+                    console.log('  lender',cTokens[ii].lendingAddress,balanceInLender);
+                    
                     CharityPoolInterface(payable(charity)).redeemInterest(cTokens[ii].lendingAddress);
                 }
                 
                 charitiesToProcess.remove(charity);
             }
         }
+        // reset the processingState
         processingState.newInterestUS = 0;
         processingState.totalCharityPoolContributions = 0;
+        processingState.tokensToCirculate = 0;
+        processingState.tokensToCirculateInCurrentPhase = 0;
         processingState.status = 0;
         processingState.i = 0;
         processingState.ii = 0;

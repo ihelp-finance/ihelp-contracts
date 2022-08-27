@@ -71,9 +71,9 @@ const upkeep = async() => {
 
   console.log('\nSTARTING UPKEEP...');
 
-  // console.log('\nsetting lower gas limit');
-  // await ihelp.setProcessingGasLimit('7000000');
-  // console.log('gas limit set\n');
+  console.log('\nsetting lower gas limit to 6.5m');
+  await ihelp.setProcessingGasLimit('6500000');
+  console.log('gas limit set\n');
 
   const upkeepStatusMapping = {
     0: "dripStage1",

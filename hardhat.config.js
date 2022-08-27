@@ -39,7 +39,7 @@ let forkingData = undefined;
 if (process.env.TEST_FORK != '' && process.env.TEST_FORK != undefined) {
   forkingData = {
     url: process.env.TEST_FORK,
-    // blockNumber: 19126828
+    blockNumber: 19126828
   };
 }
 

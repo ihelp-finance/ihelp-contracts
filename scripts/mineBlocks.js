@@ -85,7 +85,7 @@ const mineBlocks = async() => {
 
   signer = await hardhat.ethers.provider.getSigner(deployer);
   
-  const BLOCKS_TO_INCREASE = 10000;
+  const BLOCKS_TO_INCREASE = 1000;
 
   console.log('\nSTARTING BLOCK MINE OF',BLOCKS_TO_INCREASE,'BLOCKS...');
   
