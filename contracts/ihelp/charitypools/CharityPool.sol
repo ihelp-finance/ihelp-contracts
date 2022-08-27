@@ -386,9 +386,9 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
-        ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
         if (amount > 0) {
+            ConnectorInterface connectorInstance = connector(_cTokenAddress);
             // Allow connector to pull cTokens from this contracts
             uint256 cTokenValueOfInterest = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, amount);
             require(
@@ -562,7 +562,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         if (_decimals < holdingDecimals) {
             amount = amount * safepow(10, holdingDecimals - _decimals);
         } else if (_decimals > holdingDecimals) {
-            amount = amount * safepow(10, _decimals - holdingDecimals);
+            amount = amount / safepow(10, _decimals - holdingDecimals);
         }
         return amount;
     }
