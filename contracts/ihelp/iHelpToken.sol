@@ -84,7 +84,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public directDonationStakingShareOfInterest;
 
     function setTokenPhases() internal {
-        uint256 numberPhases = 20;
+        uint256 numberPhases = 10;
 
         uint256 lastInterest = 600000;
         uint256 cumulativeInterest = 0;
@@ -188,8 +188,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         // mint the initial HELP phase and premine tokens
         _mint(operator, __tokensMintedPerPhase * 1e18);
 
-        uint256 premineTokens = 7_000_000;
-        _mint(_developmentPool, premineTokens * 1e18);
+        uint256 premineTokens = 10_000_000;
+        _mint(developmentPool, premineTokens * 1e18);
 
         __processingGasLimit = 6_000_000;
     }
