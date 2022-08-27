@@ -9,9 +9,10 @@ const { readFileSync } = require("fs");
 const web3 = new Web3('http://127.0.0.1:7545');
 const { deployments, ethers, getNamedAccounts } = require("hardhat");
 const ether = require('@openzeppelin/test-helpers/src/ether');
+const readline = require('readline');
 
 
-module.exports.saveConnector = async(name, address, network) => {
+module.exports.saveConnector = async (name, address, network) => {
   const FILE_DIR = 'networks'
   if (!fs.existsSync(FILE_DIR)) {
     fs.mkdirSync(FILE_DIR);
@@ -47,7 +48,7 @@ function breakArrayIntoGroups(data, maxPerGroup) {
   return groups;
 }
 
-module.exports.deployCharityPoolsToNetwork = async(configurations, network, factoryContractName = "CharityBeaconFactory") => {
+module.exports.deployCharityPoolsToNetwork = async (configurations, network, factoryContractName = "CharityBeaconFactory") => {
   const FILE_DIR = 'build'
   if (!fs.existsSync(FILE_DIR)) {
     fs.mkdirSync(FILE_DIR);
@@ -130,7 +131,7 @@ module.exports.deployCharityPoolsToNetwork = async(configurations, network, fact
   return result;
 };
 
-module.exports.getLendingConfigurations = async(chainId, forceLookup = false) => {
+module.exports.getLendingConfigurations = async (chainId, forceLookup = false) => {
   let lendingConfiguration = fs.readFileSync(`./networks/${process.env.NETWORK_ADDRESSES || this.chainName(chainId)}-lending.json`, 'utf8');
   lendingConfiguration = JSON.parse(lendingConfiguration);
 
@@ -160,6 +161,9 @@ module.exports.getLendingConfigurations = async(chainId, forceLookup = false) =>
       }
     }
   }
+  
+  // console.log('lendingConfiguration',lendingConfiguration)
+  
   return lendingConfiguration;
 };
 
@@ -329,7 +333,72 @@ module.exports.addDonationCurrencies = async(currencies) => {
   await PriceFeedProvider.addDonationCurrencies(requestData);
 }
 
-module.exports.updateCharityPools = async() => {
+module.exports.updateCharityPoolsDefaultConfig = async () => {
+  const { deployer } = await getNamedAccounts();
+  const signer = await ethers.getSigner(deployer);
+
+  const chainId = parseInt(await getChainId(), 10);
+  const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
+
+  const holdingToken = 'DAI';
+  let holdingTokenAddress = null;
+  if (isTestEnvironment) {
+    holdingTokenAddress = (await deployments.getOrNull(holdingToken)).address;
+  }
+  else {
+    const configurations = await this.getLendingConfigurations(chainId);
+    for (const lender of Object.keys(configurations)) {
+      for (const coin of Object.keys(configurations[lender])) {
+        if (coin.replace('.e', '').replace('c', '').replace('j', '').replace('a', '') == holdingToken) {
+          holdingTokenAddress = configurations[lender][coin]['underlyingToken']
+          break
+        }
+      }
+    }
+  }
+
+
+  const ihelpAddress = (await deployments.get('iHelp')).address;
+  ihelp = await ethers.getContractAt('iHelpToken', ihelpAddress, signer);
+
+  const swapperAddress = (await deployments.get('swapper')).address;
+  const priceFeedProviderAddresss = (await deployments.get('priceFeedProvider')).address;
+  const nativeWrapper = await this.getNativeWrapper(chainId);
+
+  const defaultConfig = {
+    charityName: "1",
+    operatorAddress: signer.address,
+    charityWalletAddress: ethersLib.constants.AddressZero,
+    holdingTokenAddress,
+    ihelpAddress,
+    swapperAddress: swapperAddress,
+    priceFeedProvider: priceFeedProviderAddresss,
+    wrappedNativeAddress: nativeWrapper
+  }
+
+  console.log(`${chalk.gray(`Updating the configuration to`)} : ${chalk.yellow(JSON.stringify(defaultConfig, null, 2))}`);
+
+  const beaconFactoryDeployment = await deployments.get("CharityBeaconFactory");
+
+  this.yellow(`${chalk.gray(`Using beacon factory at`)} (${beaconFactoryDeployment.address})`);
+
+  const beaconFactory = await ethers.getContractAt("CharityBeaconFactory", beaconFactoryDeployment.address, signer);
+  const owner = await beaconFactory.owner();
+
+  if (owner === deployer) {
+    this.yellow(`${chalk.gray(`Updating config...`)} (${beaconFactoryDeployment.address})`);
+    await beaconFactory.setDefaultCharityConfiguration(defaultConfig);
+  }
+  else {
+    const { data } = await beaconFactory.populateTransaction.setDefaultCharityConfiguration(defaultConfig);
+    console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx from ${chalk.yellow(owner)} to execute the update :
+  
+          ${chalk.yellow(`${data}`)}
+      `));
+  }
+}
+
+module.exports.updateCharityPools = async () => {
   const { deployer } = await getNamedAccounts();
 
   const result = await deployments.deploy('CharityPool_Implementation', {

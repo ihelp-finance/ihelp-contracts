@@ -11,4 +11,6 @@ interface ConnectorInterface {
     function underlying(address token) external view returns (address); 
     function lender() external  view returns (string memory); 
     function cTokenValueOfUnderlying(address token, uint256 amount) external  view returns (uint256); 
+    function supplyAPR(address token, uint256 blockTime) external view returns (uint256); 
+
 }

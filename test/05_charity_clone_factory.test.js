@@ -51,7 +51,6 @@ describe('Charity Factory Deployment', function () {
             charityName: "TestCharity",
             operatorAddress: operator.address,
             charityWalletAddress: cTokenUnderlyingMock.address,
-            lendingTokenAddress: cTokenMock.address,
             holdingTokenAddress: holdingMock.address,
             ihelpAddress: iHelpMock.address,
             swapperAddress: swapperMock.address,

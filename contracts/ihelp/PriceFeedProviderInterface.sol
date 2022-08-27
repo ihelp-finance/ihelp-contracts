@@ -28,4 +28,12 @@ interface PriceFeedProviderInterface {
     function hasDonationCurrency(address _lendingAddress) external view returns (bool);
     function setDirectDonationCurrency(address _currencyAddress, bool status) external;
     function getAllDonationCurrencies() external view returns (DonationCurrency[] memory);
+
+   /**
+     * Calculates the APY for the lending token of a given protocol
+     * @param _lendingAddress the address of the lending token
+     * @param _blockTime the block time in millisconds of the chain this contract is deployed to
+     * @return APR % value
+     */
+    function getCurrencyApr(address _lendingAddress, uint256 _blockTime) external view returns (uint256);
 }

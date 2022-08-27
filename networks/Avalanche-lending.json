@@ -42,31 +42,31 @@
       "underlyingToken": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
       "lendingAddress": "0xc988c170d0E38197DC634A45bF00169C7Aa7CA19",
       "priceFeed": "0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300",
-      "connector": "compound"
+      "connector": "traderjoe"
     },
     "jUSDC": {
       "underlyingToken": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
       "lendingAddress": "0x29472d511808ce925f501d25f9ee9effd2328db2",
       "priceFeed": "0xF096872672F44d6EBA71458D74fe67F9a77a23B9",
-      "connector": "compound"
+      "connector": "traderjoe"
     },
     "jWETH.e": {
       "underlyingToken": "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab",
       "lendingAddress": "0x929f5caB61DFEc79a5431a7734a68D714C4633fa",
       "priceFeed": "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
-      "connector": "compound"
+      "connector": "traderjoe"
     },
     "jWBTC.e": {
       "underlyingToken": "0x50b7545627a5162f82a992c33b87adc75187b218",
       "lendingAddress": "0x3fE38b7b610C0ACD10296fEf69d9b18eB7a9eB1F",
       "priceFeed": "0x2779D32d5166BAaa2B2b658333bA7e6Ec0C65743",
-      "connector": "compound"
+      "connector": "traderjoe"
     },
     "jWAVAX": {
       "underlyingToken": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
       "lendingAddress": "0xC22F01ddc8010Ee05574028528614634684EC29e",
       "priceFeed": "0x0A77230d17318075983913bC2145DB16C7366156",
-      "connector": "compound"
+      "connector": "traderjoe"
     }
   }
 }

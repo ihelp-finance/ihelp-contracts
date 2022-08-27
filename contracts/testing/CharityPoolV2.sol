@@ -12,6 +12,6 @@ import "../ihelp/charitypools/CharityPool.sol";
 
 contract CharityPool2 is CharityPool {
     function version() public pure override returns(uint256) {
-        return 2;
+        return 3;
     }
 }

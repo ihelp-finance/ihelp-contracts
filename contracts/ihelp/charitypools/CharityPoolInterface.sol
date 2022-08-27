@@ -18,12 +18,12 @@ interface CharityPoolInterface {
     function setCharityWallet(address _newAddress) external;
     function developmentPool() external view returns (address);
     function stakingPool() external view returns (address);
-    function depositNative(address _cTokenAddress) external payable;
+    function depositNative(address _cTokenAddress, string memory _memo) external payable;
     function withdrawNative(address _cTokenAddress, uint256 _amount) external;
-    function depositTokens(address _cTokenAddress, uint256 _amount) external;
+    function depositTokens(address _cTokenAddress, uint256 _amount, string memory _memo) external;
     function withdrawTokens(address _cTokenAddress, uint256 _amount) external;
     function withdrawAll(address _account) external;
-    function directDonation(IERC20 _donationToken, uint256 _amount) external;
+    function directDonation(IERC20 _donationToken, uint256 _amount, string memory _memo) external;
     function redeemInterest(address _cTokenAddress) external;
     function claimInterest() external;
     function claimableInterest() external view returns (uint256);
@@ -50,7 +50,7 @@ interface CharityPoolInterface {
     function balanceOfUSD(address _addr) external view returns (uint256);
     function numberOfContributors() external view returns (uint256);
     function contributorAt(uint256 index) external view returns (address);
-    function directDonationNative() external payable;
+    function directDonationNative(string memory _memo) external payable;
     function version() external pure returns (uint256);
     function balances(address _account, address _cToken) external view returns (uint256);
     function donationBalances(address _account, address _cToken) external view returns (uint256);

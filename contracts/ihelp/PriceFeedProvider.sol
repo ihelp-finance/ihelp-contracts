@@ -7,6 +7,9 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../utils/IERC20.sol";
 import "./PriceFeedProviderInterface.sol";
+import "../connectors/ConnectorInterface.sol";
+
+import "hardhat/console.sol";
 
 contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -15,6 +18,7 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     EnumerableSet.AddressSet private _donationCurrencyMapping;
 
     mapping(address => bool) public allowedDirectDonationCurrencies;
+
     /**
      * Initialzie the contract with a set of donation currencies
      */
@@ -40,6 +44,17 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     }
 
     /**
+     * Calculates the APY for the lending token of a given protocol
+     * @param _lendingAddress the address of the lending token
+     * @param _blockTime the block time in millisconds of the chain this contract is deployed to
+     * @return APR scaled by 1e18
+     */
+    function getCurrencyApr(address _lendingAddress, uint256 _blockTime) public view returns (uint256) {
+        ConnectorInterface connector = ConnectorInterface(_donationCurrencies[_lendingAddress].connector);
+        return connector.supplyAPR(_lendingAddress, _blockTime);
+    }
+
+    /**
      * Returns the underlying token price and the decimal number of the price value
      */
     function getUnderlyingTokenPrice(address _lendingAddress) public view virtual returns (uint256, uint256) {
@@ -51,7 +66,7 @@ contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     }
 
     function addDonationCurrencies(DonationCurrency[] memory _newDonationCurrencies) public onlyOwner {
-         for (uint256 i = 0; i < _newDonationCurrencies.length; i++) {
+        for (uint256 i = 0; i < _newDonationCurrencies.length; i++) {
             _addDonationCurrency(_newDonationCurrencies[i]);
         }
     }

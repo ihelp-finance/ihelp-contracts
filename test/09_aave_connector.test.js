@@ -107,22 +107,20 @@ describe('Charity Factory Deployment', function () {
         });
 
         it("should deposit tokens", async function () {
-            await charityPool.depositTokens(aTokenMock.address, 15);
-            expect(await AAVEConnector.balanceOfUnderlying(aTokenMock.address, charityPool.address)).to.equal(15);
+            await charityPool.depositTokens(aTokenMock.address, 15,"test memo");
+            expect(await AAVEConnector.accrueAndGetBalance(aTokenMock.address, charityPool.address)).to.equal(15);
             expect(await AAVEConnector.balanceOf(aTokenMock.address, charityPool.address)).to.equal(15);
             expect(await uMock.balanceOf(owner.address)).to.equal(0);
 
         });
 
-        it("should withdarw tokens", async function () {
-            await charityPool.depositTokens(aTokenMock.address, 15);
+        it("should withdraw tokens", async function () {
+            await charityPool.depositTokens(aTokenMock.address, 15, "test memo");
             console.log(await aTokenMock.balanceOf(charityPool.address), "Balance");
             await charityPool.withdrawTokens(aTokenMock.address, 10);
-            expect(await AAVEConnector.balanceOfUnderlying(aTokenMock.address, charityPool.address)).to.equal(5);
+            expect(await AAVEConnector.accrueAndGetBalance(aTokenMock.address, charityPool.address)).to.equal(5);
             expect(await AAVEConnector.balanceOf(aTokenMock.address, charityPool.address)).to.equal(5);
             expect(await uMock.balanceOf(owner.address)).to.equal(10);
         });
     })
-
-
 });

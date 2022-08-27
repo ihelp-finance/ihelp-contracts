@@ -12,6 +12,8 @@ import "./ConnectorInterface.sol";
 contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
+    uint256 public blockTime = 4000;
+
     function initialize() public initializer {
         __Ownable_init();
     }
@@ -50,9 +52,14 @@ contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function supplyRatePerBlock(address aToken) external view override returns (uint256) {
+        uint256 apr = supplyAPR(aToken, 0);
+        return (( apr / 365 / 24 / 60 / 60) * blockTime) / 1000;
+    }
+
+    function supplyAPR(address aToken, uint256) public view override returns (uint256) {
         IPool pool = AToken(aToken).POOL();
         DataTypes.ReserveData memory data = pool.getReserveData(_underlying(aToken));
-        return uint256(data.currentLiquidityRate);
+        return uint256(data.currentLiquidityRate) / 1e9;
     }
 
     function totalSupply(address aToken) external view override returns (uint256) {
@@ -71,7 +78,15 @@ contract AAVEConnector is ConnectorInterface, OwnableUpgradeable {
         return AToken(aToken).UNDERLYING_ASSET_ADDRESS();
     }
 
-    function lender() external view returns (string memory) {
+    function lender() external pure returns (string memory) {
         return "aave";
+    }
+
+    /**
+     * Sets blocktime
+     */
+    function setBlockTime(uint256 _blockTimeInMilli) external onlyOwner {
+        require(_blockTimeInMilli > 0, "invalid/cannot-be-0");
+        blockTime = _blockTimeInMilli;
     }
 }

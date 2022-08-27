@@ -294,12 +294,13 @@ describe("Analytics", function () {
             });
 
             it("should return the supported donation currencies", async () => {
-                const currencies = await analytics.getSupportedCurrencies(iHelp.address);
+                const currencies = await analytics.getSupportedCurrencies(iHelp.address, 13.5 * 1000);
                 expect(currencies.length).to.equal(2);
                 expect(currencies[0].provider).to.equal("Provider1");
                 expect(currencies[0].underlyingToken).to.equal(uMock1.address);
                 expect(currencies[0].lendingAddress).to.equal(cTokenMock1.address);
                 expect(currencies[0].priceFeed).to.equal(chainLinkAggretator.address);
+                console.log(currencies[0]);
 
                 expect(currencies[1].provider).to.equal("Provider2");
                 expect(currencies[1].underlyingToken).to.equal(uMock2.address);

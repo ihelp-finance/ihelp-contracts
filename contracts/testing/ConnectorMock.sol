@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.10;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+pragma solidity ^0.8.9;
+
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
-
-import "./ConnectorInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../connectors/ConnectorInterface.sol";
+import "./ERC20MintableMock.sol";
+import "./CTokenMock.sol";
 import "../utils/ICErc20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
+
+contract ConnectorMock is ConnectorInterface {
     using SafeERC20 for IERC20;
     using PRBMathUD60x18 for uint256;
-
-    function initialize() public initializer {
-        __Ownable_init();
-    }
 
     function mint(address cToken, uint256 mintAmount) external override returns (uint256) {
         IERC20(_underlying(cToken)).safeTransferFrom(msg.sender, address(this), mintAmount);
@@ -24,14 +24,10 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         return result;
     }
 
-    function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        uint256 cTokens = redeemAmount.div(ICErc20(cToken).exchangeRateStored());
-        IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
-        IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
-        uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
-        IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
-        IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
-        return result;
+    function redeemUnderlying(address cToken, uint256 redeemAmount) external override  returns (uint256) {
+        address uAddress = address(CTokenMock(cToken).underlying());
+        ERC20MintableMock(uAddress).mint(msg.sender,redeemAmount);
+        return 0;
     }
 
     function cTokenValueOfUnderlying(address cToken, uint256 amount) external view returns (uint256) {

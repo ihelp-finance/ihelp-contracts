@@ -4,6 +4,8 @@ const { smock } = require("@defi-wonderland/smock");
 const {
     constants,
 } = require('@openzeppelin/test-helpers');
+const { BigNumber } = require('ethers');
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
 use(smock.matchers);
 
@@ -14,9 +16,9 @@ describe("PriceFeedProvider", function () {
     let addr2;
     let addrs;
     let CTokenMock;
-    let underlyingMock1, underlyingMock2, cTokenMock1, cTokenMock2;
+    let underlyingMock1, underlyingMock2, cTokenMock1, cTokenMock2, ATokenMock, aTokenMock;
     let donationCurrencies, chainLinkAggretator;
-    let mockConnector
+    let mockConnector, aaveMockConnector;
 
     beforeEach(async function () {
         const Mock = await smock.mock("ERC20MintableMock");
@@ -24,6 +26,13 @@ describe("PriceFeedProvider", function () {
 
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
         CTokenMock = await smock.mock("CTokenMock");
+        ATokenMock = await smock.mock("ATokenMock");
+        const APool = await smock.mock("APoolMock");
+
+        aTokenPoolMock = await APool.deploy();
+        aTokenMock = await ATokenMock.deploy(aTokenPoolMock.address);
+
+        await aTokenPoolMock.setAToken(aTokenMock.address);
         const PriceFeedProvider = await smock.mock("PriceFeedProvider", {
             signer: owner
         });
@@ -34,8 +43,25 @@ describe("PriceFeedProvider", function () {
         cTokenMock1 = await CTokenMock.deploy(underlyingMock1.address, 1000);
         cTokenMock2 = await CTokenMock.deploy(underlyingMock1.address, 1000);
 
-        mockConnector = await smock.fake('CompoundConnector');
 
+        await aTokenMock.initialize(
+            aTokenPoolMock.address,
+            addrs[6].address,
+            underlyingMock1.address,
+            ZERO_ADDRESS,
+            18,
+            "aTokenMock",
+            "ATKNM",
+            Buffer.from("0")
+        );
+
+        mockConnector = await smock.mock('CompoundConnector');
+        mockConnector = await mockConnector.deploy();
+
+        let tjMockConnector =  await smock.mock('TraderJoeConnector');
+        tjMockConnector =  await tjMockConnector.deploy();
+
+        aaveMockConnector =  await smock.fake('AAVEConnector');
         priceFeedProvider = await PriceFeedProvider.deploy();
 
         donationCurrencies = [{
@@ -43,7 +69,7 @@ describe("PriceFeedProvider", function () {
             currency: "ETH",
             underlyingToken: underlyingMock1.address,
             lendingAddress: cTokenMock1.address,
-            currency: "currency1",
+            priceFeed: chainLinkAggretator.address,
             connector: mockConnector.address
         }, {
             provider: "Provider2",
@@ -51,7 +77,15 @@ describe("PriceFeedProvider", function () {
             underlyingToken: underlyingMock2.address,
             lendingAddress: cTokenMock2.address,
             priceFeed: chainLinkAggretator.address,
-            connector: mockConnector.address
+            connector: tjMockConnector.address
+            
+        },{
+            provider: "Provider3",
+            currency: "ETH",
+            underlyingToken: underlyingMock1.address,
+            lendingAddress: aTokenMock.address,
+            priceFeed: chainLinkAggretator.address,
+            connector: aaveMockConnector.address
         }];
 
         await priceFeedProvider.initialize(donationCurrencies);
@@ -64,7 +98,7 @@ describe("PriceFeedProvider", function () {
 
         it("should set initial list of donation currencies", async function () {
             const currencies = await priceFeedProvider.getAllDonationCurrencies();
-            expect(currencies.length).to.equal(2);
+            expect(currencies.length).to.equal(3);
             expect(currencies[0].provider).to.equal(donationCurrencies[0].provider);
         });
     });
@@ -131,11 +165,11 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(3);
-                expect(currencies[2].provider).to.equal("Provider3");
-                expect(currencies[2].underlyingToken).to.equal(addrs[5].address);
-                expect(currencies[2].lendingAddress).to.equal(addrs[6].address);
-                expect(currencies[2].priceFeed).to.equal(addrs[7].address);
+                expect(currencies.length).to.equal(4);
+                expect(currencies[3].provider).to.equal("Provider3");
+                expect(currencies[3].underlyingToken).to.equal(addrs[5].address);
+                expect(currencies[3].lendingAddress).to.equal(addrs[6].address);
+                expect(currencies[3].priceFeed).to.equal(addrs[7].address);
             });
         })
 
@@ -149,11 +183,11 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(1);
-                expect(currencies[0].provider).to.equal("Provider2");
-                expect(currencies[0].underlyingToken).to.equal(donationCurrencies[1].underlyingToken);
-                expect(currencies[0].lendingAddress).to.equal(donationCurrencies[1].lendingAddress);
-                expect(currencies[0].priceFeed).to.equal(donationCurrencies[1].priceFeed);
+                expect(currencies.length).to.equal(2);  
+                expect(currencies[0].provider).to.equal("Provider3");
+                expect(currencies[0].underlyingToken).to.equal(donationCurrencies[2].underlyingToken);
+                expect(currencies[0].lendingAddress).to.equal(donationCurrencies[2].lendingAddress);
+                expect(currencies[0].priceFeed).to.equal(donationCurrencies[2].priceFeed);
             });
         })
 
@@ -219,7 +253,7 @@ describe("PriceFeedProvider", function () {
 
                 const currencies = await priceFeedProvider.getAllDonationCurrencies();
 
-                expect(currencies.length).to.equal(2);
+                expect(currencies.length).to.equal(3);
                 expect(currencies[1].provider).to.equal("Provider3");
                 expect(currencies[1].underlyingToken).to.equal(addrs[5].address);
                 expect(currencies[1].lendingAddress).to.equal(cTokenMock2.address);
@@ -236,7 +270,50 @@ describe("PriceFeedProvider", function () {
             const [price, decimals] = await priceFeedProvider.getUnderlyingTokenPrice(cTokenMock2.address);
             expect(price).to.equal(100);
             expect(decimals).to.equal(8);
-
         })
     })
+
+    describe("Currency Data", async () => {
+        it("should calculated currency APY for compound protocol", async () => {
+            await  cTokenMock1.setVariable('__supplyRatePerBlock', 1152785640)
+            
+            const SUPPLY_RATE = await cTokenMock1.supplyRatePerBlock();
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[0].lendingAddress, 4 * 1000);
+            const blocksPerDay = 86_400 / 4;
+            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(blocksPerDay * 365);
+            
+            const formatedApr =  apr/1e18;
+            console.log('APR', formatedApr);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+            
+            expect(apr).to.equal(expectedAPR);
+        })
+
+        it("should calculated currency APY for traderjoe protocol ", async () => {
+            await  cTokenMock2.setVariable('__supplyRatePerSecond', 288196410)
+            
+            const SUPPLY_RATE = await cTokenMock2.supplyRatePerSecond();
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[1].lendingAddress, 4 * 1000);
+            const blocksPerDay = 86_400 / 4;
+            const expectedAPR = BigNumber.from('' + SUPPLY_RATE).mul(4  * blocksPerDay * 365);
+            console.log('APR', apr/1e18);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+        
+            expect(apr).to.equal(expectedAPR);
+        })
+
+        it("should calculated currency APY for AAVE protocol ", async () => {
+            
+            const SUPPLY_RATE = BigNumber.from('12992135704928158729527564').div(1e9);
+            aaveMockConnector.supplyAPR.returns(SUPPLY_RATE)
+            const apr = await priceFeedProvider.getCurrencyApr(donationCurrencies[2].lendingAddress, 4 * 1000);
+            
+            console.log('APR', apr/1e18);
+            console.log((apr/1e18)/365);
+            console.log("APY", (1+(apr/1e18)/365)**365 - 1);
+        
+            expect(apr).to.equal(SUPPLY_RATE);
+        })
+    })
+
 });
