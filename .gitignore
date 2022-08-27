@@ -26,4 +26,4 @@ deployed-charities/hardhat.json
 _hardhat.config.js
 contracts_flattened
 upgradeBatch.json
-networks/localhost-connectors.json
+networks/*-connectors.json
