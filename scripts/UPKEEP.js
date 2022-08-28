@@ -195,7 +195,7 @@ const upkeep = async() => {
     hook.setUsername('iHelp Job Monitor');
     hook.setAvatar(IMAGE_URL);
 
-    await hook.send("Upkeep Job Completed Successfully...\n   Signer Cost: " + signerCost.toFixed(4) + '\n   Signer Balance: ' + fromBigNumber(balanceend).toFixed(4));
+    await hook.send("Upkeep Job Completed Successfully...\n   Signer Cost: " + signerCost.toFixed(4) + '\n   Signer Balance: ' + fromBigNumber(balanceend).toFixed(4) + '\n   Total Interest Generated: ' + totalGenerated.toFixed(4)) ;
   }
 
   process.exit(0)

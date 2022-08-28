@@ -9,8 +9,6 @@ import "../utils/IERC20.sol";
 import "./PriceFeedProviderInterface.sol";
 import "../connectors/ConnectorInterface.sol";
 
-import "hardhat/console.sol";
-
 contract PriceFeedProvider is PriceFeedProviderInterface, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
