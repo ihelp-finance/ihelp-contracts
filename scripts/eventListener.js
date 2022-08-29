@@ -96,7 +96,7 @@ const runListener = async() => {
 
             const event = filter['iface'].parseLog(log)
 
-            handleEvent(log['id'], event)
+            handleEvent(log['id'], event, log['address'])
 
         })
 
@@ -108,7 +108,7 @@ const runListener = async() => {
 
 }
 
-const handleEvent = async(id, event) => {
+const handleEvent = async(id, event, from) => {
     
     // console.log(event);
 
@@ -127,6 +127,7 @@ const handleEvent = async(id, event) => {
 
             sEvent['name'] = event['name']
             sEvent['sender'] = event['args']['sender']
+            sEvent['from'] = from
             sEvent['lendingAddress'] = event['args']['cTokenAddress']
 
             if (Object.keys(event['args']).indexOf('_memo') > -1) {
@@ -136,7 +137,7 @@ const handleEvent = async(id, event) => {
             }
 
             // get supported currency array with prices to multiply currency by amount
-            const currencies = await analytics.getSupportedCurrencies(iHelp.address)
+            const currencies = await analytics.getSupportedCurrencies(iHelp.address,process.env.NETWORK_BLOCK_TIME || 4000);
 
             const currencyHash = {}
             currencies.map((c) => {
