@@ -401,6 +401,8 @@ module.exports.updateCharityPoolsDefaultConfig = async () => {
 module.exports.updateCharityPools = async () => {
   const { deployer } = await getNamedAccounts();
 
+  const network = process.env.REACT_APP_NETWORK;
+
   const result = await deployments.deploy('CharityPool_Implementation', {
     contract: 'CharityPool',
     from: deployer,
@@ -431,12 +433,71 @@ module.exports.updateCharityPools = async () => {
         ${chalk.yellow(`${data}`)}
     `));
 
-    const network = process.env.REACT_APP_NETWORK;
     if (network == 'localhost') {
       await mockUpgrade(beaconFactoryDeployment.address, data);
     }
 
   }
+
+  const updateCharityABIs = true;
+
+  if (updateCharityABIs) {
+
+    this.cyan('\nUpdating the charity pool abi definitions to match the latest implementation...\n');
+
+    // update the charity abi in the deployments directory and in the build file
+    
+    const baseAbi = JSON.parse(await fs.readFileSync(`deployments/${network}/CharityPool_Implementation.json`,'utf8'))['abi']
+    // console.log(baseAbi)
+
+    const FILE_DIR = 'build'
+    const FILE_PATH = path.join(FILE_DIR, `${network}_charities.json`);
+
+    let deployedCharities = [];
+    let result = [];
+
+    if (fs.existsSync(FILE_PATH)) {
+      const fileData = readFileSync(FILE_PATH, { encoding: 'utf-8' });
+      deployedCharities = JSON.parse(fileData);
+    }
+
+    for (const charity of deployedCharities) {
+        this.yellow('  updating abi:',charity['charityName'])
+
+        const deployFile = `deployments/${network}/${charity['charityName']}.json`;
+
+        const deployment = JSON.parse(readFileSync(deployFile, { encoding: 'utf-8' }));
+        deployment['abi'] = baseAbi;
+
+        await fs.writeFileSync(deployFile,JSON.stringify(deployment, null, 2));
+
+    }
+  
+    this.cyan('\nExporting the deployments...\n')
+
+    // publish the contracts
+    const exec = require('child_process').exec;
+  
+    function os_func() {
+      this.execCommand = function(cmd) {
+        return new Promise((resolve, reject) => {
+          exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(stdout);
+          });
+        });
+      };
+    }
+
+    var os = new os_func();
+    this.cyan(`hardhat export --export-all ./build/${network}_contracts.json`);
+    await run('export', { "exportAll": `./build/${network}_contracts.json` });
+
+  }
+
 }
 
 module.exports.fromBigNumber = (number) => {

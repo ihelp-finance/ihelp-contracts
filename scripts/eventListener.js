@@ -73,8 +73,8 @@ const runListener = async() => {
 
     // Listen for all charity events on the connected channel
     const eventFilters = [
-        { name: 'donate', topic: ethers.utils.id("DirectDonation(address,address,uint256)"), iface: new ethers.utils.Interface(["event DirectDonation(address indexed sender, address indexed receiver, uint256 amount)"]) },
-        { name: 'deposit', topic: ethers.utils.id("Deposited(address,address,uint256)"), iface: new ethers.utils.Interface(["event Deposited(address indexed sender, address indexed cTokenAddress, uint256 amount)"]) },
+        { name: 'donate', topic: ethers.utils.id("DirectDonation(address,address,uint256,string)"), iface: new ethers.utils.Interface(["event DirectDonation(address indexed sender, address indexed receiver, uint256 amount, string memory _memo)"]) },
+        { name: 'deposit', topic: ethers.utils.id("Deposited(address,address,uint256,string)"), iface: new ethers.utils.Interface(["event Deposited(address indexed sender, address indexed cTokenAddress, uint256 amount, string memory _memo)"]) },
         { name: 'withdraw', topic: ethers.utils.id("Withdrawn(address,address,uint256)"), iface: new ethers.utils.Interface(["event Withdrawn(address indexed sender, address indexed cTokenAddress, uint256 amount)"]) },
         { name: 'reward', topic: ethers.utils.id("Rewarded(address,uint256)"), iface: new ethers.utils.Interface(["event Rewarded(address indexed receiver, uint256 amount)"]) },
     ];
@@ -127,6 +127,12 @@ const handleEvent = async(id, event) => {
             sEvent['name'] = event['name']
             sEvent['sender'] = event['args']['sender']
             sEvent['lendingAddress'] = event['args']['cTokenAddress']
+
+            if (Object.keys(event['args']).indexOf('_memo') > -1) {
+                if (event['args']['_memo'] != "") {
+                    sEvent['memo'] = event['args']['_memo'];
+                }
+            }
 
             // get supported currency array with prices to multiply currency by amount
             const currencies = await analytics.getSupportedCurrencies(iHelp.address)

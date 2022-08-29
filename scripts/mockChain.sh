@@ -14,6 +14,8 @@ rm build/localhost_* build/hardhat_* deployments/localhost -Rf
 cp build/${chainToMock}_contracts.json build/localhost_contracts.json
 cp build/${chainToMock}_charities.json build/localhost_charities.json
 
+sed -i 's/43114/31337/g' build/localhost_contracts.json
+
 cp deployments/$chainToMock deployments/localhost -Rf
 
 echo "31337" > deployments/localhost/.chainId

@@ -750,7 +750,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     function version() public pure virtual returns (uint256) {
-        return 2;
+        return 3;
     }
 
     uint256[27] private __gap;
