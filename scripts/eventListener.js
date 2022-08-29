@@ -26,6 +26,7 @@ let analytics = null;
 const runListener = async() => {
 
     const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+
     if (nodeUrlWs == '' || nodeUrlWs == undefined) {
         console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
         process.exit(1)

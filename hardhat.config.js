@@ -80,7 +80,7 @@ module.exports = {
       // }
     },
     localhost: {
-      url: "http://localhost:7545",
+      url: process.env.REACT_APP_RPC_URL || "http://localhost:7545",
       forking: forkingData,
       loggingEnabled:process.env.TEST_LOGGING == 'true' ? true : false,
       timeout: 1200000, // this is needed for forked chain timeouts and/or slow rpc endpoints
