@@ -462,7 +462,7 @@ module.exports.updateCharityPools = async () => {
     }
 
     for (const charity of deployedCharities) {
-        this.yellow('  updating abi:',charity['charityName'])
+        // this.yellow('  updating abi:',charity['charityName'])
 
         const deployFile = `deployments/${network}/${charity['charityName']}.json`;
 
@@ -473,7 +473,7 @@ module.exports.updateCharityPools = async () => {
 
     }
   
-    this.cyan('\nExporting the deployments...\n')
+    this.cyan('\nExporting the deployments...')
 
     // publish the contracts
     const exec = require('child_process').exec;
