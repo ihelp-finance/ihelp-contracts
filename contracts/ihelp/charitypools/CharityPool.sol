@@ -213,22 +213,26 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         uint256 _amount,
         address _account
     ) internal {
+
         if (_amount == 0) {
             _amount = balances[_account][_cTokenAddress];
         }
 
-        _withdraw(msg.sender, _cTokenAddress, _amount);
+        if (_amount > 0) {
+            _withdraw(_account, _cTokenAddress, _amount);
 
-        ConnectorInterface connectorInstance = connector(_cTokenAddress);
+            ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
-        // Allow connector to pull cTokens from this contracts
-        require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+            // Allow connector to pull cTokens from this contracts
+            require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
 
-        // Reddem the underlying tokens for cTokens
-        require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+            // Reddem the underlying tokens for cTokens
+            require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
 
-        require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
-        emit Withdrawn(msg.sender, _cTokenAddress, _amount);
+            require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
+            emit Withdrawn(_account, _cTokenAddress, _amount);
+        }
+        
     }
 
     /**
