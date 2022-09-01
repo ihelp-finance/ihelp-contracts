@@ -8,9 +8,11 @@ const chalk = require('chalk')
 const ethers = require('ethers')
 
 const { getChainId, network } = require('hardhat');
-const { chainName, green, yellow, dim, fromBigNumber, getLendingConfigurations, cyan } = require("./deployUtils");
+const { chainName, green, yellow, dim, fromBigNumber, getLendingConfigurations, cyan,runRpcTest } = require("./deployUtils");
 
 const upkeep = async() => {
+
+  await runRpcTest();
 
   const { deploy } = hardhat.deployments;
 

@@ -8,6 +8,8 @@ const chalk = require('chalk')
 const ethers = require('ethers')
 // const externalContracts = require('../../react-app/src/contracts/external_contracts');
 
+const { chainName, green, yellow, dim, fromBigNumber, getLendingConfigurations, cyan,runRpcTest } = require("./deployUtils");
+
 const db = require('../../ihelp-app/config/db.js');
 
 //const { assert, use, expect } = require("chai");
@@ -16,72 +18,9 @@ let userAccount, userSigner;
 let signer;
 let ihelp, xhelp, swapper, charityPool1, charityPool2, charityPool3, dai, cdai;
 
-const fromBigNumber = (number) => {
-    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)))
-}
+const reward = async() => {
 
-function dim() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.dim.call(chalk, ...arguments))
-    }
-}
-
-function yellow() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.yellow.call(chalk, ...arguments))
-    }
-}
-
-function green() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.green.call(chalk, ...arguments))
-    }
-}
-
-function cyan() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.cyan.call(chalk, ...arguments))
-    }
-}
-
-const chainName = (chainId) => {
-    switch (chainId) {
-        case 1:
-            return 'Mainnet';
-        case 3:
-            return 'Ropsten';
-        case 4:
-            return 'Rinkeby';
-        case 5:
-            return 'Goerli';
-        case 42:
-            return 'Kovan';
-        case 56:
-            return 'Binance Smart Chain';
-        case 77:
-            return 'POA Sokol';
-        case 97:
-            return 'Binance Smart Chain (testnet)';
-        case 99:
-            return 'POA';
-        case 100:
-            return 'xDai';
-        case 137:
-            return 'Matic';
-        case 31337:
-            return 'HardhatEVM';
-        case 43113:
-            return 'Fuji';
-        case 43114:
-            return 'Avalanche';
-        case 80001:
-            return 'Matic (Mumbai)';
-        default:
-            return 'Unknown';
-    }
-}
-
-const upkeep = async() => {
+    await runRpcTest();
 
     const { deploy } = hardhat.deployments;
 
@@ -158,4 +97,4 @@ const upkeep = async() => {
 
 }
 
-upkeep();
+reward();

@@ -549,3 +549,31 @@ const mockUpgrade = async(to, data) => {
   this.green('\nmock upgrade complete\n')
 
 }
+
+
+module.exports.runRpcTest = async() => {
+
+  console.log('\nstarting rpc test for rate limiting...')
+  class LoggingProvider extends ethers.providers.JsonRpcProvider {
+      perform(method, parameters) {
+          console.log("  >>>", method, parameters);
+          return super.perform(method, parameters).then((result) => {
+              console.log("  <<<", method, parameters, result);
+              return result;
+          });
+      }    
+  }
+
+  // before doing anything try to call a request with ethers for exponential backoff
+  const nodeUrl = process.env.REACT_APP_RPC_URL;
+  if (nodeUrl == '' || nodeUrl == undefined) {
+      console.log('please define REACT_APP_RPC_URL env variable - exiting')
+      process.exit(1)
+  }
+  
+  // const providerTest = new ethers.providers.JsonRpcProvider(nodeUrl)
+  const providerTest = new LoggingProvider(nodeUrl)
+  await providerTest.getBlockNumber();
+  console.log('rpc provider ready.\n');
+
+}
