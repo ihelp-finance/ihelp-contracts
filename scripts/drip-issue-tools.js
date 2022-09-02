@@ -18,36 +18,34 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../env/.env') })
 let signer;
 let ihelp;
 
-const testApy = async () => {
+let charityInstance
+let cToken
+const getBlockDetails = async (BLOCK) => {
 
     const charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0x019171b8ee9093e69851dab4c7613b204e436695');
     const cToken = await hardhat.ethers.getContractAt("ERC20", '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE');
 
-    let redeemableInterestAtBlock = await charityInstance
-        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', {
-            blockTag:
-            18703588
-        });
-
-    let balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 18703588 });
-
-    console.log("balance at block ", 18703588, ' is ', balance / 1e18);
-    console.log("interest at block ", 18703588, ' is ', redeemableInterestAtBlock / 1e18);
-
+    let redeemableInterestAtBlock;
+    let balance;
+    console.log("======= BLOCK ==========", BLOCK)
     redeemableInterestAtBlock = await charityInstance
-        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: 18749252 });
-    balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 18749252 });
+        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: BLOCK });
+    balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: BLOCK });
 
-    console.log("balance at block ", 18749252, ' is ', balance / 1e18);
-    console.log("interest at block ", 18749252, ' is ', redeemableInterestAtBlock / 1e18);
+    console.log("balance at block ", BLOCK, ' is ', balance / 1e18);
+    console.log("interest at block ", BLOCK, ' is ', redeemableInterestAtBlock / 1e18);
 
-    redeemableInterestAtBlock = await charityInstance
-        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: 19198018 });
-    balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 19198018 });
+}
 
-    console.log("balance at block ", 19198018, ' is ', balance / 1e18);
-    console.log("interest at block ", 19198018, ' is ', redeemableInterestAtBlock / 1e18);
+const testApy = async () => {
+    charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0x019171b8ee9093e69851dab4c7613b204e436695');
+    cToken = await hardhat.ethers.getContractAt("ERC20", '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE');
 
+
+    await getBlockDetails(19198018)
+    await getBlockDetails(19197985)
+    await getBlockDetails(19197898)
+    await getBlockDetails(19153836)
 
     process.exit(0)
 
