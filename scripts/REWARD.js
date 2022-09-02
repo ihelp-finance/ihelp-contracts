@@ -37,6 +37,9 @@ const reward = async() => {
     const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
+    const helpAddress = (await hardhat.deployments.get('iHelp')).address;
+    help = await hardhat.ethers.getContractAt('iHelpToken', helpAddress, signer);
+
     const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
     xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
 
@@ -61,10 +64,25 @@ const reward = async() => {
     
     const newlyAwarded = parseFloat(stakepool2) - parseFloat(stakepool1)
     console.log('\nNewly Awarded:',newlyAwarded.toFixed(6))
+
+    const helpCirculatingTx = await help.totalCirculating();
+    const helpCirculating = fromBigNumber(helpCirculatingTx);
+    console.log('\nhelpCirculating:',helpCirculating)
+
+    const helpSupplyTx = await help.totalSupply();
+    const helpSupply = fromBigNumber(helpSupplyTx);
+    console.log('\nhelpSupply:',helpSupply)
+
+    const xhelpSupplyTx = await xhelp.totalSupply();
+    const xhelpSupply = fromBigNumber(xhelpSupplyTx);
+    console.log('\nxhelpSupply:',xhelpSupply)
     
     const data = {
         reward:newlyAwarded,
-        total_reward:stakepool2 
+        total_reward:stakepool2,
+        help_circulating:helpCirculating.toFixed(6),
+        help_supply:helpSupply.toFixed(6),
+        xhelp_supply:xhelpSupply.toFixed(6)
     }
     
     if (newlyAwarded > 0) {
