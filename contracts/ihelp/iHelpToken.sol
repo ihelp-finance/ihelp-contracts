@@ -83,6 +83,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public directDonationDevelopmentShareOfInterest;
     uint256 public directDonationStakingShareOfInterest;
 
+    event RedeemError(address charity);
+
     function setTokenPhases() internal {
         uint256 numberPhases = 10;
 
@@ -627,7 +629,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
                     console.log('  lender',cTokens[ii].lendingAddress,balanceInLender);
                     
-                    CharityPoolInterface(payable(charity)).redeemInterest(cTokens[ii].lendingAddress);
+                    try CharityPoolInterface(payable(charity)).redeemInterest(cTokens[ii].lendingAddress) {} catch {
+                        emit RedeemError(charity);
+                    }
                 }
                 
                 charitiesToProcess.remove(charity);

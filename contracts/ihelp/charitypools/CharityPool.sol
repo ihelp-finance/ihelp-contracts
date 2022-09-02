@@ -431,6 +431,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
             newTotalInterestEarned[_cTokenAddress] = 0;
 
+            require(accountedBalances[_cTokenAddress] <= IERC20(_cTokenAddress).balanceOf(address(this)), "redeem/overflow");
+
             emit Rewarded(charityWallet, amount);
         }
     }
