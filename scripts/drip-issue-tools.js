@@ -18,282 +18,36 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../env/.env') })
 let signer;
 let ihelp;
 
-const fromBigNumber = (number) => {
-    return parseFloat(web3.utils.fromWei(Big(number).toFixed(0)))
-}
-
-function dim() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.dim.call(chalk, ...arguments))
-    }
-}
-
-function yellow() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.yellow.call(chalk, ...arguments))
-    }
-}
-
-function green() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.green.call(chalk, ...arguments))
-    }
-}
-
-function cyan() {
-    if (!process.env.HIDE_DEPLOY_LOG) {
-        console.log(chalk.cyan.call(chalk, ...arguments))
-    }
-}
-
-const chainName = (chainId) => {
-    switch (chainId) {
-        case 1:
-            return 'Mainnet';
-        case 3:
-            return 'Ropsten';
-        case 4:
-            return 'Rinkeby';
-        case 5:
-            return 'Goerli';
-        case 42:
-            return 'Kovan';
-        case 56:
-            return 'Binance Smart Chain';
-        case 77:
-            return 'POA Sokol';
-        case 97:
-            return 'Binance Smart Chain (testnet)';
-        case 99:
-            return 'POA';
-        case 100:
-            return 'xDai';
-        case 137:
-            return 'Matic';
-        case 31337:
-            return 'HardhatEVM';
-        case 43113:
-            return 'Fuji';
-        case 43114:
-            return 'Avalanche';
-        case 80001:
-            return 'Matic (Mumbai)';
-        default:
-            return 'Unknown';
-    }
-}
-
-const leaderBoard = [
-    {
-        "address": "0x085290a16d2F9D9E4b2deF533617940386EeF54C",
-        "name": "Matter",
-        "contributions": 2100.089416,
-        "donations": 0,
-        "interests": 5.594921401747918,
-        "createdAt": "2022-08-16T00:15:03.613Z",
-        "updatedAt": "2022-08-26T18:09:05.744Z"
-    },
-    {
-        "address": "0x7D69823fbaC34B25F42d6E0266AD9Ba211508bD7",
-        "name": "Alzheimer's Disease and Related Disorders Association, Inc.",
-        "contributions": 2000.14638,
-        "donations": 0,
-        "interests": 4.853218,
-        "createdAt": "2022-08-18T01:27:04.057Z",
-        "updatedAt": "2022-08-26T18:09:05.744Z"
-    },
-    {
-        "address": "0xdb668cd91F7e25b7D354a925A65B3C6B7622E633",
-        "name": "Big Dog Ranch Rescue",
-        "contributions": 1514.8032502,
-        "donations": 0,
-        "interests": 0.46094917416940623,
-        "createdAt": "2022-08-10T23:12:03.637Z",
-        "updatedAt": "2022-08-27T09:33:05.812Z"
-    },
-    {
-        "address": "0x830d33d0218248f72f728028BED6afAeA7D3D8f1",
-        "name": "Think Together",
-        "contributions": 1500.109785,
-        "donations": 0,
-        "interests": 4.160849,
-        "createdAt": "2022-08-17T03:06:03.658Z",
-        "updatedAt": "2022-08-26T18:09:05.743Z"
-    },
-    {
-        "address": "0x32a0c06aB637FA0c7B7849CA82deC27459a19a20",
-        "name": "Concern Worldwide US, Inc.",
-        "contributions": 1500.109785,
-        "donations": 0,
-        "interests": 1.39807,
-        "createdAt": "2022-08-18T01:21:03.882Z",
-        "updatedAt": "2022-08-26T18:09:05.740Z"
-    },
-    {
-        "address": "0x5789D5939782e1bb72E51A49C5EB7F2fa8e5c3c1",
-        "name": "American Rivers, Inc.",
-        "contributions": 1500.109785,
-        "donations": 0,
-        "interests": 2.180313,
-        "createdAt": "2022-08-18T01:12:03.852Z",
-        "updatedAt": "2022-08-26T18:09:05.742Z"
-    },
-    {
-        "address": "0x6e679e9A073281dCca0fB7A929607607157C8d96",
-        "name": "charity water",
-        "contributions": 1452.623433957036,
-        "donations": 0,
-        "interests": 1.0824370576265228,
-        "createdAt": "2022-08-18T21:21:04.026Z",
-        "updatedAt": "2022-08-26T18:09:05.742Z"
-    },
-    {
-        "address": "0x872b30f22AFDfA5E634130335180AD35e7F2dBEA",
-        "name": "Fish & Wildlife Foundation of Florida, Inc.",
-        "contributions": 1420.52396,
-        "donations": 0,
-        "interests": 2.062287,
-        "createdAt": "2022-08-18T01:36:04.084Z",
-        "updatedAt": "2022-08-26T18:09:05.742Z"
-    },
-    {
-        "address": "0x3373e724edD4f5837Ad6570ba87BDF6801E583DC",
-        "name": "Books for Africa, Inc.",
-        "contributions": 1000.07319,
-        "donations": 0,
-        "interests": 1.762312,
-        "createdAt": "2022-08-19T17:27:04.199Z",
-        "updatedAt": "2022-08-26T18:09:05.743Z"
-    },
-    {
-        "address": "0xf4d232DabDb83Eb05A87438C2491f0AFD2aaa5f5",
-        "name": "St. Jude Children's Research Hospital",
-        "contributions": 1000.07319,
-        "donations": 0,
-        "interests": 2.424884,
-        "createdAt": "2022-08-18T01:33:04.223Z",
-        "updatedAt": "2022-08-26T18:09:05.744Z"
-    },
-    {
-        "address": "0x336292FC01D7cC942528DdCb8306B43BE1c4eE09",
-        "name": "Channel One Food Bank",
-        "contributions": 1000.07319,
-        "donations": 0,
-        "interests": 1.033082,
-        "createdAt": "2022-08-17T03:12:03.717Z",
-        "updatedAt": "2022-08-26T18:09:05.737Z"
-    },
-    {
-        "address": "0xF48f4248885d879af2ab07bF19330122245D46Ed",
-        "name": "Water for People",
-        "contributions": 900.065871,
-        "donations": 0,
-        "interests": 0.92946,
-        "createdAt": "2022-08-17T03:15:08.705Z",
-        "updatedAt": "2022-08-26T18:09:05.738Z"
-    },
-    {
-        "address": "0x4aF3D1AF431a67920BfE547ab2f7865aD022698a",
-        "name": "Muttvile",
-        "contributions": 641.046914,
-        "donations": 0,
-        "interests": 0.203265,
-        "createdAt": "2022-08-23T19:39:05.586Z",
-        "updatedAt": "2022-08-26T18:09:05.740Z"
-    },
-    {
-        "address": "0xA6ED5f00d3501e4Ab35c9aab02255A78cD320FFC",
-        "name": "Central Institute for the Deaf",
-        "contributions": 500.036595,
-        "donations": 0,
-        "interests": 0.518089,
-        "createdAt": "2022-08-17T02:45:03.709Z",
-        "updatedAt": "2022-08-26T18:09:05.741Z"
-    },
-    {
-        "address": "0xb58363bbBC5FBeB3Ddb11Bdf5862f694Ed7489AA",
-        "name": "Wayside Waifs",
-        "contributions": 420.030739,
-        "donations": 0,
-        "interests": 0.39117,
-        "createdAt": "2022-08-18T01:30:04.029Z",
-        "updatedAt": "2022-08-26T18:09:05.737Z"
-    },
-    {
-        "address": "0x019171B8Ee9093e69851dAb4c7613B204e436695",
-        "name": "Girls Who Code Inc",
-        "contributions": 149.914554,
-        "donations": 0,
-        "interests": 0.10914436104715604,
-        "createdAt": "2022-08-14T02:45:03.652Z",
-        "updatedAt": "2022-08-26T18:09:05.743Z"
-    },
-    {
-        "address": "0x08e6c17a0cC46506c3115e8472Bcd7dBd63841D3",
-        "name": "The Relief Foundation",
-        "contributions": 50.133500525,
-        "donations": 0,
-        "interests": 0.03935259362510167,
-        "createdAt": "2022-08-10T07:34:22.714Z",
-        "updatedAt": "2022-08-27T09:33:05.811Z"
-    },
-    {
-        "address": "0xde745f23e3b41601263711866A799CEA4C6D2A27",
-        "name": "Animal Friends Alliance",
-        "contributions": 40.10680042,
-        "donations": 0,
-        "interests": 0.03181532270214969,
-        "createdAt": "2022-08-10T08:54:03.454Z",
-        "updatedAt": "2022-08-27T09:33:05.811Z"
-    }
-]
-
 const testApy = async () => {
 
-    // let {
-    //     deployer
-    // } = await hardhat.getNamedAccounts();
+    const charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0x019171b8ee9093e69851dab4c7613b204e436695');
+    const cToken = await hardhat.ethers.getContractAt("ERC20", '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE');
 
-    // signer = await hardhat.ethers.provider.getSigner(deployer);
-    // console.log('signer', signer._address);
+    let redeemableInterestAtBlock = await charityInstance
+        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', {
+            blockTag:
+            18703588
+        });
 
-    // const ihelpContract = (await hardhat.deployments.get('iHelp'));
-    ihelp = await hardhat.ethers.getContractAt("iHelpToken", '0x500bd3Aaa7c785B07B45eAa09B4384D63A89b374');
+    let balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 18703588 });
 
-    const priceFeedProvider = await ihelp.priceFeedProvider();
-    // const connectorContract = (await hardhat.deployments.get('TraderJoeConnector'));
-    const priceFeedInstance = await hardhat.ethers.getContractAt("PriceFeedProvider", priceFeedProvider);
+    console.log("balance at block ", 18703588, ' is ', balance / 1e18);
+    console.log("interest at block ", 18703588, ' is ', redeemableInterestAtBlock / 1e18);
 
-    const charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0xde745f23e3b41601263711866A799CEA4C6D2A27');
+    redeemableInterestAtBlock = await charityInstance
+        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: 18749252 });
+    balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 18749252 });
 
-    const charities = await ihelp.getCharities();
+    console.log("balance at block ", 18749252, ' is ', balance / 1e18);
+    console.log("interest at block ", 18749252, ' is ', redeemableInterestAtBlock / 1e18);
 
-    console.log("All charities", charities.length)
+    redeemableInterestAtBlock = await charityInstance
+        .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: 19198018 });
+    balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: 19198018 });
 
-    const indexs = []
+    console.log("balance at block ", 19198018, ' is ', balance / 1e18);
+    console.log("interest at block ", 19198018, ' is ', redeemableInterestAtBlock / 1e18);
 
-    leaderBoard.forEach(leaderb => {
-        const index = charities.findIndex(item => item.toLowerCase() === leaderb.address.toLowerCase());
-        indexs.push({ idx: index, address: leaderb.address })
-    });
-
-    // console.log(indexs.sort((a, b) => a.idx - b.idx).map((item, index) => ({ ...item, index })));
-
-    // const lastCharityIndex = charities.findIndex(item => item.toLowerCase() === ('0xde745f23e3b41601263711866A799CEA4C6D2A27').toLowerCase());
-    // const targteCharityIndex = charities.findIndex(item => item.toLowerCase() === ('0x872b30f22afdfa5e634130335180ad35e7f2dbea').toLowerCase());
-
-    // console.log("last index", lastCharityIndex, "target", targteCharityIndex);
-    // console.log("NAME", await charityInstance.name());
-    const dTokens = await priceFeedInstance.getAllDonationCurrencies()
-    console.log(dTokens.map(item => item.lendingAddress));
-
-    console.log(dTokens);
-
-    // const tjConnector = new hardhat.ethers.Contract(jDAIaddress, jDAIabi, hardhat.ethers.provider);
-
-    // console.log('supplyRatePerSecond',fromBigNumber(await jDAI.supplyRatePerSecond()));
-
-    // console.log(await tjConnector.supplyAPR(jDAIaddress,4000));
 
     process.exit(0)
 
