@@ -391,7 +391,16 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
 
-        require(accountedBalances[_cTokenAddress] <= IERC20(_cTokenAddress).balanceOf(address(this)) - amount, "redeem/overflow");
+        if(
+            IERC20(_cTokenAddress).balanceOf(address(this)) < amount ||
+            accountedBalances[_cTokenAddress] <= IERC20(_cTokenAddress).balanceOf(address(this)) - amount
+        ) {
+            currentInterestEarned[_cTokenAddress] = 0;
+            redeemableInterest[_cTokenAddress] = 0;
+            newTotalInterestEarned[_cTokenAddress] = 0;
+
+            revert("redeem/overflow");
+        }
 
         if (amount > 0) {
             ConnectorInterface connectorInstance = connector(_cTokenAddress);
