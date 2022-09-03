@@ -88,6 +88,11 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     iHelpTokenInterface public ihelpToken;
     PriceFeedProviderInterface public priceFeedProvider;
 
+    /**
+     * Emited whenever a redeem intrest amount overflows
+     */
+    event RedeemError();
+
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
@@ -399,7 +404,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             redeemableInterest[_cTokenAddress] = 0;
             newTotalInterestEarned[_cTokenAddress] = 0;
 
-            revert("redeem/overflow");
+            emit RedeemError();
+            return;
         }
 
         if (amount > 0) {
