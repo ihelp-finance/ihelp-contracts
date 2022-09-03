@@ -324,6 +324,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             // if no active contributors pass over the charity for processing
             if (CharityPoolInterface(payable(charity)).numberOfContributors() == 0) {
+                // reset ii to avoid funky issues
+                processingState.ii = 0;
                 continue;
             }
             
@@ -511,6 +513,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             // only process the charities initially considered in dripStage1
             if (!shouldProcessCharity(charity)) {
+                // reset ii to avoid funky issues
+                processingState.ii = 0;
                 continue;
             }
 
