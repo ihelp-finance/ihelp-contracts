@@ -20,32 +20,89 @@ let ihelp;
 
 let charityInstance
 let cToken
-const getBlockDetails = async (BLOCK) => {
-
-    const charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0x019171b8ee9093e69851dab4c7613b204e436695');
-    const cToken = await hardhat.ethers.getContractAt("ERC20", '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE');
+let priceFeedProvider;
+const getBlockDetails = async (BLOCK, logInfo) => {
 
     let redeemableInterestAtBlock;
     let balance;
-    console.log("======= BLOCK ==========", BLOCK)
+    let accountedBalance;
+    let donationCurrencies;
+    let iHelpState
+
+    console.log("======= BLOCK ==========", BLOCK, logInfo || "")
     redeemableInterestAtBlock = await charityInstance
         .functions.redeemableInterest('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: BLOCK });
     balance = await cToken.balanceOf('0x019171b8ee9093e69851dab4c7613b204e436695', { blockTag: BLOCK });
 
-    console.log("balance at block ", BLOCK, ' is ', balance / 1e18);
-    console.log("interest at block ", BLOCK, ' is ', redeemableInterestAtBlock / 1e18);
+    accountedBalance = await charityInstance
+        .functions.accountedBalances('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: BLOCK });
 
+    donationCurrencies = await priceFeedProvider
+        .functions.getAllDonationCurrencies({ blockTag: BLOCK });
+
+    iHelpState = await ihelp
+        .functions.processingState({ blockTag: BLOCK });
+    // console.log(donationCurrencies);
+
+    console.log("balance at block           ", BLOCK, ' is ', balance / 1e18);
+    console.log("accounted balance at block ", BLOCK, ' is ', accountedBalance / 1e18);
+    console.log("interest at block          ", BLOCK, ' is ', redeemableInterestAtBlock / 1e18);
+    console.log("processing state at block  ", BLOCK, ' is ', iHelpState);
+
+    // console.log("currencies at block        ", BLOCK, ' is \n ', donationCurrencies[0].map(item => `${item.provider}:${item.currency}:${item.lendingAddress}`));
+}
+
+const shouldProcessCharity = async (charity, BLOCK) => {
+    const result = await ihelp
+        .functions.shouldProcessCharity(charity, { blockTag: BLOCK });
+    console.log(" should process charity :",charity, result)
 }
 
 const testApy = async () => {
     charityInstance = await hardhat.ethers.getContractAt("CharityPool", '0x019171b8ee9093e69851dab4c7613b204e436695');
     cToken = await hardhat.ethers.getContractAt("ERC20", '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE');
 
+    ihelp = await hardhat.ethers.getContractAt("iHelpToken", '0x500bd3Aaa7c785B07B45eAa09B4384D63A89b374');
 
+    const priceFeedProviderAddress = await ihelp.priceFeedProvider();
+    priceFeedProvider = await hardhat.ethers.getContractAt("PriceFeedProvider", priceFeedProviderAddress);
+
+    await shouldProcessCharity('0x872b30f22AFDfA5E634130335180AD35e7F2dBEA', 18827937);
+    await shouldProcessCharity('0x6e679e9A073281dCca0fB7A929607607157C8d96', 18827937);
+    await shouldProcessCharity('0x019171B8Ee9093e69851dAb4c7613B204e436695', 18827937);
+
+    return;
+    await getBlockDetails(18749236, "DRIP STAGE 1")
+    await getBlockDetails(18749239, "DRIP STAGE 2")
+    await getBlockDetails(18749243, "DRIP STAGE 4")
+    await getBlockDetails(18749253, "DUMP")
+
+    console.log("\nFaulty dump will happen next\n")
+
+    await getBlockDetails(18827922, "DRIP STAGE 1")
+    await getBlockDetails(18827924, "DRIP STAGE 2")
+    await getBlockDetails(18827928, "DRIP STAGE 4")
+    await getBlockDetails(18827936, "DUMP BLOCK -1")
+    await getBlockDetails(18827937, "DUMP")
+
+    await getBlockDetails(18827933, "DUMP BLOCK -1")
+
+
+    // await getBlockDetails(18827938, "DUMP BLOCK +1")
+
+
+
+    // await getBlockDetails(18827918)
+
+
+
+
+    return;
     await getBlockDetails(19198018)
     await getBlockDetails(19197985)
     await getBlockDetails(19197898)
-    await getBlockDetails(19153836)
+
+
 
     process.exit(0)
 
