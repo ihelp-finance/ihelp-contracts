@@ -610,6 +610,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 
                 // only process the charities initially considered in dripStage1
                 if (!shouldProcessCharity(charity)) {
+                    // reset ii to 0 to avoid funky issue
+                    processingState.ii = 0;
                     continue;
                 }
                 
