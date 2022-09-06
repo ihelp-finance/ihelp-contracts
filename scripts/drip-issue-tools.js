@@ -23,7 +23,7 @@ let cToken
 let priceFeedProvider;
 const getBlockDetails = async (BLOCK, logInfo) => {
 
-    let redeemableInterestAtBlock;
+    let redeemableInterestAtBlock, newTotalInterestEarned, currentInterestEarned;
     let balance;
     let accountedBalance;
     let donationCurrencies;
@@ -42,12 +42,22 @@ const getBlockDetails = async (BLOCK, logInfo) => {
 
     iHelpState = await ihelp
         .functions.processingState({ blockTag: BLOCK });
+
+    newTotalInterestEarned = await charityInstance
+        .functions.newTotalInterestEarned('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: BLOCK });
+
+    currentInterestEarned = await charityInstance
+        .functions.currentInterestEarned('0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE', { blockTag: BLOCK });
+
     // console.log(donationCurrencies);
 
-    console.log("balance at block           ", BLOCK, ' is ', balance / 1e18);
-    console.log("accounted balance at block ", BLOCK, ' is ', accountedBalance / 1e18);
-    console.log("interest at block          ", BLOCK, ' is ', redeemableInterestAtBlock / 1e18);
-    console.log("processing state at block  ", BLOCK, ' is ', iHelpState);
+    console.log("balance at block                  ", BLOCK, ' is ', balance / 1e18);
+    console.log("accounted balance at block        ", BLOCK, ' is ', accountedBalance / 1e18);
+    console.log("redeemable interest at block      ", BLOCK, ' is ', redeemableInterestAtBlock / 1e18);
+    console.log("newTotalInterestEarned at block   ", BLOCK, ' is ', newTotalInterestEarned / 1e18);
+    console.log("currentInterestEarned at block    ", BLOCK, ' is ', currentInterestEarned / 1e18);
+
+    // console.log("processing state at block  ", BLOCK, ' is ', iHelpState);
 
     // console.log("currencies at block        ", BLOCK, ' is \n ', donationCurrencies[0].map(item => `${item.provider}:${item.currency}:${item.lendingAddress}`));
 }
@@ -55,7 +65,7 @@ const getBlockDetails = async (BLOCK, logInfo) => {
 const shouldProcessCharity = async (charity, BLOCK) => {
     const result = await ihelp
         .functions.shouldProcessCharity(charity, { blockTag: BLOCK });
-    console.log(" should process charity :",charity, result)
+    console.log(" should process charity :", charity, result)
 }
 
 const testApy = async () => {
@@ -67,40 +77,32 @@ const testApy = async () => {
     const priceFeedProviderAddress = await ihelp.priceFeedProvider();
     priceFeedProvider = await hardhat.ethers.getContractAt("PriceFeedProvider", priceFeedProviderAddress);
 
-    // await shouldProcessCharity('0x872b30f22AFDfA5E634130335180AD35e7F2dBEA', 18827937);
-    // await shouldProcessCharity('0x6e679e9A073281dCca0fB7A929607607157C8d96', 18827937);
-    // await shouldProcessCharity('0x019171B8Ee9093e69851dAb4c7613B204e436695', 18827937);
 
-    // return;
-    await getBlockDetails(18749236, "DRIP STAGE 1")
-    await getBlockDetails(18749239, "DRIP STAGE 2")
-    await getBlockDetails(18749243, "DRIP STAGE 4")
-    await getBlockDetails(18749253, "DUMP")
+    // await getBlockDetails(18749236, "DRIP STAGE 1")
+    // await getBlockDetails(18749239, "DRIP STAGE 2")
+    // await getBlockDetails(18749243, "DRIP STAGE 4")
+    // await getBlockDetails(18749253, "DUMP")
 
-    console.log("\nFaulty dump will happen next\n")
+    // console.log("\nFaulty dump will happen next\n")
 
-    await getBlockDetails(18827922, "DRIP STAGE 1")
-    await getBlockDetails(18827924, "DRIP STAGE 2")
-    await getBlockDetails(18827928, "DRIP STAGE 4")
-    await getBlockDetails(18827936, "DUMP BLOCK -1")
+    // await getBlockDetails(18827922, "DRIP STAGE 1")
+    // await getBlockDetails(18827924, "DRIP STAGE 2")
+    // await getBlockDetails(18827928, "DRIP STAGE 4")
+    // await getBlockDetails(18827936, "DUMP BLOCK -1")
     await getBlockDetails(18827937, "DUMP")
 
-    await getBlockDetails(18827933, "DUMP BLOCK -1")
+
+    console.log("\nAFTER Faulty dump will happen next\n")
+
+    await getBlockDetails(18956286, "DRIP STAGE 1")
+    await getBlockDetails(18956287, "DRIP STAGE 1")
+
+    // await getBlockDetails(18956292, "DRIP STAGE 1")
 
 
-    // await getBlockDetails(18827938, "DUMP BLOCK +1")
-
-
-
-    // await getBlockDetails(18827918)
-
-
-
-
-    return;
-    await getBlockDetails(19198018)
-    await getBlockDetails(19197985)
-    await getBlockDetails(19197898)
+    // await getBlockDetails(18827928, "DRIP STAGE 4")
+    // await getBlockDetails(18827936, "DUMP BLOCK -1")
+    // await getBlockDetails(18827937, "DUMP")
 
 
 
