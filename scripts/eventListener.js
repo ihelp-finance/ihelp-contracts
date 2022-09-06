@@ -8,6 +8,8 @@ const Web3 = require('web3');
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../../env/.env') })
 
+const { runRpcTest } = require("./deployUtils");
+
 const db = require('../../ihelp-app/config/db.js');
 
 const genericErrorhandler = err => {
@@ -24,6 +26,8 @@ let analytics = null;
 
 // The listener configuration
 const runListener = async() => {
+
+    await runRpcTest();
 
     const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
 
