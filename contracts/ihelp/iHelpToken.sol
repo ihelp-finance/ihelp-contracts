@@ -324,6 +324,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             // if no active contributors pass over the charity for processing
             if (CharityPoolInterface(payable(charity)).numberOfContributors() == 0) {
+                // reset ii to avoid funky issues
+                processingState.ii = 0;
                 continue;
             }
             
@@ -355,6 +357,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             if( totalInterestUSDofCharity == 0 ) {
                 continue;
             }
+
+            console.log('charity total',charity,totalInterestUSDofCharity);
+
             // capture the share
             // charityInterestShare[charity] += totalInterestUSDofCharity;
             
@@ -380,10 +385,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         require(processingState.status == 1, "Invalid status");
 
         console.log("DRIPPING...\n");
-
-        // CHECKS, EFFECTS, INTERACTIONS
-
-        // make sure this only happens once per block - for now just made it on demand
 
         // this value will accumulate the overall accumlated interest balance for each charity over each timestep
         uint256 newInterestUSD = processingState.newInterestUS; // represents capital contributed + interest generated
@@ -511,6 +512,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             // only process the charities initially considered in dripStage1
             if (!shouldProcessCharity(charity)) {
+                // reset ii to avoid funky issues
+                processingState.ii = 0;
                 continue;
             }
 
@@ -606,6 +609,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
                 
                 // only process the charities initially considered in dripStage1
                 if (!shouldProcessCharity(charity)) {
+                    // reset ii to 0 to avoid funky issue
+                    processingState.ii = 0;
                     continue;
                 }
                 
