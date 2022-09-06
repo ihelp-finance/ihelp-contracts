@@ -42,15 +42,19 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
       
+        // redeemAmount in underlyingToken scale
+        console.log("redeemUnderlying cToken",cToken);
+        console.log("cToken balanceOf",IERC20(cToken).balanceOf(msg.sender));
+        console.log("redeemUnderlying redeemAmount",redeemAmount);
+
+                                                        // 1000000
         uint256 cTokens = cTokenValueOfUnderlying(cToken,redeemAmount);
         
-        console.log("redeemUnderlying cToken",cToken);
-        console.log("redeemUnderlying redeemAmount",redeemAmount);
         console.log("redeemUnderlying cTokens",cTokens);
-        console.log("redeemUnderlying balanceOf",IERC20(cToken).balanceOf(msg.sender));
 
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
+
         uint256 result = TJErc20(cToken).redeemUnderlying(redeemAmount);
         IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
         IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
@@ -74,12 +78,12 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function cTokenValueOfUnderlying(address cToken, uint256 amount) public view returns (uint256) {
-        uint256 rate = TJErc20(cToken).exchangeRateStored();
-        uint8 cTokenDecimals = TJErc20(cToken).decimals();
-        // uint8 holdingTokenDecimals = TJErc20(cToken).decimals();
-        console.log('exchangeRateStored',rate);
-        uint256 scaledAmount = amount.mul(rate).div(safepow(10,18-8+cTokenDecimals));
-        return scaledAmount;
+        // uint256 rate = TJErc20(cToken).exchangeRateStored();
+        // uint8 cTokenDecimals = TJErc20(cToken).decimals();
+        // uint8 underlyingTokenDecimals = TJErc20(cToken).decimals();
+        // console.log('exchangeRateStored',rate);
+        // uint256 scaledAmount = amount.mul(rate).div(safepow(10,holdingTokenDecimals+cTokenDecimals));
+        return amount.div(TJErc20(cToken).exchangeRateStored());
     }
 
     function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {
