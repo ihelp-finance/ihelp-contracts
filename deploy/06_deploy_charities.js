@@ -237,7 +237,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId, ethers, upg
       // console.log(c['Organization Name']);
 
       // assume all the charity pools start with no charity wallet defined (can update this on a case by case basis later)
-      charitiesToDeploy.push({ contractName: c['Organization Name'], charityName:c['Organization Name'], charityWalletAddress: ethersLib.constants.AddressZero });
+      if (c['Status'] == 'LIVE') {
+        charitiesToDeploy.push({ contractName: c['Organization Name'], charityName:c['Organization Name'], charityWalletAddress: ethersLib.constants.AddressZero });
+      }
       
       if (ci < charityJsonRun.length - 1 && (ci < parseInt(charitiesToDeloy) - 1 || charitiesToDeloy == 'all')) {
         await deployCharity(ci + 1);

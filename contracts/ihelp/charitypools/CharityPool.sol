@@ -140,6 +140,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
     function setCurrentInterestEarned(address _cTokenAddress,uint256 value) public onlyOperatorOrOwner {
         currentInterestEarned[_cTokenAddress] = value;
+        redeemableInterest[_cTokenAddress] = value;
+        newTotalInterestEarned[_cTokenAddress] = value;
     }
 
     function developmentPool() public view returns (address) {

@@ -159,8 +159,6 @@ const contributionValidation = async() => {
 
         i+=1;
 
-        // continue
-
         // if (charity.charityName != 'Girls Who Code Inc') {
         //     continue
         // }
