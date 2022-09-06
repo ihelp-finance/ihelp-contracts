@@ -41,19 +41,18 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-      
         // redeemAmount in underlyingToken scale
-        console.log("redeemUnderlying cToken",cToken);
-        console.log("cToken balanceOf",IERC20(cToken).balanceOf(msg.sender));
-        console.log("redeemUnderlying redeemAmount",redeemAmount);
+        console.log("redeemUnderlying cToken", cToken);
+        console.log("cToken balanceOf", IERC20(cToken).balanceOf(msg.sender));
+        console.log("redeemUnderlying redeemAmount", redeemAmount);
 
-                                                        // 1000000
-        uint256 cTokens = cTokenValueOfUnderlying(cToken,redeemAmount);
-        
-        console.log("redeemUnderlying cTokens",cTokens);
+        // 1000000
+        uint256 cTokens = cTokenValueOfUnderlying(cToken, redeemAmount);
+
+        console.log("redeemUnderlying cTokens", cTokens);
 
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
-        IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
+        IERC20(cToken).safeIncreaseAllowance(address(cToken), cTokens);
 
         uint256 result = TJErc20(cToken).redeemUnderlying(redeemAmount);
         IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
@@ -61,29 +60,9 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
         return result;
     }
 
-    function tocTokenScale(address _cTokenAddress, uint256 amount) internal view returns (uint256) {
-
-        uint8 underlyingDecimals = TJErc20( _underlying(_cTokenAddress) ).decimals(); // USDC
-        console.log('underlyingDecimals',underlyingDecimals); // 6
-
-        uint8 cTokenDecimals = TJErc20(_cTokenAddress).decimals();
-        console.log('ctokenDecimals',cTokenDecimals); // 8
-
-        if (cTokenDecimals < underlyingDecimals) {
-            amount = amount * safepow(10, underlyingDecimals - cTokenDecimals);
-        } else if (cTokenDecimals > underlyingDecimals) {
-            amount = amount / safepow(10, cTokenDecimals - underlyingDecimals);
-        }
-        return amount;
-    }
-
     function cTokenValueOfUnderlying(address cToken, uint256 amount) public view returns (uint256) {
-        // uint256 rate = TJErc20(cToken).exchangeRateStored();
-        // uint8 cTokenDecimals = TJErc20(cToken).decimals();
-        // uint8 underlyingTokenDecimals = TJErc20(cToken).decimals();
-        // console.log('exchangeRateStored',rate);
-        // uint256 scaledAmount = amount.mul(rate).div(safepow(10,holdingTokenDecimals+cTokenDecimals));
-        return amount.div(TJErc20(cToken).exchangeRateStored());
+        uint256 rate = TJErc20(cToken).exchangeRateStored();
+         return amount.div(rate);
     }
 
     function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {

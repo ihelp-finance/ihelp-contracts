@@ -27,7 +27,7 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
         uint256 cTokens = redeemAmount.div(ICErc20(cToken).exchangeRateStored());
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
-        IERC20(cToken).safeIncreaseAllowance(address(cToken), redeemAmount);
+        IERC20(cToken).safeIncreaseAllowance(address(cToken), cTokens);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
         IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
         IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));

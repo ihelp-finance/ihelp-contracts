@@ -179,7 +179,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
 
         ConnectorInterface connectorIntance = connector(_cTokenAddress);
         // Allow connector to pull cTokens from this contracts
-        require(IERC20(_cTokenAddress).approve(address(connectorIntance), _amount), "Funding/approve");
+        uint256 cTokenAmount = connectorIntance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+        require(IERC20(_cTokenAddress).approve(address(connectorIntance), cTokenAmount), "Funding/approve");
 
         // Redeem the underlying tokens
         require(connectorIntance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
@@ -222,7 +223,8 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
             // Allow connector to pull cTokens from this contracts
-            require(IERC20(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+            uint256 cTokenAmount = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+            require(IERC20(_cTokenAddress).approve(address(connectorInstance), cTokenAmount), "Funding/approve");
 
             // Reddem the underlying tokens for cTokens
             require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
