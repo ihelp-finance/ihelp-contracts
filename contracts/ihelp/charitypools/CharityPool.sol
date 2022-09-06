@@ -231,7 +231,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
             // Reddem the underlying tokens for cTokens
             require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
 
-            require(getUnderlying(_cTokenAddress).transfer(msg.sender, _amount), "Funding/transfer");
+            require(getUnderlying(_cTokenAddress).transfer(_account, _amount), "Funding/transfer");
             emit Withdrawn(_account, _cTokenAddress, _amount);
         }
         
