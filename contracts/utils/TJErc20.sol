@@ -10,6 +10,8 @@ interface TJErc20  {
 
     function balanceOfUnderlying(address owner) external returns (uint256);
 
+    function decimals() external view returns (uint8);
+
     function getCash() external view returns (uint256);
 
     function supplyRatePerSecond() external view returns (uint256);
