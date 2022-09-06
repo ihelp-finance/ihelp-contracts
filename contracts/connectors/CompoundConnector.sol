@@ -25,7 +25,7 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
     }
 
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        uint256 cTokens = redeemAmount.div(ICErc20(cToken).exchangeRateStored());
+        uint256 cTokens = cTokenValueOfUnderlying(cToken, redeemAmount);
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), cTokens);
         uint256 result = ICErc20(cToken).redeemUnderlying(redeemAmount);
@@ -34,8 +34,9 @@ contract CompoundConnector is ConnectorInterface, OwnableUpgradeable {
         return result;
     }
 
-    function cTokenValueOfUnderlying(address cToken, uint256 amount) external view returns (uint256) {
-        return amount.div(ICErc20(cToken).exchangeRateStored());
+    function cTokenValueOfUnderlying(address cToken, uint256 amount) public view returns (uint256) {
+        uint256 rate = ICErc20(cToken).exchangeRateStored();
+        return amount.div(rate);
     }
 
     function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {

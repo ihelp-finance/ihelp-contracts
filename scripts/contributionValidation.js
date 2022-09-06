@@ -13,11 +13,13 @@ const { chainName, green, yellow, dim, fromBigNumber, getLendingConfigurations, 
 
 let deployer;
 
-const getBalances = async(cToken,charityInstance,lender,currency,decimals) =>{
+const getBalances = async(cToken,charityInstance,lender,currency,underlyingDecimals) =>{
     let cTokenBalanceRaw  = await cToken.balanceOf(charityInstance.address);
+    let cTokenDecimals  = await cToken.decimals();
+
     let cTokenBalance = null;
     if (lender == 'aave') {
-        cTokenBalance = cTokenBalanceRaw/Math.pow(10,decimals)
+        cTokenBalance = cTokenBalanceRaw/Math.pow(10,underlyingDecimals)
     }
     else if (lender == 'traderjoe') {
         // multiply by the exchange rate
@@ -25,8 +27,15 @@ const getBalances = async(cToken,charityInstance,lender,currency,decimals) =>{
         const exchangeRate = await tToken.exchangeRateStored();
         
         // This seems strange the exchange rate comes back in a different decimal - something may be wrong here
+        // scaledCTokens = cTokenBalanceRaw.div( BigInt(10)**BigInt(cTokenDecimals) );
+        // scaledExchangeRate = exchangeRate.div( (BigInt(10) ** BigInt(18-8+underlyingDecimals)) );
+        // cTokenBalanceRaw = scaledCTokens*scaledExchangeRate;
+        // cTokenBalance = cTokenBalanceRaw/Math.pow(10,cTokenDecimals)   
+
         cTokenBalanceRaw = cTokenBalanceRaw.mul(exchangeRate)/Math.pow(10,18)
-        cTokenBalance = cTokenBalanceRaw/Math.pow(10,decimals)
+        cTokenBalance = cTokenBalanceRaw/Math.pow(10,underlyingDecimals)
+
+        //process.exit(0)
     }
     return {cTokenBalanceRaw,cTokenBalance}
 }
@@ -57,13 +66,6 @@ const getBalanceDetails = async(charityInstance,configurations) => {
 
                 const decimals = await charityInstance.decimals(currency.lendingAddress);
 
-                const currentInterestEarned = await charityInstance.currentInterestEarned(currency.lendingAddress);
-                if (currentInterestEarned != 0) {
-                    console.log('     currentInterestEarned',currentInterestEarned/Math.pow(10,decimals))
-                    yellow('     setting currentInterestEarned to 0...')
-                    await charityInstance.setCurrentInterestEarned(currency.lendingAddress,0);
-                }
-                
                 const accountedBalance = balance/Math.pow(10,decimals);
                 sumBalances+=accountedBalance;
 
@@ -81,12 +83,22 @@ const getBalanceDetails = async(charityInstance,configurations) => {
 
                 const CORRECT_BALANCES = true;
 
+                if (CORRECT_BALANCES) {
+                    const currentInterestEarned = await charityInstance.currentInterestEarned(currency.lendingAddress);
+                    if (currentInterestEarned != 0) {
+                        console.log('     currentInterestEarned',currentInterestEarned/Math.pow(10,decimals))
+                        yellow('     setting currentInterestEarned to 0...')
+                        await charityInstance.setCurrentInterestEarned(currency.lendingAddress,0);
+                    }
+                }
+
                 if (accountedBalance > balances.cTokenBalance) {
 
                     const difference = balance - balances.cTokenBalanceRaw;
                     yellow('     balance > lenderbalance - correcting by',difference/Math.pow(10,decimals) );
 
                     if (CORRECT_BALANCES) {
+
                         const tokenContract = await hardhat.ethers.getContractAt("ERC20", currency.underlyingToken);
 
                         console.log('     signer balance:',(await tokenContract.balanceOf(signer._address))/Math.pow(10,decimals));

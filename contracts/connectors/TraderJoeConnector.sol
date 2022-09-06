@@ -26,34 +26,10 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
         return result;
     }
 
-    function safepow(uint256 base, uint256 exponent) public pure returns (uint256) {
-        if (exponent == 0) {
-            return 1;
-        } else if (exponent == 1) {
-            return base;
-        } else if (base == 0 && exponent != 0) {
-            return 0;
-        } else {
-            uint256 z = base;
-            for (uint256 i = 1; i < exponent; i++) z = z * base;
-            return z;
-        }
-    }
-
     function redeemUnderlying(address cToken, uint256 redeemAmount) external override returns (uint256) {
-        // redeemAmount in underlyingToken scale
-        console.log("redeemUnderlying cToken", cToken);
-        console.log("cToken balanceOf", IERC20(cToken).balanceOf(msg.sender));
-        console.log("redeemUnderlying redeemAmount", redeemAmount);
-
-        // 1000000
         uint256 cTokens = cTokenValueOfUnderlying(cToken, redeemAmount);
-
-        console.log("redeemUnderlying cTokens", cTokens);
-
         IERC20(cToken).safeTransferFrom(msg.sender, address(this), cTokens);
         IERC20(cToken).safeIncreaseAllowance(address(cToken), cTokens);
-
         uint256 result = TJErc20(cToken).redeemUnderlying(redeemAmount);
         IERC20(_underlying(cToken)).safeTransfer(msg.sender, IERC20(_underlying(cToken)).balanceOf(address(this)));
         IERC20(cToken).safeTransfer(msg.sender, IERC20(cToken).balanceOf(address(this)));
@@ -62,7 +38,7 @@ contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
 
     function cTokenValueOfUnderlying(address cToken, uint256 amount) public view returns (uint256) {
         uint256 rate = TJErc20(cToken).exchangeRateStored();
-         return amount.div(rate);
+        return amount.div(rate);
     }
 
     function accrueAndGetBalance(address cToken, address owner) external returns (uint256) {

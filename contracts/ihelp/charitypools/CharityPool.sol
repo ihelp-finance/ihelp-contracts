@@ -399,16 +399,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
         
-        // if(
-        //     IERC20(_cTokenAddress).balanceOf(address(this)) < amount ||
-        //     accountedBalances[_cTokenAddress] <= IERC20(_cTokenAddress).balanceOf(address(this)) - amount
-        // ) {
-        //     currentInterestEarned[_cTokenAddress] = 0;
-        //     redeemableInterest[_cTokenAddress] = 0;
-        //     newTotalInterestEarned[_cTokenAddress] = 0;
-        //     return;
-        // }
-
         if (amount > 0) {
             ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
@@ -744,7 +734,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
     }
 
     function version() public pure virtual returns (uint256) {
-        return 3;
+        return 4;
     }
 
     uint256[27] private __gap;
