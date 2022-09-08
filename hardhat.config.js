@@ -338,7 +338,7 @@ task(
         const wrappedNative = new ethers.Contract(native, wavaxabi, signer);
         const dai = await ethers.getContractAt("ERC20", currency);
 
-        const daibalance = await dai.balanceOf(signer._address);
+        let daibalance = await dai.balanceOf(signer._address);
         let wavaxbalance = await wrappedNative.balanceOf(signer._address);
 
         // use swapper to convert avax to dai
@@ -351,9 +351,10 @@ task(
         const DO_DONATIONS = false;
 
         if (WRAP_AVAX) {
-          const nativeAmount = await swapper.getNativeRoutedTokenPrice(currency, native, ethers.utils.parseUnits('180',18));
+          const nativeAmount = await swapper.getNativeRoutedTokenPrice(currency, native, ethers.utils.parseUnits('100',18));
           const wrapTx = await wrappedNative.deposit({value: nativeAmount });
           await wrapTx.wait();
+          wavaxbalance = await wrappedNative.balanceOf(signer._address);
         }    
 
         if (SWAP_TO_DAI) {
@@ -368,6 +369,8 @@ task(
 
           const swapTx = await swapper.swap(native,currency,wavaxbalance.toString(), minamount, signer._address)
           await swapTx.wait();
+
+          daibalance = await dai.balanceOf(signer._address);
 
         }
 
@@ -393,7 +396,15 @@ task(
 
           let userbalance = await ethers.provider.getBalance(accounts[a]);
           let daibalance = await dai.balanceOf(accounts[a]);
+
           console.log(parseInt(a)+1,'/',accounts.length,accounts[a],'avax:'+ethers.utils.formatEther(userbalance),'dai:'+ethers.utils.formatEther(daibalance));
+
+          if (userbalance > 0) {
+            continue
+          }
+          // if (a <= 1) {
+          //   continue
+          // }          
 
           if (DO_TRANSFERS) {
             const amountToTransfer = Math.random() * (parseFloat(taskArgs.max) - parseFloat(taskArgs.min)) + parseFloat(taskArgs.min);
@@ -410,16 +421,18 @@ task(
             const rndInt = Math.floor(Math.random() * deployedCharities.length);
             const charity = deployedCharities[rndInt];
 
-            console.log('   donating',ethers.utils.formatEther(daibalance),'to',charity.charityName);
+            console.log('   donating',ethers.utils.formatEther(daibalance),'to',charity.charityName,rndInt);
 
             const walletFile = `./wallets/${accounts[a]}.txt`;
 
             let privKey = fs.readFileSync(walletFile).toString().trim();
             const userSigner = new ethers.Wallet(privKey, ethers.provider);
+            
+            const SEND_NATIVE = false;
 
-            if (userbalance == 0) {
+            if (userbalance <= 0.04 || SEND_NATIVE) {
 
-              const txAmount = 0.02;
+              const txAmount = 0.04;
 
               console.log('   transfering',txAmount,'avax to user...');
               const txRequest = {
@@ -439,7 +452,7 @@ task(
 
             const approveTx = await dai.connect(userSigner).approve(charity.address, daibalance.toString());
             await approveTx.wait();
-
+            
             const charityInstance = await ethers.getContractAt("CharityPool", charity.address);
 
             const lender = '0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE';
