@@ -135,14 +135,14 @@ contract Swapper is SwapperInterface, OwnableUpgradeable {
     ) external view returns (uint256) {
         address[] memory path;
 
-        if (_tokenIn == SWAP_ROUTER.WETH() || _tokenOut == SWAP_ROUTER.WETH()) {
+        if (_tokenIn == nativeToken() || _tokenOut == nativeToken()) {
             path = new address[](2);
             path[0] = _tokenIn;
             path[1] = _tokenOut;
         } else {
             path = new address[](3);
             path[0] = _tokenIn;
-            path[1] = SWAP_ROUTER.WETH();
+            path[1] = nativeToken();
             path[2] = _tokenOut;
         }
 

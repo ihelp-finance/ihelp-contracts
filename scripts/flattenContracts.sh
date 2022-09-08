@@ -1,6 +1,6 @@
 #!/bin/bash
 
-contractsToFlatten=( "ihelp/iHelpToken" "analytics/Analytics" "ihelp/PriceFeedProvider" )
+contractsToFlatten=( "ihelp/iHelpToken" "analytics/Analytics" "ihelp/PriceFeedProvider" "ihelp/charitypools/CharityPool" )
 
 flatdir="contracts_flattened"
 
