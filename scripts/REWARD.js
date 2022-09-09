@@ -29,12 +29,20 @@ const reward = async() => {
         stakingPool,
     } = await hardhat.getNamedAccounts();
 
-    signer = await hardhat.ethers.provider.getSigner(deployer);
+    const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+    if (nodeUrlWs == '' || nodeUrlWs == undefined) {
+        console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
+        process.exit(1)
+    }
+    
+    const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
+
+    signer = await provider.getSigner(deployer);
 
     console.log(`signer: ${deployer}`);
 
     // get the signer eth balance
-    const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
+    const startbalance = await provider.getBalance(signer._address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
     const helpAddress = (await hardhat.deployments.get('iHelp')).address;
@@ -42,6 +50,9 @@ const reward = async() => {
 
     const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
     xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
+
+    const analyticsAddress = (await hardhat.deployments.get('analytics')).address;
+    analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
 
     let dai,cdai,usdc,cusdc;
 
@@ -76,22 +87,59 @@ const reward = async() => {
     const xhelpSupplyTx = await xhelp.totalSupply();
     const xhelpSupply = fromBigNumber(xhelpSupplyTx);
     console.log('\nxhelpSupply:',xhelpSupply)
+
+    let totalHelpers=0;
+    let totalCharities=0;
+    let totalInterest=0;
+    let totalTvl=0;
+    let totalDirectDonations=0;
+
+    let numberOfCharities = await help.numberOfCharities()
+    numberOfCharities = parseInt(numberOfCharities.toString());
+    console.log('\nnumberOfCharities',numberOfCharities);
+
+    const BATCH_SIZE = 15;
+    let index = 0;
+    for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
+        // console.log(i,'/',numberOfCharities)
+
+        const d = await analytics["generalStats"](helpAddress, i, BATCH_SIZE)
+        // console.log(d)
+        
+        // make this non-additive due to calling outside limit paganation
+        totalHelpers = parseFloat(d['totalHelpers'])
+        
+        // increment these values from paganation
+        totalCharities += parseFloat(d['totalCharities'])
+        totalInterest += parseFloat(ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
+        totalTvl += parseFloat(ethers.utils.formatUnits(d['totalValueLocked'], 18))
+
+    }
     
     const data = {
         reward:newlyAwarded,
         total_reward:stakepool2,
         help_circulating:helpCirculating.toFixed(6),
         help_supply:helpSupply.toFixed(6),
-        xhelp_supply:xhelpSupply.toFixed(6)
+        xhelp_supply:xhelpSupply.toFixed(6),
+        tvl:totalTvl.toFixed(6),
+        interest_generated:totalInterest.toFixed(6),
+        direct_donations:totalDirectDonations.toFixed(6),
+        num_charities:totalCharities.toFixed(0),
+        num_donors:totalHelpers.toFixed(0),
     }
+    console.log('');
+    console.log(data);
     
     if (newlyAwarded > 0) {
         await db.StakingStat.create(data)
+    } else {
+        console.log('no reward - not saving stats...');
     }
 
     // }
     
-    const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
+    const balanceend = await provider.getBalance(signer._address);
     console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
     const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);

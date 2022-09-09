@@ -14,13 +14,21 @@ const upkeep = async() => {
 
   await runRpcTest();
 
+  const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+  if (nodeUrlWs == '' || nodeUrlWs == undefined) {
+      console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
+      process.exit(1)
+  }
+  
+  const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
+
   const { deploy } = hardhat.deployments;
 
   let {
     deployer
   } = await hardhat.getNamedAccounts();
 
-  signer = await hardhat.ethers.provider.getSigner(deployer);
+  signer = await provider.getSigner(deployer);
 
   console.log(`\nsigner: ${signer._address}`);
 
@@ -35,7 +43,7 @@ const upkeep = async() => {
     })
   })
 
-  const DAI = new ethers.Contract(daiAddress, daiAbi, hardhat.ethers.provider);
+  const DAI = new ethers.Contract(daiAddress, daiAbi, provider);
 
   const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
   ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
@@ -49,7 +57,7 @@ const upkeep = async() => {
   analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
 
   // get the signer eth balance
-  const startbalance = await hardhat.ethers.provider.getBalance(signer._address);
+  const startbalance = await provider.getBalance(signer._address);
   console.log(`\nstart signer balance: ${fromBigNumber(startbalance)}`);
 
   const numberOfCharities = await ihelp.numberOfCharities();
@@ -152,7 +160,7 @@ const upkeep = async() => {
 
   await upkeepStep()
 
-  const balanceend = await hardhat.ethers.provider.getBalance(signer._address);
+  const balanceend = await provider.getBalance(signer._address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
   const signerCost = fromBigNumber(startbalance) - fromBigNumber(balanceend);
