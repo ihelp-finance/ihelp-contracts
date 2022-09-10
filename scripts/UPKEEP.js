@@ -22,15 +22,10 @@ const upkeep = async() => {
   
   const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
 
-  const { deploy } = hardhat.deployments;
+  let privKey = process.env.DEPLOYER_PRIVATE_KEY;
+  const signer = new ethers.Wallet(privKey, provider);
 
-  let {
-    deployer
-  } = await hardhat.getNamedAccounts();
-
-  signer = await provider.getSigner(deployer);
-
-  console.log(`\nsigner: ${signer._address}`);
+  console.log(`signer: ${signer.address}`);
 
   const daiAbi = require('./utils/dai.abi.json');
   const configs = await getLendingConfigurations();
@@ -57,7 +52,7 @@ const upkeep = async() => {
   analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
 
   // get the signer eth balance
-  const startbalance = await provider.getBalance(signer._address);
+  const startbalance = await provider.getBalance(signer.address);
   console.log(`\nstart signer balance: ${fromBigNumber(startbalance)}`);
 
   const numberOfCharities = await ihelp.numberOfCharities();
@@ -160,7 +155,7 @@ const upkeep = async() => {
 
   await upkeepStep()
 
-  const balanceend = await provider.getBalance(signer._address);
+  const balanceend = await provider.getBalance(signer.address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
   const signerCost = fromBigNumber(startbalance) - fromBigNumber(balanceend);

@@ -22,13 +22,6 @@ const reward = async() => {
 
     await runRpcTest();
 
-    const { deploy } = hardhat.deployments;
-
-    let {
-        deployer,
-        stakingPool,
-    } = await hardhat.getNamedAccounts();
-
     const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
     if (nodeUrlWs == '' || nodeUrlWs == undefined) {
         console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
@@ -37,12 +30,13 @@ const reward = async() => {
     
     const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
 
-    signer = await provider.getSigner(deployer);
+    let privKey = process.env.DEPLOYER_PRIVATE_KEY;
+    const signer = new ethers.Wallet(privKey, provider);
 
-    console.log(`signer: ${deployer}`);
+    console.log(`signer: ${signer.address}`);
 
     // get the signer eth balance
-    const startbalance = await provider.getBalance(signer._address);
+    const startbalance = await provider.getBalance(signer.address);
     console.log(`start signer balance: ${fromBigNumber(startbalance)}`);
     
     const helpAddress = (await hardhat.deployments.get('iHelp')).address;
@@ -55,8 +49,6 @@ const reward = async() => {
     analytics = await hardhat.ethers.getContractAt('Analytics', analyticsAddress, signer);
 
     let dai,cdai,usdc,cusdc;
-
-    const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.REACT_APP_RPC_URL);
 
     const stakepool1Tx = await xhelp.totalAwarded();
     const stakepool1 = fromBigNumber(stakepool1Tx);
@@ -139,7 +131,7 @@ const reward = async() => {
 
     // }
     
-    const balanceend = await provider.getBalance(signer._address);
+    const balanceend = await provider.getBalance(signer.address);
     console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
 
     const signerCost = fromBigNumber(startbalance)-fromBigNumber(balanceend);
