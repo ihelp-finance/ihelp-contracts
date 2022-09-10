@@ -23,5 +23,4 @@ library CharityPoolUtils {
         uint256 stakeContribUSD;
         uint256 totalDonations;
     }
-
 }
