@@ -72,6 +72,9 @@ describe("Charity Pool", function () {
 
         iHelpMock.stakingPool.returns(stakingPool.address);
         iHelpMock.developmentPool.returns(developmentPool.address);
+
+        iHelpMock.getDirectDonationFees.returns([25, 25, 950]);
+
         iHelpMock.getPools.returns([developmentPool.address, stakingPool.address]);
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
@@ -125,8 +128,8 @@ describe("Charity Pool", function () {
 
     describe("Deposit", function () {
         beforeEach(async function () {
-            await cTokenUnderlyingMock.mint(owner.address, 10000);
-            await cTokenUnderlyingMock.increaseAllowance(charityPool.address, 1000);
+            await cTokenUnderlyingMock.mint(owner.address, parseEther('100000'));
+            await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther('100000'));
         });
 
         it("Should fail to deposit 0", async function () {
@@ -161,21 +164,21 @@ describe("Charity Pool", function () {
         });
 
         it("Should calculate usd balance", async function () {
-            const deposit = 100;
-            const expectedBalanceInUsd = parseUnits('' + deposit, 9);
+            const deposit = parseUnits('100', 18);
+            const expectedBalanceInUsd = parseUnits('100', 9);
 
             await charityPool.depositTokens(cTokenMock.address, deposit, "Test Memo");
             expect(await charityPool.balanceOfUSD(owner.address)).to.equal(expectedBalanceInUsd);
         });
 
         describe("Native Deposits", function () {
-            let deposit = 100
+            let deposit = parseEther('100')
             beforeEach(async function () {
                 await cTokenMock.setVariable("underlying", wTokenMock.address)
             });
 
             it("Should allow native deposits", async function () {
-                const expectedBalanceInUsd = parseUnits('' + deposit, 9);
+                const expectedBalanceInUsd = parseUnits('100', 9);
                 await charityPool.depositNative(cTokenMock.address, "Test Memo", { value: deposit });
                 expect(await charityPool.balanceOfUSD(owner.address)).to.equal(expectedBalanceInUsd);
             })
@@ -292,9 +295,9 @@ describe("Charity Pool", function () {
     });
 
     describe("Direct Donations", function () {
-        const stakeFee = 100;
-        const devFee = 100;
-        const charityFee = 800;
+        const stakeFee = 25;
+        const devFee = 25;
+        const charityFee = 950;
         beforeEach(async function () {
             await cTokenUnderlyingMock.mint(owner.address, parseEther("100"));
             await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("100"));
@@ -345,7 +348,7 @@ describe("Charity Pool", function () {
         it("Should send staking fee", async function () {
             await charityPool.setVariable('holdingToken', cTokenUnderlyingMock.address);
             const amount = parseEther("10");
-            const fee = await iHelpMock.stakingShareOfInterest();
+            const [fee] = await iHelpMock.getDirectDonationFees();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
 
             await charityPool.directDonation(cTokenUnderlyingMock.address, amount, "Test Memo");
@@ -362,7 +365,7 @@ describe("Charity Pool", function () {
 
         it("Should send development fee", async function () {
             const amount = parseEther("10");
-            const fee = await iHelpMock.developmentShareOfInterest();
+            const [,fee] = await iHelpMock.getDirectDonationFees();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
 
             // Mint the holding tokens to the charity in order to simulate the swaps
@@ -375,13 +378,10 @@ describe("Charity Pool", function () {
 
         it("Should send donation to the charity wallet", async function () {
             const amount = parseEther("10");
-            const fee = await iHelpMock.charityShareOfInterest();
+            const [,,fee] = await iHelpMock.getDirectDonationFees();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
             // Mint the holding tokens to the charity in order to simulate the swaps
             await holdingMock.mint(owner.address, amount);
-
-            console.log("Expected share", expectedAmountAfterTax);
-
             await expect(charityPool.directDonation(holdingMock.address, amount, "Test Memo"))
                 .to.emit(holdingMock, "Transfer")
                 .withArgs(charityPool.address, charityWallet.address, expectedAmountAfterTax);
@@ -391,7 +391,7 @@ describe("Charity Pool", function () {
         it("Should keep the donation in the charity contract", async function () {
             await charityPool.setVariable("charityWallet", constants.ZERO_ADDRESS);
             const amount = parseEther("10");
-            const fee = await iHelpMock.charityShareOfInterest();
+            const [,,fee] = await iHelpMock.getDirectDonationFees();
             const expectedAmountAfterTax = amount.mul(fee).div(1000);
             // Mint the holding tokens to the charity in order to simulate the swaps
             await holdingMock.mint(owner.address, amount);
