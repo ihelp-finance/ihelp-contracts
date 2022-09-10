@@ -190,8 +190,8 @@ describe("Charity Pool", function () {
             })
 
             it("Should change the user balance on deposit", async function () {
-                await expect(await charityPool.depositNative(cTokenMock.address, "Test Memo", { value: deposit })).to
-                    .changeEtherBalances([owner, wTokenMock], [-100, 100])
+                await expect(await charityPool.depositNative(cTokenMock.address, "Test Memo", { value: 100 })).to
+                    .changeEtherBalances([owner, wTokenMock], [parseEther(-100, 100])
             })
         });
     });
