@@ -8,6 +8,7 @@ library AnalyticsUtils {
         uint256 totalInterestGenerated;
         uint256 totalHelpers;
         uint256 totalCharities;
+        uint256 totalDirectDonations;
     }
 
     struct CharityStats {

@@ -320,6 +320,9 @@ describe("Analytics", function () {
                 charityPool1.totalInterestEarnedUSD.returns(20);
                 charityPool2.totalInterestEarnedUSD.returns(30);
 
+                charityPool1.totalDonationsUSD.returns(20);
+                charityPool2.totalDonationsUSD.returns(30);
+
                 iHelp.numberOfContributors.returns(20);
 
                 const result = await analytics.generalStats(iHelp.address, 0, 0);
@@ -327,6 +330,8 @@ describe("Analytics", function () {
                 expect(result.totalValueLocked).to.equal(400);
                 expect(result.totalInterestGenerated).to.equal(50);
                 expect(result.totalHelpers).to.equal(20);
+                expect(result.totalDirectDonations).to.equal(50);
+
             });
 
             it("should return the charity pool statistics in one call", async () => {

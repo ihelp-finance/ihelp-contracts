@@ -237,16 +237,6 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         
     }
 
-    function lenderCorrection(
-        address _cTokenAddress,
-        uint256 _amount
-    ) public onlyOperatorOrOwner {
-        require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
-        ConnectorInterface connectorInstance = connector(_cTokenAddress);
-        require(getUnderlying(_cTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
-        require(connectorInstance.mint(_cTokenAddress, _amount) == 0, "Funding/supply");
-    }
-
     function _depositFrom(
         address _spender,
         address _cTokenAddress,
