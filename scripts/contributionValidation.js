@@ -129,11 +129,16 @@ const getBalanceDetails = async(charityInstance,configurations) => {
 
 const contributionValidation = async() => {
 
-    let {
-        deployer
-    } = await hardhat.getNamedAccounts();
+    const nodeUrlWs = process.env.WEBSOCKET_RPC_URL;
+    if (nodeUrlWs == '' || nodeUrlWs == undefined) {
+        console.log('please define WEBSOCKET_RPC_URL env variable - exiting')
+        process.exit(1)
+    }
     
-    signer = await hardhat.ethers.provider.getSigner(deployer);
+    const provider = new ethers.providers.WebSocketProvider(nodeUrlWs)
+    
+    let privKey = process.env.DEPLOYER_PRIVATE_KEY;
+    const signer = new ethers.Wallet(privKey, provider);
 
     // get all lenders
     const configurations = await getLendingConfigurations();
@@ -192,6 +197,8 @@ const contributionValidation = async() => {
 
     const interestGenerated = sumLenderBalances - sumBalances;
     console.log('Interest Generated:',interestGenerated)
+
+    process.exit(0)
 
 }
 
