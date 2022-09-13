@@ -319,6 +319,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   const xhelpAddress = await getAddress('xHelp');
   const swapperAddress = await getAddress('swapper');
   const analyticsAddress = await getAddress('analytics');
+  const pricefeedAddress = await getAddress('priceFeedProvider');
 
   console.log('');
   green('Signer Address:', signer._address);
@@ -326,6 +327,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
   green('Analytics Address:', analyticsAddress);
+  green('PriceFeedProvider Address:', pricefeedAddress);
   green('Development Pool Address:', developmentPool);
   green('');
 
@@ -335,6 +337,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
     { name: 'xHelp', address: xhelpAddress },
     { name: 'Swapper', address: swapperAddress },
     { name: 'Analytics', address: analyticsAddress },
+    { name: 'PriceFeedProvider', address: pricefeedAddress },
     { name: 'Development Pool', address: developmentPool },
   ];
 
