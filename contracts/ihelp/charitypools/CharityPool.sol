@@ -392,7 +392,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function _redeemInterest(address _cTokenAddress) internal {
         uint256 amount = redeemableInterest[_cTokenAddress];
-        
+
         if (amount > 0) {
             ConnectorInterface connectorInstance = connector(_cTokenAddress);
 

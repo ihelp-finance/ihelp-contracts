@@ -113,6 +113,7 @@ const reward = async() => {
         totalCharities += parseFloat(d['totalCharities'])
         totalInterest += parseFloat(ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
         totalTvl += parseFloat(ethers.utils.formatUnits(d['totalValueLocked'], 18))
+        totalDirectDonations += parseFloat(ethers.utils.formatUnits(d['totalDirectDonations'], 18))
 
     }
     
