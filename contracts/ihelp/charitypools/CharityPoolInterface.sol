@@ -38,7 +38,6 @@ interface CharityPoolInterface {
     function calculateTotalIncrementalInterest(address _cTokenAddress) external;
     function accountedBalanceUSD() external view returns (uint256);
     function newTotalInterestEarnedUSD() external view returns (uint256);
-    function newTotalInterestEarnedUSDOfCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns (uint256) ;
     function accountedBalanceUSDOfCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns(uint256);
     function newTotalInterestEarnedUSDByCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns (uint256);
     function totalInterestEarnedUSD() external view returns (uint256);

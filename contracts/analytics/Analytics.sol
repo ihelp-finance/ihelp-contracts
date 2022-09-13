@@ -259,6 +259,7 @@ contract Analytics is IAnalytics {
             CharityPoolInterface charity = CharityPoolInterface(payable(_iHelp.charityAt(index)));
             result.totalValueLocked += charity.accountedBalanceUSD();
             result.totalInterestGenerated += charity.totalInterestEarnedUSD();
+            result.totalDirectDonations += charity.totalDonationsUSD();
         }
         return result;
     }
