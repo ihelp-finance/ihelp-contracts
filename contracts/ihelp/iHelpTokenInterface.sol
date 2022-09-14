@@ -23,4 +23,5 @@ interface iHelpTokenInterface is IERC20 {
     function contributorAt(uint256 _index) external view returns(address, uint256);
     function notifyBalanceUpdate(address _account, uint256 _amount, bool _increased) external;
     function withdrawBulk(address[] calldata _charities) external;
+    function hasCharity(address _charityAddress) external returns(bool);
 }
