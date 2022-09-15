@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import "../connectors/ConnectorInterface.sol";
 import "./PriceFeedProviderInterface.sol";
 import "./iHelpTokenInterface.sol";
@@ -10,7 +12,9 @@ import "./SwapperInterface.sol";
 
 import "./rewards/CharityRewardDistributor.sol";
 
-contract ContributionsAggregator is CharityRewardDistributor {
+import "hardhat/console.sol";
+
+contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor {
     // The total deposited amount for a given charity by its lender
     mapping(address => mapping(address => uint256)) public accountedBalance;
 
@@ -20,7 +24,6 @@ contract ContributionsAggregator is CharityRewardDistributor {
     // Keeps track of holding token rewards for each lender protocol
     mapping(address => uint256) internal _currentRewards;
 
-    PriceFeedProviderInterface public priceFeedProvider;
     SwapperInterface internal swapper;
     iHelpTokenInterface public ihelpToken;
 
@@ -31,8 +34,13 @@ contract ContributionsAggregator is CharityRewardDistributor {
     mapping(address => uint256) public redeemableInterest;
 
     modifier onlyCharity() {
-        require(ihelpToken.hasCharity(msg.sender), "aggregator/not-allowed");
+        require(ihelpToken.hasCharity(msg.sender), "Aggregator/not-allowed");
         _;
+    }
+
+    function initialize(address _ihelpAddress) public initializer {
+        __Ownable_init();
+        ihelpToken = iHelpTokenInterface(_ihelpAddress);
     }
 
     /**
@@ -55,17 +63,21 @@ contract ContributionsAggregator is CharityRewardDistributor {
         uint256 _amount
     ) internal {
         require(_amount != 0, "Funding/deposit-zero");
-        require(priceFeedProvider.hasDonationCurrency(_lenderTokenAddress), "Native-Funding/invalid-ctoken");
+        require(priceFeedProvider().hasDonationCurrency(_lenderTokenAddress), "Funding/invalid-token");
 
         // Update the total balance of cTokens of this contract
         accountedBalance[_charityAddress][_lenderTokenAddress] += _amount;
         _deposited[_lenderTokenAddress] += _amount;
+
         ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
+        IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
 
         require(
-            IERC20(connectorInstance.underlying(_lenderTokenAddress)).approve(address(connectorInstance), _amount),
-            "Funding/approve"
+            underlyingToken.transferFrom(address(msg.sender), address(this), _amount),
+            "Funding/underlying-transfer-fail"
         );
+
+        require(underlyingToken.approve(address(connectorInstance), _amount), "Funding/approve");
 
         // Deposit into Lender
         require(connectorInstance.mint(_lenderTokenAddress, _amount) == 0, "Funding/supply");
@@ -75,27 +87,47 @@ contract ContributionsAggregator is CharityRewardDistributor {
      * @notice Withdraws underlying tokens in exchange for lender tokens
      * @param _lenderTokenAddress - The address of the lender token
      * @param _charityAddress - The address of the charity that the end users places his contribution towards
-     * @param _amount - The amount of underlying tokens that the contributor deposits
+     * @param _amount - The amount of underlying tokens that the contributor withdrwas
+     * @param _destination - The end address that will receive the underlying tokens
      */
     function withdraw(
         address _lenderTokenAddress,
         address _charityAddress,
-        uint256 _amount
+        uint256 _amount,
+        address _destination
     ) external onlyCharity updateReward(_charityAddress, _lenderTokenAddress) {
-        _withdraw(_lenderTokenAddress, _charityAddress, _amount);
+        _withdraw(_lenderTokenAddress, _charityAddress, _amount, _destination);
     }
 
     function _withdraw(
         address _lenderTokenAddress,
         address _charityAddress,
-        uint256 _amount
+        uint256 _amount,
+        address _destination
     ) internal {
         require(_amount <= accountedBalance[_charityAddress][_lenderTokenAddress], "Funding/no-funds");
 
         accountedBalance[_charityAddress][_lenderTokenAddress] -= _amount;
         _deposited[_lenderTokenAddress] -= _amount;
 
-        // @Matt, can we remvoe these checks, and let the transaction fail if accounted balance goes on the negative?
+        ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
+        IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
+
+        require(IERC20(_lenderTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+
+        uint256 balanceBefore = underlyingToken.balanceOf(address(this));
+        require(connectorInstance.redeemUnderlying(_lenderTokenAddress, _amount) == 0, "Funding/supply");
+        uint256 balanceNow = underlyingToken.balanceOf(address(this));
+
+        // Perform a sanity check; TODO: Discuss this 
+        assert(balanceNow - balanceBefore == _amount);
+
+        require(
+            underlyingToken.transfer(_destination, _amount),
+            "Funding/underlying-transfer-fail"
+        );
+
+        // TODO: @Matt, can we remvoe these checks, and let the transaction fail if accounted balance goes on the negative?
 
         // // Update the totals of the charity
         // if (accountedBalance[_charityAddress][_lenderTokenAddress] > _amount) {
@@ -183,23 +215,23 @@ contract ContributionsAggregator is CharityRewardDistributor {
     }
 
     // increment and return the total interest generated
-    function calculateTotalIncrementalInterest(address _cTokenAddress) public {
-        _calculateTotalIncrementalInterest(_cTokenAddress);
+    function calculateTotalIncrementalInterest(address _lenderTokenAddress) public {
+        _calculateTotalIncrementalInterest(_lenderTokenAddress);
     }
 
-    function _calculateTotalIncrementalInterest(address _cTokenAddress) internal {
+    function _calculateTotalIncrementalInterest(address _lenderTokenAddress) internal {
         // in charityPool currency
-        uint256 newEarned = interestEarned(_cTokenAddress);
+        uint256 newEarned = interestEarned(_lenderTokenAddress);
 
-        if (newEarned > currentInterestEarned[_cTokenAddress]) {
-            newTotalInterestEarned[_cTokenAddress] = newEarned - currentInterestEarned[_cTokenAddress];
-            currentInterestEarned[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
+        if (newEarned > currentInterestEarned[_lenderTokenAddress]) {
+            newTotalInterestEarned[_lenderTokenAddress] = newEarned - currentInterestEarned[_lenderTokenAddress];
+            currentInterestEarned[_lenderTokenAddress] += newTotalInterestEarned[_lenderTokenAddress];
 
             // keep track of the total interest earned as USD
-            totalInterestEarned[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
-            redeemableInterest[_cTokenAddress] += newTotalInterestEarned[_cTokenAddress];
+            totalInterestEarned[_lenderTokenAddress] += newTotalInterestEarned[_lenderTokenAddress];
+            redeemableInterest[_lenderTokenAddress] += newTotalInterestEarned[_lenderTokenAddress];
         } else {
-            newTotalInterestEarned[_cTokenAddress] = 0;
+            newTotalInterestEarned[_lenderTokenAddress] = 0;
         }
     }
 
@@ -212,7 +244,7 @@ contract ContributionsAggregator is CharityRewardDistributor {
         }
     }
 
-    function sweepRewards(address _lenderTokenAddress, uint256 _amount) internal override {
+    function sweepRewards(address, uint256 _amount) internal override {
         (address _developmentPool, ) = ihelpToken.getPools();
         require(IERC20(holdingToken()).transfer(_developmentPool, _amount), "Funding/transfer");
     }
@@ -226,7 +258,11 @@ contract ContributionsAggregator is CharityRewardDistributor {
         require(IERC20(holdingToken()).transfer(_charityAddress, _amount), "Funding/transfer");
     }
 
-    function holdingToken() internal returns (address) {
+    function priceFeedProvider() public view returns (PriceFeedProviderInterface) {
+        return PriceFeedProviderInterface(ihelpToken.priceFeedProvider());
+    }
+
+    function holdingToken() internal view returns (address) {
         return ihelpToken.underlyingToken();
     }
 
@@ -234,6 +270,6 @@ contract ContributionsAggregator is CharityRewardDistributor {
      * @notice Returns the connector instance for a given lender
      */
     function connector(address _cTokenAddress) internal view returns (ConnectorInterface) {
-        return ConnectorInterface(priceFeedProvider.getDonationCurrency(_cTokenAddress).connector);
+        return ConnectorInterface(priceFeedProvider().getDonationCurrency(_cTokenAddress).connector);
     }
 }

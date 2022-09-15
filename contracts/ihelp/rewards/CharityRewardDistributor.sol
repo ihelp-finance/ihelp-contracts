@@ -83,4 +83,6 @@ abstract contract CharityRewardDistributor {
         uint256 leftToClaim = rewardAwarded[_lenderTokenAddress] - totalClaimed[_lenderTokenAddress];
         return currentRewards(_lenderTokenAddress) - leftToClaim;
     }
+
+    uint256[44] private  __gap;
 }
