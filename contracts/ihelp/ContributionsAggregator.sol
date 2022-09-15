@@ -27,7 +27,6 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     SwapperInterface internal swapper;
     iHelpTokenInterface public ihelpToken;
 
-
     modifier onlyCharity() {
         require(ihelpToken.hasCharity(msg.sender), "Aggregator/not-allowed");
         _;
@@ -118,22 +117,6 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         assert(balanceNow - balanceBefore == _amount);
 
         require(underlyingToken.transfer(_destination, _amount), "Funding/underlying-transfer-fail");
-
-        // TODO: @Matt, can we remvoe these checks, and let the transaction fail if accounted balance goes on the negative?
-
-        // // Update the totals of the charity
-        // if (accountedBalance[_charityAddress][_lenderTokenAddress] > _amount) {
-        //     accountedBalance[_charityAddress][_lenderTokenAddress] -= _amount;
-        // } else {
-        //     accountedBalance[_charityAddress][_lenderTokenAddress] = 0;
-        // }
-
-        //  // Update the total of the lender
-        // if (deposited[_lenderTokenAddress] > _amount) {
-        //     deposited[_lenderTokenAddress] -= _amount;
-        // } else {
-        //     deposited[_charityAddress][_lenderTokenAddress] = 0;
-        // }
     }
 
     /**
@@ -154,6 +137,8 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
      */
     function _redeemInterest(address _lenderTokenAddress) internal returns (uint256) {
         uint256 amount = interestEarned(_lenderTokenAddress);
+        console.log(amount);
+
         if (amount > 0) {
             ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
 
@@ -163,12 +148,16 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
                 IERC20(_lenderTokenAddress).approve(address(connectorInstance), cTokenValueOfInterest),
                 "Funding/approve"
             );
-
-            connectorInstance.redeemUnderlying(_lenderTokenAddress, amount);
-
             IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
-            address tokenaddress = address(underlyingToken);
 
+            uint256 balanceBefore = underlyingToken.balanceOf(address(this));
+            connectorInstance.redeemUnderlying(_lenderTokenAddress, amount);
+            uint256 balanceNow = underlyingToken.balanceOf(address(this));
+
+            // Sanity check
+            assert(balanceNow - balanceBefore == amount);
+
+            address tokenaddress = address(underlyingToken);
             if (tokenaddress != holdingToken()) {
                 // ensure minimum of 50% redeemed
                 uint256 minAmount = (amount * 50) / 100;
@@ -179,32 +168,14 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
                 );
 
                 require(underlyingToken.approve(address(swapper), amount), "Funding/approve");
-
                 amount = swapper.swap(tokenaddress, holdingToken(), amount, 0, address(this));
             }
 
-            (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
-            uint256 devFeeShare = (amount * devFee) / 1000;
-            uint256 stakeFeeShare = (amount * stakeFee) / 1000;
-
-            (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
-
-            require(IERC20(holdingToken()).transfer(_developmentPool, devFeeShare), "Funding/transfer");
-            require(IERC20(holdingToken()).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
-
-            // We calculated the resulted rewards and update distribute them
-            _currentRewards[_lenderTokenAddress] += amount - (devFeeShare + stakeFeeShare);
-            distributeRewards(_lenderTokenAddress);
+            (uint256 devFeeShare, uint256 stakeFeeShare) = distributeInterestFees(amount);
+            addRewards(_lenderTokenAddress, amount - (devFeeShare + stakeFeeShare));
         }
+
         return amount;
-    }
-
-    function deposited(address _lenderTokenAddress) public view virtual override returns (uint256) {
-        return _deposited[_lenderTokenAddress];
-    }
-
-    function currentRewards(address _lenderTokenAddress) public virtual override returns (uint256) {
-        return _currentRewards[_lenderTokenAddress];
     }
 
     function interestEarned(address _lenderTokenAddress) internal returns (uint256) {
@@ -214,6 +185,33 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         } else {
             return 0;
         }
+    }
+
+    function distributeInterestFees(uint256 _amount) internal returns (uint256, uint256) {
+        (uint256 devFee, uint256 stakeFee, ) = ihelpToken.getFees();
+        uint256 devFeeShare = (_amount * devFee) / 1000;
+        uint256 stakeFeeShare = (_amount * stakeFee) / 1000;
+
+        (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
+        console.log(_amount, devFeeShare, stakeFeeShare);
+        require(IERC20(holdingToken()).transfer(_developmentPool, devFeeShare), "Funding/transfer");
+        require(IERC20(holdingToken()).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
+
+        return (devFeeShare, stakeFeeShare);
+    }
+
+    function addRewards(address _lenderTokenAddress, uint256 _amount) internal {
+        // We calculated the resulted rewards and update distribute them
+        _currentRewards[_lenderTokenAddress] += _amount;
+        distributeRewards(_lenderTokenAddress);
+    }
+
+    function deposited(address _lenderTokenAddress) public view virtual override returns (uint256) {
+        return _deposited[_lenderTokenAddress];
+    }
+
+    function currentRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
+        return _currentRewards[_lenderTokenAddress];
     }
 
     function sweepRewards(address, uint256 _amount) internal override {

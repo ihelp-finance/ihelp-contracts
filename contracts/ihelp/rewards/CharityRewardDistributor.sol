@@ -26,7 +26,7 @@ abstract contract CharityRewardDistributor {
     function transferReward(address _charityAddress, address _lenderTokenAddress, uint256 _amount) virtual internal;
 
     // Returns the newly generated charity rewards
-    function currentRewards(address _lenderTokenAddress) public virtual returns(uint256);
+    function currentRewards(address _lenderTokenAddress) public view virtual returns(uint256);
 
 
     // Keeps track of rewards to be distributed to the charities

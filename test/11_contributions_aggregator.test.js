@@ -11,7 +11,7 @@ const { constants } = require('@openzeppelin/test-helpers');
 use(smock.matchers);
 
 describe("Contributions aggregator", function () {
-    let owner, charity;
+    let owner, charity, devPool, stakingPool;
     let contributionsAggregator;
     let priceFeedProviderMock;
     let iHelpMock;
@@ -19,7 +19,7 @@ describe("Contributions aggregator", function () {
     let lenderTokenUnderlyingMock, lenderTokenMock, holdingToken
 
     beforeEach(async function () {
-        [owner, charity, ...addrs] = await ethers.getSigners();
+        [owner, charity, stakignPool, devPool, ...addrs] = await ethers.getSigners();
 
         let SwapperUtils = await ethers.getContractFactory("SwapperUtils");
         SwapperUtils = await SwapperUtils.deploy();
@@ -58,6 +58,9 @@ describe("Contributions aggregator", function () {
         iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
         iHelpMock.underlyingToken.returns(holdingToken.address);
         iHelpMock.hasCharity.returns(true);
+        iHelpMock.getFees.returns([100, 100, 800]);
+        iHelpMock.getPools.returns([stakignPool.address, devPool.address]);
+
 
         const ContributionsAggregator = await smock.mock("ContributionsAggregator", {
             libraries: {
@@ -146,5 +149,26 @@ describe("Contributions aggregator", function () {
         })
     })
 
+    describe('Interest', () => {
+        beforeEach(async () => {
+            await lenderTokenUnderlyingMock.mint(owner.address, 1000);
+            await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
+            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000);
+        })
+        it('should redeem interest', async () => {
+            // We set holdingToken to be the same as the redeemed underlying to avoid swapping
+            iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
+
+            // We simulate 10% interest generated
+            await lenderTokenMock.accrueCustom(100);
+            await contributionsAggregator.redeemInterest(lenderTokenMock.address);
+
+            console.log(await lenderTokenUnderlyingMock.balanceOf(devPool.address));
+            console.log(await contributionsAggregator.currentRewards(lenderTokenMock.address));
+
+            expect(await contributionsAggregator.currentRewards(lenderTokenMock.address)).to.equal(80, "invalid total charity reward amount");
+        })
+
+    })
 
 })
