@@ -16,7 +16,7 @@ describe("Contributions aggregator", function () {
     let priceFeedProviderMock;
     let iHelpMock;
     let compoundConnector, aggregator;
-    let lenderTokenUnderlyingMock, lenderTokenMock
+    let lenderTokenUnderlyingMock, lenderTokenMock, holdingToken
 
     beforeEach(async function () {
         [owner, charity, ...addrs] = await ethers.getSigners();
@@ -32,6 +32,7 @@ describe("Contributions aggregator", function () {
         // ===== Intialize lender tokens =====
         const Mock = await smock.mock("ERC20MintableMock");
         const LenderTokenMock = await smock.mock("CTokenMock");
+        holdingToken = await Mock.deploy("Holding", "HODL", 18);
 
         lenderTokenUnderlyingMock = await Mock.deploy("Mock", "MOK", 18);
         lenderTokenMock = await LenderTokenMock.deploy(lenderTokenUnderlyingMock.address, 1000);
@@ -55,6 +56,7 @@ describe("Contributions aggregator", function () {
         // ===== Intialize a iHelp Token  =====
         iHelpMock = await smock.fake("iHelpToken");
         iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
+        iHelpMock.underlyingToken.returns(holdingToken.address);
         iHelpMock.hasCharity.returns(true);
 
         const ContributionsAggregator = await smock.mock("ContributionsAggregator", {
@@ -78,11 +80,15 @@ describe("Contributions aggregator", function () {
         })
     })
 
-    // describe('Getters', () => {
-    //     it('should return to correct PriceFeedProvider', async () => {
-    //         expect(await contributionsAggregator.priceFeedProvider()).to.be.equal(priceFeedProviderMock.address)
-    //     })
-    // })
+    describe('Getters', () => {
+        it('should return to correct PriceFeedProvider', async () => {
+            expect(await contributionsAggregator.priceFeedProvider()).to.be.equal(priceFeedProviderMock.address)
+        })
+
+        it('should return to correct HoldingToken', async () => {
+            expect(await contributionsAggregator.holdingToken()).to.be.equal(holdingToken.address)
+        })
+    })
 
     describe('Deposit', () => {
         it('should process a deposit', async () => {
