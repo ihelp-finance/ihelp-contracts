@@ -15,6 +15,14 @@ import "./rewards/CharityRewardDistributor.sol";
 import "hardhat/console.sol";
 
 contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor {
+
+    /**
+     * @notice This event is should be emited every time a redeem of interest is made
+     * @param lenderToken - The address of the token that generated the interest (aUSDT, cDAI, jUSDC, etc)
+     * @param amount - The amount that was redeemed converted to holding tokens
+     */
+    event RedeemedInterest(address lenderToken, uint256 amount);
+
     // The total deposited amount for a given charity by its lender
     mapping(address => mapping(address => uint256)) public accountedBalance;
 
@@ -22,7 +30,7 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     mapping(address => uint256) internal _deposited;
 
     // Keeps track of holding token rewards for each lender protocol
-    mapping(address => uint256) internal _currentRewards;
+    mapping(address => uint256) internal _totalRewards;
 
     SwapperInterface internal swapper;
     iHelpTokenInterface public ihelpToken;
@@ -137,7 +145,6 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
      */
     function _redeemInterest(address _lenderTokenAddress) internal returns (uint256) {
         uint256 amount = interestEarned(_lenderTokenAddress);
-        console.log(amount);
 
         if (amount > 0) {
             ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
@@ -173,6 +180,8 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
 
             (uint256 devFeeShare, uint256 stakeFeeShare) = distributeInterestFees(amount);
             addRewards(_lenderTokenAddress, amount - (devFeeShare + stakeFeeShare));
+
+            emit RedeemedInterest(_lenderTokenAddress, amount);
         }
 
         return amount;
@@ -193,16 +202,20 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         uint256 stakeFeeShare = (_amount * stakeFee) / 1000;
 
         (address _developmentPool, address _stakingPool) = ihelpToken.getPools();
-        console.log(_amount, devFeeShare, stakeFeeShare);
-        require(IERC20(holdingToken()).transfer(_developmentPool, devFeeShare), "Funding/transfer");
-        require(IERC20(holdingToken()).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
+        if (devFeeShare > 0) {
+            require(IERC20(holdingToken()).transfer(_developmentPool, devFeeShare), "Funding/transfer");
+        }
+
+        if (stakeFeeShare > 0) {
+            require(IERC20(holdingToken()).transfer(_stakingPool, stakeFeeShare), "Funding/transfer");
+        }
 
         return (devFeeShare, stakeFeeShare);
     }
 
     function addRewards(address _lenderTokenAddress, uint256 _amount) internal {
         // We calculated the resulted rewards and update distribute them
-        _currentRewards[_lenderTokenAddress] += _amount;
+        _totalRewards[_lenderTokenAddress] += _amount;
         distributeRewards(_lenderTokenAddress);
     }
 
@@ -210,8 +223,12 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         return _deposited[_lenderTokenAddress];
     }
 
-    function currentRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
-        return _currentRewards[_lenderTokenAddress];
+    function balanceOf(address _charityAddress, address _lenderTokenAddress) public override view returns (uint256) {
+        return accountedBalance[_charityAddress][_lenderTokenAddress];
+    }
+
+    function totalRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
+        return _totalRewards[_lenderTokenAddress];
     }
 
     function sweepRewards(address, uint256 _amount) internal override {
@@ -224,7 +241,7 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         address _lenderTokenAddress,
         uint256 _amount
     ) internal virtual override {
-        _currentRewards[_lenderTokenAddress] -= _amount;
+        _totalRewards[_lenderTokenAddress] -= _amount;
         require(IERC20(holdingToken()).transfer(_charityAddress, _amount), "Funding/transfer");
     }
 

@@ -16,46 +16,64 @@ abstract contract CharityRewardDistributor {
     mapping(address => mapping(address => uint256)) public claimed;
     mapping(address => mapping(address => uint256)) public charityRewardPerTokenPaid;
 
-     // Get total deposited lenderTokens
-    function deposited(address _lenderTokenAddress) public virtual view returns(uint256);  
+    // Get total deposited lenderTokens
+    function deposited(address _lenderTokenAddress) public view virtual returns (uint256);
 
     // Handle unclamied rewards transfer
-    function sweepRewards(address _lenderTokenAddress, uint256 _amount) virtual internal;
+    function sweepRewards(address _lenderTokenAddress, uint256 _amount) internal virtual;
+
+    // Returns contributions for a given charity under a specific lender
+    function balanceOf(address _charityAddress, address _lenderTokenAddress) public virtual view returns (uint256);
 
     // Handle rewards transfer to their respective charity
-    function transferReward(address _charityAddress, address _lenderTokenAddress, uint256 _amount) virtual internal;
+    function transferReward(
+        address _charityAddress,
+        address _lenderTokenAddress,
+        uint256 _amount
+    ) internal virtual;
 
     // Returns the newly generated charity rewards
-    function currentRewards(address _lenderTokenAddress) public view virtual returns(uint256);
-
+    function totalRewards(address _lenderTokenAddress) public view virtual returns (uint256);
 
     // Keeps track of rewards to be distributed to the charities
     modifier updateReward(address _charityAddress, address _lenderTokenAddress) {
         rewardPerTokenStored[_lenderTokenAddress] = rewardPerToken(_lenderTokenAddress);
-        claimableCharityReward[_charityAddress][_lenderTokenAddress] = claimableCharityReward[_charityAddress][_lenderTokenAddress];
+        claimableCharityReward[_charityAddress][_lenderTokenAddress] = claimableRewardOf(_charityAddress, _lenderTokenAddress);
 
         charityRewardPerTokenPaid[_charityAddress][_lenderTokenAddress] = rewardPerTokenStored[_lenderTokenAddress];
         _;
     }
 
     // Returns the reward ratio for a given lender token
-    function rewardPerToken(address _lenderAddress) public view returns (uint256) {
-        if (deposited(_lenderAddress) == 0) {
+    function rewardPerToken(address _lenderTokenAddress) public view returns (uint256) {
+        if (deposited(_lenderTokenAddress) == 0) {
             return 0;
         }
-        return rewardPerTokenStored[_lenderAddress];
+        return rewardPerTokenStored[_lenderTokenAddress];
     }
 
-      function claimReward(address _charityAddress, address _lenderTokenAddress) public updateReward(_charityAddress, _lenderTokenAddress) {
+    function claimableRewardOf(address _charityAddress, address _lenderTokenAddress) public view returns (uint256) {
+        uint256 _balance = balanceOf(_charityAddress, _lenderTokenAddress);
+        if (_balance == 0) {
+            return claimableCharityReward[_charityAddress][_lenderTokenAddress];
+        }
+
+        return claimableCharityReward[_charityAddress][_lenderTokenAddress] + 
+            (_balance * (rewardPerToken(_lenderTokenAddress) - charityRewardPerTokenPaid[_charityAddress][_lenderTokenAddress])) / 1e9;
+    }
+
+    function claimReward(address _charityAddress, address _lenderTokenAddress)
+        public
+        updateReward(_charityAddress, _lenderTokenAddress)
+    {
         uint256 claimAmount = claimableCharityReward[_charityAddress][_lenderTokenAddress];
-       _claim(claimAmount, _charityAddress, _lenderTokenAddress);
+        _claim(claimAmount, _charityAddress, _lenderTokenAddress);
     }
 
 
     function _claim(uint256 amount, address _charityAddress, address _lenderTokenAddress) internal {
         uint256 claimAmount = claimableCharityReward[_charityAddress][_lenderTokenAddress];
         require(claimAmount >= amount, "not enough claimable balance for amount");
-
 
         claimableCharityReward[_charityAddress][_lenderTokenAddress] -= amount;
         claimed[_charityAddress][_lenderTokenAddress] += amount;
@@ -67,7 +85,7 @@ abstract contract CharityRewardDistributor {
     // Calculates the new reward ratio after new rewards are added to the pool
     function distributeRewards(address _lenderTokenAddress) internal {
         uint256 totalDeposited = deposited(_lenderTokenAddress);
-        uint256 totalReward = totalCharityReward(_lenderTokenAddress);
+        uint256 totalReward = currentCharityReward(_lenderTokenAddress);
 
         if (totalDeposited > 0) {
             rewardPerTokenStored[_lenderTokenAddress] += (totalReward * 1e9) / totalDeposited;
@@ -79,10 +97,10 @@ abstract contract CharityRewardDistributor {
     }
 
     // Returns the newly generated charity rewards
-    function totalCharityReward(address _lenderTokenAddress) internal virtual returns (uint256) {
+    function currentCharityReward(address _lenderTokenAddress) internal virtual returns (uint256) {
         uint256 leftToClaim = rewardAwarded[_lenderTokenAddress] - totalClaimed[_lenderTokenAddress];
-        return currentRewards(_lenderTokenAddress) - leftToClaim;
+        return totalRewards(_lenderTokenAddress) - leftToClaim;
     }
 
-    uint256[44] private  __gap;
+    uint256[44] private __gap;
 }
