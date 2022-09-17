@@ -11,11 +11,11 @@ import "./SwapperUtils.sol";
 import "./SwapperInterface.sol";
 
 import "./rewards/CharityRewardDistributor.sol";
+import "./rewards/IHelpRewardDistributor.sol";
 
 import "hardhat/console.sol";
 
-contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor {
-
+contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor, IHelpRewardDistributor {
     /**
      * @notice This event is should be emited every time a redeem of interest is made
      * @param lenderToken - The address of the token that generated the interest (aUSDT, cDAI, jUSDC, etc)
@@ -24,7 +24,13 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     event RedeemedInterest(address lenderToken, uint256 amount);
 
     // The total deposited amount for a given charity by its lender
-    mapping(address => mapping(address => uint256)) public accountedBalance;
+    mapping(address => mapping(address => uint256)) public charityAccountedBalance;
+
+    // The total deposited amount for a  contributor by lender
+    mapping(address => mapping(address => uint256)) public contributorAccountedBalance;
+
+    // We keep track of the claimable contributor's iHelp tokens
+    mapping(address => mapping(address => uint256)) internal claimableUserReward;
 
     // The total deposited amount for a given charity by its lender
     mapping(address => uint256) internal _deposited;
@@ -37,6 +43,11 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
 
     modifier onlyCharity() {
         require(ihelpToken.hasCharity(msg.sender), "Aggregator/not-allowed");
+        _;
+    }
+
+    modifier onlyIHelp() {
+        require(_msgSender() == address(ihelpToken), "iHelp/not-allowed");
         _;
     }
 
@@ -54,22 +65,27 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     function deposit(
         address _lenderTokenAddress,
         address _charityAddress,
+        address _contributorAddress,
         uint256 _amount
-    ) external onlyCharity updateReward(_charityAddress, _lenderTokenAddress) {
-        _deposit(_lenderTokenAddress, _charityAddress, _amount);
+    ) external onlyCharity updateReward(_charityAddress, _lenderTokenAddress) updateIHelpReward(_contributorAddress) {
+        _deposit(_lenderTokenAddress, _charityAddress, _contributorAddress, _amount);
     }
 
     function _deposit(
         address _lenderTokenAddress,
         address _charityAddress,
+        address _contributorAddress,
         uint256 _amount
     ) internal {
         require(_amount != 0, "Funding/deposit-zero");
         require(priceFeedProvider().hasDonationCurrency(_lenderTokenAddress), "Funding/invalid-token");
 
         // Update the total balance of cTokens of this contract
-        accountedBalance[_charityAddress][_lenderTokenAddress] += _amount;
+        charityAccountedBalance[_charityAddress][_lenderTokenAddress] += _amount;
         _deposited[_lenderTokenAddress] += _amount;
+
+        // Keep track of each individual user contribution
+        contributorAccountedBalance[_contributorAddress][_lenderTokenAddress] += _amount;
 
         ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
         IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
@@ -95,21 +111,24 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     function withdraw(
         address _lenderTokenAddress,
         address _charityAddress,
+        address _contributorAddress,
         uint256 _amount,
         address _destination
-    ) external onlyCharity updateReward(_charityAddress, _lenderTokenAddress) {
-        _withdraw(_lenderTokenAddress, _charityAddress, _amount, _destination);
+    ) external onlyCharity updateReward(_charityAddress, _lenderTokenAddress) updateIHelpReward(_contributorAddress) {
+        _withdraw(_lenderTokenAddress, _charityAddress, _contributorAddress, _amount, _destination);
     }
 
     function _withdraw(
         address _lenderTokenAddress,
         address _charityAddress,
+        address _contributorAddress,
         uint256 _amount,
         address _destination
     ) internal {
-        require(_amount <= accountedBalance[_charityAddress][_lenderTokenAddress], "Funding/no-funds");
+        require(_amount <= charityAccountedBalance[_charityAddress][_lenderTokenAddress], "Funding/no-funds");
 
-        accountedBalance[_charityAddress][_lenderTokenAddress] -= _amount;
+        charityAccountedBalance[_charityAddress][_lenderTokenAddress] -= _amount;
+        contributorAccountedBalance[_contributorAddress][_lenderTokenAddress] -= _amount;
         _deposited[_lenderTokenAddress] -= _amount;
 
         ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
@@ -125,6 +144,15 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         assert(balanceNow - balanceBefore == _amount);
 
         require(underlyingToken.transfer(_destination, _amount), "Funding/underlying-transfer-fail");
+    }
+
+    /**
+     * Claims a iHelp reward amount in the name of a contributor
+     * @param _contributor - The contributor
+     * @param _amount - The amount of iHelp tokens to be claimed
+     */
+    function claimIHelpReward(address _contributor, uint256 _amount) public virtual updateIHelpReward(_contributor) onlyIHelp {
+        _claimIHelp(_amount, _contributor);
     }
 
     /**
@@ -223,8 +251,56 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         return _deposited[_lenderTokenAddress];
     }
 
-    function balanceOf(address _charityAddress, address _lenderTokenAddress) public override view returns (uint256) {
-        return accountedBalance[_charityAddress][_lenderTokenAddress];
+    /**
+     * Calculates the usd value of an underlying token
+     * @param _lenderTokenAddress - Address of the lending provider
+     * @param _amount - The amount to be converted
+     */
+    function usdValueoOfUnderlying(address _lenderTokenAddress, uint256 _amount) public view virtual returns (uint256) {
+        (uint256 tokenPrice, uint256 priceDecimals) = priceFeedProvider().getUnderlyingTokenPrice(_lenderTokenAddress);
+
+        uint256 valueUSD = _amount * tokenPrice;
+        valueUSD = valueUSD / SwapperUtils.safepow(10, priceDecimals);
+
+        ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
+        IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
+
+        return SwapperUtils.toScale(underlyingToken.decimals(), IERC20(holdingToken()).decimals(), valueUSD);
+    }
+
+    /**
+     * Returns the total value in USD of all underlying contributions
+     */
+    function contributions() public view override returns (uint256) {
+        uint256 usdValue;
+        for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
+            usdValue += usdValueoOfUnderlying(lenderTokenAddress, _deposited[lenderTokenAddress]);
+        }
+        return usdValue;
+    }
+
+    /**
+     * Returns the total value in USD of a contributor deposits
+     */
+    function contributionsOf(address _contributor) public view override returns (uint256) {
+        uint256 usdValue;
+        for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
+            usdValue += usdValueoOfUnderlying(
+                lenderTokenAddress,
+                contributorAccountedBalance[_contributor][lenderTokenAddress]
+            );
+        }
+        return usdValue;
+    }
+
+    function distributeIHelp(uint256 _newTokens) external onlyIHelp {
+        distributeIHelpRewards(_newTokens);
+    }
+
+    function balanceOf(address _charityAddress, address _lenderTokenAddress) public view override returns (uint256) {
+        return charityAccountedBalance[_charityAddress][_lenderTokenAddress];
     }
 
     function totalRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
