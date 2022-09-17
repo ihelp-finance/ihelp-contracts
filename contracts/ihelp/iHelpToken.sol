@@ -313,11 +313,14 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalContributionsUsd;
         for (uint256 i= 0; i < cTokens.length; i++) {
             totalInterest += contributionsAggregator.redeemInterest(cTokens[i].lendingAddress);
-            totalContributionsUsd += contributionsAggregator.usdValueoOfUnderlying(cTokens[i].lendingAddress);
+            
+            // Get total deposied underlying tokens for a specific lender and keep track of their total usd value
+            uint256 totalDeposited = contributionsAggregator.deposited(cTokens[i].lendingAddress);
+            totalContributionsUsd += contributionsAggregator.usdValueoOfUnderlying(cTokens[i].lendingAddress, totalDeposited );
         }
 
-        drip(totalInterest, totalContributionsUsd);
-
+        uint256 tokensToCirculate = drip(totalInterest, totalContributionsUsd);
+        distribute(tokensToCirculate);
     }
 
     /**
