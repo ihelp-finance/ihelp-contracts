@@ -13,7 +13,7 @@ abstract contract CharityRewardDistributor {
 
     // We keep track of charity rewards depeding on their deposited amounts
     mapping(address => mapping(address => uint256)) internal claimableCharityReward;
-    mapping(address => mapping(address => uint256)) public claimed;
+    mapping(address => mapping(address => uint256)) public claimedChairtyRewards;
     mapping(address => mapping(address => uint256)) public charityRewardPerTokenPaid;
 
     // Get total deposited lenderTokens
@@ -66,17 +66,16 @@ abstract contract CharityRewardDistributor {
         public
         updateReward(_charityAddress, _lenderTokenAddress)
     {
-        uint256 claimAmount = claimableCharityReward[_charityAddress][_lenderTokenAddress];
+        uint256 claimAmount = claimableRewardOf(_charityAddress, _lenderTokenAddress);
         _claim(claimAmount, _charityAddress, _lenderTokenAddress);
     }
 
-
     function _claim(uint256 amount, address _charityAddress, address _lenderTokenAddress) internal {
-        uint256 claimAmount = claimableCharityReward[_charityAddress][_lenderTokenAddress];
+        uint256 claimAmount = claimableRewardOf(_charityAddress, _lenderTokenAddress);
         require(claimAmount >= amount, "not enough claimable balance for amount");
 
         claimableCharityReward[_charityAddress][_lenderTokenAddress] -= amount;
-        claimed[_charityAddress][_lenderTokenAddress] += amount;
+        claimedChairtyRewards[_charityAddress][_lenderTokenAddress] += amount;
         totalClaimed[_lenderTokenAddress] += amount;
 
         transferReward(_charityAddress, _lenderTokenAddress, amount);
