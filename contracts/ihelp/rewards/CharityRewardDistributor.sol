@@ -13,7 +13,6 @@ abstract contract CharityRewardDistributor {
 
     // We keep track of charity rewards depeding on their deposited amounts
     mapping(address => mapping(address => uint256)) internal claimableCharityReward;
-    mapping(address => mapping(address => uint256)) public claimedChairtyRewards;
     mapping(address => mapping(address => uint256)) public charityRewardPerTokenPaid;
 
     // Get total deposited lenderTokens
@@ -75,7 +74,6 @@ abstract contract CharityRewardDistributor {
         require(claimAmount >= amount, "not enough claimable balance for amount");
 
         claimableCharityReward[_charityAddress][_lenderTokenAddress] -= amount;
-        claimedChairtyRewards[_charityAddress][_lenderTokenAddress] += amount;
         totalClaimed[_lenderTokenAddress] += amount;
 
         transferReward(_charityAddress, _lenderTokenAddress, amount);
@@ -84,14 +82,14 @@ abstract contract CharityRewardDistributor {
     // Calculates the new reward ratio after new rewards are added to the pool
     function distributeRewards(address _lenderTokenAddress) internal {
         uint256 totalDeposited = deposited(_lenderTokenAddress);
-        uint256 totalReward = currentCharityReward(_lenderTokenAddress);
+        uint256 newRewards = currentCharityReward(_lenderTokenAddress);
 
         if (totalDeposited > 0) {
-            rewardPerTokenStored[_lenderTokenAddress] += (totalReward * 1e9) / totalDeposited;
-            rewardAwarded[_lenderTokenAddress] += totalReward;
+            rewardPerTokenStored[_lenderTokenAddress] += (newRewards * 1e9) / totalDeposited;
+            rewardAwarded[_lenderTokenAddress] += newRewards;
         } else {
             rewardPerTokenStored[_lenderTokenAddress] = 0;
-            sweepRewards(_lenderTokenAddress, totalReward);
+            sweepRewards(_lenderTokenAddress, newRewards);
         }
     }
 
