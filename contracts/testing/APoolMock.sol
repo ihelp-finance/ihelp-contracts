@@ -12,14 +12,14 @@ contract APoolMock {
         address asset,
         uint256 amount,
         address onBehalfOf,
-        uint16 referralCode
+        uint16
     ) external virtual {
         require(IERC20(asset).transferFrom(msg.sender, address(aToken), amount), "no transfer");
         aToken.mint(msg.sender, onBehalfOf, amount, 1);
     }
 
     function withdraw(
-        address asset,
+        address,
         uint256 amount,
         address to
     ) external virtual returns(uint256)  {
@@ -44,7 +44,7 @@ contract APoolMock {
         uint256 amount,
         uint256 balanceFromBefore,
         uint256 balanceToBefore
-    ) external {
+    ) external pure {
         return;
     }
 

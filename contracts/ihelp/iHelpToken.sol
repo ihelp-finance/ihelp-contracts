@@ -27,17 +27,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     // if this number reaches 0, the contributor will be removed from the uniqueContributors list
     mapping(address => uint256) public _contributionsSum;
 
-    /** Keep track of the current processing state
-
-        Status Meaning:
-
-        -- 0 --> Must run dripStage1 until status changes to 1
-        -- 1 --> Must run dripStage2 , changes status to 2 or 3
-        -- 2 --> must run dripStage3 1 until status changes to 3
-        -- 3 --> must run dripStage4 1 until status changes to 4
-        -- 4 --> must run dump()  until status changes to 0
-        
-     */
     struct ProcessingState {
         uint256 newInterestUS;
         uint256 totalCharityPoolContributions;
@@ -313,14 +302,22 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 totalContributionsUsd;
         for (uint256 i = 0; i < cTokens.length; i++) {
             totalInterest += contributionsAggregator.redeemInterest(cTokens[i].lendingAddress);
+
+            console.log("CUrrent interest", totalInterest);
             
             // Get total deposied underlying tokens for a specific lender and keep track of their total usd value
             uint256 totalDeposited = contributionsAggregator.deposited(cTokens[i].lendingAddress);
-            totalContributionsUsd += contributionsAggregator.usdValueoOfUnderlying(cTokens[i].lendingAddress, totalDeposited );
+            totalContributionsUsd += contributionsAggregator.usdValueoOfUnderlying(cTokens[i].lendingAddress, totalDeposited);
         }
 
         uint256 tokensToCirculate = drip(totalInterest, totalContributionsUsd);
-        distribute(tokensToCirculate);
+        
+        // TODO: 
+        // Figure out a way to keep track of this 
+        // contributorGeneratedInterest[charityContract.contributorAt(ii)][charity] += userInterest;
+        // totalContributorGeneratedInterest += userInterest;
+
+        contributionsAggregator.distributeIHelp(tokensToCirculate);
     }
 
     /**
@@ -329,14 +326,23 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
      * @param _totalContributions - Aggregatoed charity pool contributions
      * @return the new tokens to circulate 
      */
-    function drip(uint256 _interest, uint256 _totalContributions ) internal returns(uint256)  {
+    function drip(uint256 _interest, uint256 _totalContributions) internal  virtual returns(uint256)  {
         // based on the total generated interest in the timestep generate the tokens to drip
         uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
         // e.g. $1.66 in Wei
         console.log("tokensPerInterest", tokensPerInterest);
+        console.log("interest", _interest);
 
         // calculate the units to drip this timestamp
-        uint256 tokensToCirculate = _interest.mul(tokensPerInterest);
+
+        // TODO: ask @Matt, 
+        // 
+        // uint256 tokensToCirculate = _interest.mul(tokensPerInterest);
+        //
+        // ^ This expression returns 17 help tokens => we will be dripping more tokens than expected
+        // using native operator returns the correct value however
+
+        uint256 tokensToCirculate = _interest * tokensPerInterest;
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log("totalSupply", __totalSupply);
@@ -359,6 +365,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             __totalCirculating += tokensToCirculateInCurrentPhase;
 
             if (_totalContributions > 0) {
+                console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
+                console.log("tokensPerInterest", tokensPerInterest);
+
                 uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
 
                 console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
@@ -391,17 +400,9 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         __totalCirculating += tokensToCirculate;
         __tokensLastDripped = tokensToCirculate + tokensToCirculateInCurrentPhase;
 
+        console.log("tokensToCirculate", tokensToCirculate);
+
         return tokensToCirculate;
-    }
-
-    function distribute(uint256 _tokensToCirculate) internal {
-        uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
-        uint256 interestInPhase = _tokensToCirculate.div(tokensPerInterest);
-
-        // Figure out a way to keep track of this // TODO
-        // contributorGeneratedInterest[charityContract.contributorAt(ii)][charity] += userInterest;
-        // totalContributorGeneratedInterest += userInterest;
-        contributionsAggregator.distributeIHelp(interestInPhase);
     }
 
     /**
@@ -517,8 +518,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         developmentPool = _poolAddress;
     }
 
-    function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
-        require(gasLimit > 0, "Limit cannot be 0");
-        __processingGasLimit = gasLimit;
+    function setContributionsAggregator(address _aggregatorAddress) external onlyOperatorOrOwner {
+        contributionsAggregator = ContributionsAggregator(_aggregatorAddress);
     }
 }
