@@ -71,7 +71,11 @@ abstract contract CharityRewardDistributor {
 
     function _claim(uint256 amount, address _charityAddress, address _lenderTokenAddress) internal {
         uint256 claimAmount = claimableRewardOf(_charityAddress, _lenderTokenAddress);
-        require(claimAmount >= amount, "not enough claimable balance for amount");
+        if(amount > 0){
+            require(claimAmount >= amount, "not enough claimable balance for amount");
+        } else {
+            amount = claimAmount;
+        }
 
         claimableCharityReward[_charityAddress][_lenderTokenAddress] -= amount;
         totalClaimed[_lenderTokenAddress] += amount;

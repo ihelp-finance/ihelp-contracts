@@ -13,9 +13,9 @@ import "./SwapperInterface.sol";
 import "./rewards/CharityRewardDistributor.sol";
 import "./rewards/IHelpRewardDistributor.sol";
 
-import "hardhat/console.sol";
+import "./ContributionsAggregatorInterface.sol";
 
-contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor, IHelpRewardDistributor {
+contract ContributionsAggregator is ContributionsAggregatorInterface, OwnableUpgradeable, CharityRewardDistributor, IHelpRewardDistributor {
     /**
      * @notice This event is should be emited every time a redeem of interest is made
      * @param lenderToken - The address of the token that generated the interest (aUSDT, cDAI, jUSDC, etc)
@@ -140,7 +140,9 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
         ConnectorInterface connectorInstance = connector(_lenderTokenAddress);
         IERC20 underlyingToken = IERC20(connectorInstance.underlying(_lenderTokenAddress));
 
-        require(IERC20(_lenderTokenAddress).approve(address(connectorInstance), _amount), "Funding/approve");
+        // Allow connector to pull cTokens from this contracts
+        uint256 lenderTokenAmount = connectorInstance.cTokenValueOfUnderlying(_lenderTokenAddress, _amount);
+        require(IERC20(_lenderTokenAddress).approve(address(connectorInstance), lenderTokenAmount), "Funding/approve");
 
         uint256 balanceBefore = underlyingToken.balanceOf(address(this));
         require(connectorInstance.redeemUnderlying(_lenderTokenAddress, _amount) == 0, "Funding/supply");
@@ -311,6 +313,32 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
 
     function totalRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
         return _totalRewards[_lenderTokenAddress];
+    }
+
+    /**
+     * Claim all charity acummulated holding token rewards. The holding tokens will
+     * be sent to the charity pool contract
+     * @param _charityAddress - The address of the charity which we claim the rewards for
+     */
+    function claimAllCharityRewards(address _charityAddress) external {
+         for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
+            _claim(0, _charityAddress, lenderTokenAddress);
+        }
+    }
+
+    /**
+     * Returns the total claimable interest in holding tokesn for charity
+     * @param _charityAddress - The address of the charity
+     * @return The claimable interest
+     */
+    function totalClaimableInterest(address _charityAddress) external view returns(uint256){
+        uint256 total;
+         for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
+            total += claimableRewardOf(_charityAddress, lenderTokenAddress);
+        }
+        return total;
     }
 
     function sweepRewards(address, uint256 _amount) internal override {
