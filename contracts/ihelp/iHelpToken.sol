@@ -311,7 +311,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 totalInterest;
         uint256 totalContributionsUsd;
-        for (uint256 i= 0; i < cTokens.length; i++) {
+        for (uint256 i = 0; i < cTokens.length; i++) {
             totalInterest += contributionsAggregator.redeemInterest(cTokens[i].lendingAddress);
             
             // Get total deposied underlying tokens for a specific lender and keep track of their total usd value

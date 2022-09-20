@@ -47,8 +47,12 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
     }
 
     modifier onlyIHelp() {
-        require(_msgSender() == address(ihelpToken), "iHelp/not-allowed");
+        require(isIHelp(msg.sender), "iHelp/not-allowed");
         _;
+    }
+
+    function isIHelp(address _account) internal view virtual returns (bool) {
+        return _account == address(ihelpToken);
     }
 
     function initialize(address _ihelpAddress) public initializer {
@@ -60,6 +64,7 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
      * @notice Deposits underlying tokens in exchange for lender tokens
      * @param _lenderTokenAddress - The address of the lender token
      * @param _charityAddress - The address of the charity that the end users places his contribution towards
+     * @param _contributorAddress - The address of the contributor
      * @param _amount - The amount of underlying tokens that the contributor deposits
      */
     function deposit(
@@ -105,6 +110,7 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
      * @notice Withdraws underlying tokens in exchange for lender tokens
      * @param _lenderTokenAddress - The address of the lender token
      * @param _charityAddress - The address of the charity that the end users places his contribution towards
+     * @param _contributorAddress - The address of the contributor
      * @param _amount - The amount of underlying tokens that the contributor withdrwas
      * @param _destination - The end address that will receive the underlying tokens
      */
@@ -152,7 +158,7 @@ contract ContributionsAggregator is OwnableUpgradeable, CharityRewardDistributor
      * @param _amount - The amount of iHelp tokens to be claimed
      */
     function claimIHelpReward(address _contributor, uint256 _amount) public virtual updateIHelpReward(_contributor) onlyIHelp {
-        _claimIHelp(_amount, _contributor);
+        _claimIHelp(_contributor, _amount);
     }
 
     /**

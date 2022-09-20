@@ -2,11 +2,13 @@ const { expect, use } = require("chai");
 const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const AggregatorV3JSON = require("../artifacts/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol/AggregatorV3Interface.json");
+const { parseEther } = require('ethers/lib/utils');
 
 use(smock.matchers);
 
 describe("Contributions aggregator", function () {
     let owner, charity, secondCharity, thirdCharity, devPool, stakingPool;
+    let contributor, secondContributor, thirdContributor;
     let contributionsAggregator;
     let priceFeedProviderMock;
     let iHelpMock;
@@ -14,7 +16,7 @@ describe("Contributions aggregator", function () {
     let lenderTokenUnderlyingMock, lenderTokenMock, holdingToken
 
     beforeEach(async function () {
-        [owner, charity, secondCharity, thirdCharity, stakingPool, devPool, ...addrs] = await ethers.getSigners();
+        [owner, charity, secondCharity, thirdCharity, stakingPool, devPool, contributor, secondContributor, thirdContributor, ...addrs] = await ethers.getSigners();
 
         let SwapperUtils = await ethers.getContractFactory("SwapperUtils");
         SwapperUtils = await SwapperUtils.deploy();
@@ -57,7 +59,7 @@ describe("Contributions aggregator", function () {
         iHelpMock.getPools.returns([stakingPool.address, devPool.address]);
 
 
-        const ContributionsAggregator = await smock.mock("ContributionsAggregator", {
+        const ContributionsAggregator = await smock.mock("ContributionsAggregatorExtended", {
             libraries: {
                 SwapperUtils: SwapperUtils.address
             }
@@ -94,26 +96,35 @@ describe("Contributions aggregator", function () {
             await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
 
             // Also checking for balance change
-            await expect(() => contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000))
+            await expect(() => contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000))
                 .to.changeTokenBalance(lenderTokenUnderlyingMock, owner, -1000);
 
-            expect(await contributionsAggregator.accountedBalance(charity.address, lenderTokenMock.address)).to.equal(1000);
+            expect(await contributionsAggregator.charityAccountedBalance(charity.address, lenderTokenMock.address)).to.equal(1000);
             expect(await contributionsAggregator.deposited(lenderTokenMock.address)).to.equal(1000);
+            expect(await contributionsAggregator.contributorAccountedBalance(owner.address, lenderTokenMock.address)).to.equal(1000);
             expect(await lenderTokenMock.balanceOf(contributionsAggregator.address)).to.equal(1000);
         })
 
+        it('should return the usd contributinons for a given user', async () => {
+            await lenderTokenUnderlyingMock.mint(owner.address, 1000);
+            await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
+            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000);
+            priceFeedProviderMock.getUnderlyingTokenPrice.returns([2e9, 9])
+            expect(await contributionsAggregator.contributionsOf(owner.address)).to.equal(2000);
+        })
+
         it('should fail to process a deposit on 0 amount', async () => {
-            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 0)).to.be.revertedWith("Funding/deposit-zero");
+            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 0)).to.be.revertedWith("Funding/deposit-zero");
         })
 
         it('should fail to process a deposit when lender token is not set', async () => {
             priceFeedProviderMock.hasDonationCurrency.returns(false);
-            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000)).to.be.revertedWith("Funding/invalid-token");
+            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000)).to.be.revertedWith("Funding/invalid-token");
         })
 
         it('should only allow charity contracts', async () => {
             iHelpMock.hasCharity.returns(false);
-            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000)).to.be.revertedWith("Aggregator/not-allowed");
+            await expect(contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000)).to.be.revertedWith("Aggregator/not-allowed");
         })
     })
 
@@ -121,26 +132,27 @@ describe("Contributions aggregator", function () {
         beforeEach(async () => {
             await lenderTokenUnderlyingMock.mint(owner.address, 1000);
             await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
-            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000);
+            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000);
         })
 
         it('should process a withdraw', async () => {
-            await expect(() => contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, 1000, owner.address))
+            await expect(() => contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, owner.address, 1000, owner.address))
                 .to.changeTokenBalance(lenderTokenUnderlyingMock, owner, 1000);
 
-            expect(await contributionsAggregator.accountedBalance(charity.address, lenderTokenMock.address)).to.equal(0);
+            expect(await contributionsAggregator.charityAccountedBalance(charity.address, lenderTokenMock.address)).to.equal(0);
             expect(await contributionsAggregator.deposited(lenderTokenMock.address)).to.equal(0);
+            expect(await contributionsAggregator.contributorAccountedBalance(owner.address, lenderTokenMock.address)).to.equal(0);
             expect(await lenderTokenMock.balanceOf(contributionsAggregator.address)).to.equal(0);
         })
 
         it('should fail to process a withtraw on insufficient balance', async () => {
-            await contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, 1000, owner.address);
-            expect(contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, 1000, owner.address)).to.be.revertedWith("Funding/no-funds")
+            await contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, owner.address, 1000, owner.address);
+            expect(contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, owner.address, 1000, owner.address)).to.be.revertedWith("Funding/no-funds")
         })
 
         it('should only allow charity contracts', async () => {
             iHelpMock.hasCharity.returns(false);
-            await expect(contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, 1000, owner.address)).to.be.revertedWith("Aggregator/not-allowed");
+            await expect(contributionsAggregator.withdraw(lenderTokenMock.address, charity.address, owner.address, 1000, owner.address)).to.be.revertedWith("Aggregator/not-allowed");
         })
     })
 
@@ -190,7 +202,6 @@ describe("Contributions aggregator", function () {
             await lenderTokenUnderlyingMock.connect(thirdCharity).increaseAllowance(contributionsAggregator.address, 1000);
 
             iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
-
         })
 
         it('should calculate the correct rewards', async () => {
