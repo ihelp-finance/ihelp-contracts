@@ -278,18 +278,14 @@ describe("Charity Pool", function () {
 
             it("Should perform bulk withdrawals", async function () {
                 await expect(charityPool.withdrawAll(owner.address)).to
-                    .emit(uTokenMock2, "Transfer")
-                    .withArgs(charityPool.address, owner.address, amount)
-                    .emit(wTokenMock, "Transfer")
-                    .withArgs(charityPool.address, owner.address, amount)
+                    .emit(charityPool, "Withdrawn")
+                    .withArgs(owner.address, cTokenMock2.address, amount)
             })
 
             it("Should perform bulk withdrawals fromIHelp", async function () {
                 await expect(charityPool.connect(iHelpMock.wallet).withdrawAll(owner.address)).to
-                    .emit(uTokenMock2, "Transfer")
-                    .withArgs(charityPool.address, owner.address, amount)
-                    .emit(wTokenMock, "Transfer")
-                    .withArgs(charityPool.address, owner.address, amount)
+                    .emit(charityPool, "Withdrawn")
+                    .withArgs(owner.address, cTokenMock2.address, amount)
             })
         });
     });
@@ -454,6 +450,7 @@ describe("Charity Pool", function () {
 
     describe("Interest", function () {
         beforeEach(async function () {
+            await contributionsAggregator.totalClaimableInterest.returns(200)
             await cTokenUnderlyingMock.setVariable('_decimals', 9);
             await cTokenUnderlyingMock.mint(owner.address, parseEther("200000"));
             await cTokenUnderlyingMock.increaseAllowance(charityPool.address, parseEther("200000"));
@@ -473,7 +470,7 @@ describe("Charity Pool", function () {
             await holdingMock.setVariable("_balances", {
                 [charityPool.address]: 200
             });
-            expect(await charityPool.claimableInterest()).to.equal(200);
+            expect(await charityPool.claimableInterest()).to.equal(400);
         });
 
         it("Should claim interest", async function () {
@@ -496,110 +493,6 @@ describe("Charity Pool", function () {
             expect(await cTokenMock.balanceOf(owner.address)).to.equal(0);
         });
 
-        it("Should calculate redeemable interest", async function () {
-            const interest = 10000;
-            cTokenMock.balanceOfUnderlying.returns(interest);
-
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(interest);
-        });
-
-        it("Should not add new redeemable interest", async function () {
-            const interest = 10000;
-            cTokenMock.balanceOfUnderlying.returns(interest);
-
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(interest);
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            expect(await charityPool.redeemableInterest(cTokenMock.address)).to.equal(interest);
-        });
-
-        it("Should calculate usd interest", async function () {
-            const interest = 10000;
-            const expectedInterestInUsd = interest;
-            cTokenMock.balanceOfUnderlying.returns(interest);
-
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            expect(await charityPool.newTotalInterestEarnedUSD()).to.equal(expectedInterestInUsd);
-            expect(await charityPool.totalInterestEarnedUSD()).to.equal(expectedInterestInUsd);
-            expect(await charityPool.accountedBalanceUSD()).to.equal(0);
-        });
-
-        it("Should not add new interest", async function () {
-            const interest = 10000;
-            const expectedInterestInUsd = interest * 1e9; // 18-9 decimalls
-            cTokenMock.balanceOfUnderlying.returns(interest);
-            await charityPool.setVariable('currentInterestEarned', {
-                [cTokenMock.address]: interest
-            });
-
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-            expect(await charityPool.newTotalInterestEarnedUSD()).to.equal(0);
-            expect(await charityPool.totalInterestEarnedUSD()).to.equal(0);
-        });
-
-        it("Should calculate accountedBalanceUSD", async function () {
-            const interest = 10000;
-            const deposit = parseEther("200");
-            const expectedBalanceInUsd = deposit;
-
-            cTokenMock.balanceOfUnderlying.returns(deposit.add(interest));
-
-            await charityPool.depositTokens(cTokenMock.address, deposit, "Test Memo");
-            await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-
-            expect(await charityPool.accountedBalanceUSD()).to.equal(expectedBalanceInUsd);
-        });
-
-        describe("Interest redeem", function () {
-            beforeEach(async function () {
-                iHelpMock.getFees.returns([100, 100, 800]);
-            });
-            it("Should redeem interest", async function () {
-                const interest = 10000;
-                await charityPool.setVariable('redeemableInterest', {
-                    [cTokenMock.address]: interest
-                });
-
-                await charityPool.setVariable('currentInterestEarned', {
-                    [cTokenMock.address]: interest
-                });
-
-                await cTokenMock.setVariable("_balances", {
-                    [charityPool.address]: interest
-                });
-
-                cTokenMock.redeemUnderlying.returns(async () => {
-                    await cTokenUnderlyingMock.setVariable("_balances", {
-                        [CompoundConnector.address]: interest
-                    })
-
-                    await holdingMock.setVariable("_balances", {
-                        [charityPool.address]: interest
-                    })
-                    return 0;
-                });
-
-                swapperMock.swap.returns(async () => { return interest; });
-
-                await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-                expect(await charityPool.connect(iHelpMock.wallet, "it should emit rewarded").redeemInterest(cTokenMock.address)).to.emit(charityPool, "Rewarded");
-
-                expect(await holdingMock.balanceOf(charityPool.address)).to.equal(interest * 0.8);
-                expect(await holdingMock.balanceOf(developmentPool.address)).to.equal(interest * 0.1);
-                expect(await holdingMock.balanceOf(stakingPool.address)).to.equal(interest * 0.1);
-
-                expect(await charityPool.redeemableInterest(cTokenMock.address), "It should reset interest").to.equal(0);
-            });
-
-            it("Should not emit rewarded if no interest", async function () {
-                const interest = 0;
-                cTokenMock.balanceOfUnderlying.returns(interest);
-
-                await charityPool.connect(iHelpMock.wallet).calculateTotalIncrementalInterest(cTokenMock.address);
-                expect(await charityPool.connect(iHelpMock.wallet).redeemInterest(cTokenMock.address)).not.to.emit(charityPool, "Rewarded");
-            });
-        });
     });
 
     describe("Pow", function () {
