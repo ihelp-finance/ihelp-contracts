@@ -373,7 +373,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function claimableInterest() public view returns (uint256) {
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
-        return aggregatorInstance.totalClaimableInterest(address(this));
+        return aggregatorInstance.totalClaimableInterest(address(this)) + IERC20(holdingToken).balanceOf(address(this));
     }
 
     /**
