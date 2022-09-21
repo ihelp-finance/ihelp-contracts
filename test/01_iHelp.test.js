@@ -260,7 +260,7 @@ describe("iHelp", function () {
 
         it('should redeem interest, drip and distribute', async () => {
             contributionsAggregator.redeemInterest.returns(5);
-            await iHelp.redeemInterest();
+            await iHelp.upkeep();
             const tokensToCirculate = contributionsAggregator.distributeIHelp.getCall(0).args[0]
             expect(tokensToCirculate / 1e18).to.be.closeTo(16.66, 0.01);
         })
@@ -268,7 +268,7 @@ describe("iHelp", function () {
         it('should redeem interest, and calculate phase change', async () => {
             contributionsAggregator.redeemInterest.returns(5);
             await iHelp.setVariable('__totalSupply', parseEther('10'))
-            await iHelp.redeemInterest();
+            await iHelp.upkeep();
             const tokensToCirculate = contributionsAggregator.distributeIHelp.getCall(0).args[0]
             expect(tokensToCirculate / 1e18).to.be.closeTo(13.33, 0.01);
         })

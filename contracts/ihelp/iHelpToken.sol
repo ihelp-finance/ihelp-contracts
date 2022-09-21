@@ -75,6 +75,21 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     ContributionsAggregator public contributionsAggregator;
 
+    /**
+     * Emited after running the upkeep function
+     * @param totalAmount - The total interest in holding tokens
+     * @param drippedIhelp - Total help tokens that where driped for this upkeep
+     */
+    event RedeemedInterest(uint256 totalAmount, uint256 drippedIhelp);
+
+    /**
+     * Emited when a phase change ouccurs
+     * @param newPhase    - The new phase index
+     * @param previousDrip - The help tokens driped before the phase change
+     * @param newPhaseDrip - The help tokens that where driped for this upkeep
+     */
+    event PhaseChange(uint256 newPhase, uint256 previousDrip, uint256 newPhaseDrip);
+
     function setTokenPhases() internal {
         uint256 numberPhases = 10;
 
@@ -295,7 +310,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     /**
      * @notice Redeems any newly generated interest and distributes the corrsponding iHelp Tokens
      */
-    function redeemInterest() external {
+    function upkeep() external {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
         uint256 totalInterest;
@@ -305,6 +320,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         uint256 tokensToCirculate = drip(totalInterest);
         contributionsAggregator.distributeIHelp(tokensToCirculate);
+
+        emit RedeemedInterest(totalInterest, tokensToCirculate);
         
         // TODO: 
         // Figure out a way to keep track of this 
@@ -373,6 +390,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
             console.log("remainingTokensToCirculate", remainingTokensToCirculate);
 
             tokensToCirculate = remainingTokensToCirculate;
+
+            emit PhaseChange(__tokenPhase, tokensToCirculateInCurrentPhase, remainingTokensToCirculate);
 
         }
 
