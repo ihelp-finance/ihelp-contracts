@@ -102,8 +102,12 @@ describe("Contributions aggregator", function () {
             expect(await contributionsAggregator.charityAccountedBalance(charity.address, lenderTokenMock.address)).to.equal(1000);
             expect(await contributionsAggregator.deposited(lenderTokenMock.address)).to.equal(1000);
             expect(await contributionsAggregator.contributorAccountedBalance(owner.address, lenderTokenMock.address)).to.equal(1000);
-            expect(await lenderTokenMock.balanceOf(contributionsAggregator.address)).to.equal(1000);
         })
+
+        it("Should mint lenderTokens", async function () {
+            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000);
+            expect(await lenderTokenMock.balanceOf(contributionsAggregator.address)).to.equal(1000);
+        });
 
         it('should return the usd contributinons for a given user', async () => {
             await lenderTokenUnderlyingMock.mint(owner.address, 1000);

@@ -19,6 +19,7 @@ describe("Charity Pool", function () {
     let swapperMock;
     let priceFeedProviderMock, aggregator;
     let CompoundConnector;
+    let contributionsAggregator;
 
 
     beforeEach(async function () {
@@ -38,6 +39,7 @@ describe("Charity Pool", function () {
         aggregator.latestRoundData.returns([0, 1e9, 0, 0, 0]);
 
         iHelpMock = await smock.fake("iHelpToken", { address: addr2.address });
+        contributionsAggregator = await smock.fake("ContributionsAggregatorExtended");
 
         const PriceFeedProvider = await smock.mock("PriceFeedProviderMock");
         priceFeedProviderMock = await PriceFeedProvider.deploy();
@@ -70,6 +72,8 @@ describe("Charity Pool", function () {
             connector: CompoundConnector.address
         }]);
 
+        iHelpMock.contributionsAggregator.returns(contributionsAggregator.address);
+
         iHelpMock.stakingPool.returns(stakingPool.address);
         iHelpMock.developmentPool.returns(developmentPool.address);
 
@@ -78,6 +82,7 @@ describe("Charity Pool", function () {
         iHelpMock.getPools.returns([developmentPool.address, stakingPool.address]);
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
+
     });
 
     describe("Deployment", function () {
@@ -158,11 +163,6 @@ describe("Charity Pool", function () {
             expect(await charityPool.accountedBalances(cTokenMock.address)).to.equal(15);
         });
 
-        it("Should mint to cToken", async function () {
-            await charityPool.depositTokens(cTokenMock.address, 15, "Test Memo");
-            expect(await cTokenMock.balanceOf(charityPool.address)).to.equal(15);
-        });
-
         it("Should calculate usd balance", async function () {
             const deposit = parseUnits('100', 18);
             const expectedBalanceInUsd = parseUnits('100', 9);
@@ -191,7 +191,7 @@ describe("Charity Pool", function () {
 
             it("Should change the user balance on deposit", async function () {
                 await expect(await charityPool.depositNative(cTokenMock.address, "Test Memo", { value: 100 })).to
-                    .changeEtherBalances([owner, wTokenMock], [parseEther(-100, 100])
+                    .changeEtherBalances([owner, wTokenMock], [-100, 100])
             })
         });
     });
