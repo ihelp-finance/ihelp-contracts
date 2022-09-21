@@ -299,34 +299,25 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
         uint256 totalInterest;
-        uint256 totalContributionsUsd;
         for (uint256 i = 0; i < cTokens.length; i++) {
             totalInterest += contributionsAggregator.redeemInterest(cTokens[i].lendingAddress);
-
-            console.log("CUrrent interest", totalInterest);
-            
-            // Get total deposied underlying tokens for a specific lender and keep track of their total usd value
-            uint256 totalDeposited = contributionsAggregator.deposited(cTokens[i].lendingAddress);
-            totalContributionsUsd += contributionsAggregator.usdValueoOfUnderlying(cTokens[i].lendingAddress, totalDeposited);
         }
 
-        uint256 tokensToCirculate = drip(totalInterest, totalContributionsUsd);
+        uint256 tokensToCirculate = drip(totalInterest);
+        contributionsAggregator.distributeIHelp(tokensToCirculate);
         
         // TODO: 
         // Figure out a way to keep track of this 
         // contributorGeneratedInterest[charityContract.contributorAt(ii)][charity] += userInterest;
         // totalContributorGeneratedInterest += userInterest;
-
-        contributionsAggregator.distributeIHelp(tokensToCirculate);
     }
 
     /**
      * Drips iHelp tokens accodring to to the total charity pool contributions and interest
      * @param _interest - The newly generate interest
-     * @param _totalContributions - Aggregatoed charity pool contributions
      * @return the new tokens to circulate 
      */
-    function drip(uint256 _interest, uint256 _totalContributions) internal  virtual returns(uint256)  {
+    function drip(uint256 _interest) internal  virtual returns(uint256)  {
         // based on the total generated interest in the timestep generate the tokens to drip
         uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
         // e.g. $1.66 in Wei
@@ -335,74 +326,63 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         // calculate the units to drip this timestamp
 
-        // TODO: ask @Matt, 
-        // 
-        // uint256 tokensToCirculate = _interest.mul(tokensPerInterest);
-        //
-        // ^ This expression returns 17 help tokens => we will be dripping more tokens than expected
-        // using native operator returns the correct value however
-
         uint256 tokensToCirculate = _interest * tokensPerInterest;
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log("totalSupply", __totalSupply);
         console.log("tokensToCirculate", tokensToCirculate);
 
-        uint256 tokensToCirculateInCurrentPhase = __totalSupply;
+        uint256 tokensToCirculateInCurrentPhase;
 
         if (tokensToCirculate >= __totalSupply) {
+            tokensToCirculateInCurrentPhase = __totalSupply;
+
             console.log("");
             console.log("splitting interest division...");
 
-
-            // tokensToCirculateInCurrentPhase = __totalSupply;
-            // console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
-            // // e.g. 10 token
-            // __totalSupply -= tokensToCirculateInCurrentPhase;
-                    
-            // TODO: Ask matt about setting ____totalSupply to 0;
             __totalSupply = 0;
-            __totalCirculating += tokensToCirculateInCurrentPhase;
 
-            if (_totalContributions > 0) {
-                console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
-                console.log("tokensPerInterest", tokensPerInterest);
+            console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
+            console.log("tokensPerInterest", tokensPerInterest);
 
-                uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
+            uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase / tokensPerInterest;
 
-                console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
+            console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
 
-                // DISTRIBUTE THIS INTEREST TO ALL
+            // DISTRIBUTE THIS INTEREST TO ALL
 
-                uint256 remainingInterestToCirculate = _interest - interestForExistingTokenSupply;
-                // e.g. $10 required - $6 ciruclated = $4 remaining
-                console.log("remainingInterestToCirculate", remainingInterestToCirculate);
+            uint256 remainingInterestToCirculate = _interest - interestForExistingTokenSupply;
+            // e.g. $10 required - $6 ciruclated = $4 remaining
+            console.log("remainingInterestToCirculate", remainingInterestToCirculate);
 
-                __tokenPhase += 1;
-                uint256 newTokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
-                // e.g. 0.86
+            __tokenPhase += 1;
+            uint256 newTokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
 
-                // mint another 1,000,000 tokens to the supply
-                // console.log('mint operator',operator);
-                _mint(operator, __tokensMintedPerPhase * 1e18);
+            // e.g. 0.86
 
-                __totalSupply += __tokensMintedPerPhase * 1e18;
+            // mint another 1,000,000 tokens to the supply
+            // console.log('mint operator',operator);
+            _mint(operator, __tokensMintedPerPhase * 1e18);
 
-                uint256 remainingTokensToCirculate = remainingInterestToCirculate.mul(newTokensPerInterest);
-                // e..g $4 * $0.86 = $3.44
-                console.log("remainingTokensToCirculate", remainingTokensToCirculate);
+            __totalSupply += __tokensMintedPerPhase * 1e18;
 
-                tokensToCirculate = remainingTokensToCirculate;
-            }
+            console.log("newTokensPerInterest", newTokensPerInterest);
+
+            uint256 remainingTokensToCirculate = remainingInterestToCirculate * newTokensPerInterest;
+            // e..g $4 * $0.86 = $3.44
+            console.log("remainingTokensToCirculate", remainingTokensToCirculate);
+
+            tokensToCirculate = remainingTokensToCirculate;
+
         }
 
         __totalSupply -= tokensToCirculate;
         __totalCirculating += tokensToCirculate;
         __tokensLastDripped = tokensToCirculate + tokensToCirculateInCurrentPhase;
 
-        console.log("tokensToCirculate", tokensToCirculate);
+        console.log("__tokensLastDripped", __tokensLastDripped);
 
-        return tokensToCirculate;
+        return __tokensLastDripped;
     }
 
     /**
