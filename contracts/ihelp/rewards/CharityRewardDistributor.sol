@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.9;
 
+
 abstract contract CharityRewardDistributor {
     // Rewards stored grouped by lender token
     mapping(address => uint256) public rewardPerTokenStored;
@@ -22,7 +23,7 @@ abstract contract CharityRewardDistributor {
     function sweepRewards(address _lenderTokenAddress, uint256 _amount) internal virtual;
 
     // Returns contributions for a given charity under a specific lender
-    function balanceOf(address _charityAddress, address _lenderTokenAddress) public virtual view returns (uint256);
+    function balanceOfCharity(address _charityAddress, address _lenderTokenAddress) public virtual view returns (uint256);
 
     // Handle rewards transfer to their respective charity
     function transferReward(
@@ -52,7 +53,7 @@ abstract contract CharityRewardDistributor {
     }
 
     function claimableRewardOf(address _charityAddress, address _lenderTokenAddress) public view returns (uint256) {
-        uint256 _balance = balanceOf(_charityAddress, _lenderTokenAddress);
+        uint256 _balance = balanceOfCharity(_charityAddress, _lenderTokenAddress);
         if (_balance == 0) {
             return claimableCharityReward[_charityAddress][_lenderTokenAddress];
         }
