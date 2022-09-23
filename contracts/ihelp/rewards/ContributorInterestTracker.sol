@@ -55,7 +55,7 @@ abstract contract ContributorInterestTracker {
     }
 
     // Calculates the new reward ratio after new rewards are added to the pool
-    function trackInterest(address _lenderTokenAddress, uint256 _newInterest) internal {
+    function trackInterest(address _lenderTokenAddress, uint256 _newInterest) internal  {
         uint256 totalDeposited = deposited(_lenderTokenAddress);
         if (totalDeposited > 0) {
             interestPerTokenStored[_lenderTokenAddress] += (_newInterest * 1e9) / totalDeposited;

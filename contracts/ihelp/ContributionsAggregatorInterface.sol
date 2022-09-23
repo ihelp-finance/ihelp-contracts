@@ -47,6 +47,15 @@ interface ContributionsAggregatorInterface {
     function claimAllCharityRewards(address _charityAddress) external;
 
     /**
+     * Claim charity acummulated holding token rewards. The holding tokens will
+     * be sent to the charity pool contract
+     * @param _charityAddress - The address of the charity which we claim the rewards for
+     * @param _lenderTokenAddress - The lender token address
+     * @return The amount of interest claimed in the form of holding token
+     */
+    function claimReward(address _charityAddress, address _lenderTokenAddress) external returns (uint256);
+
+    /**
      * Returns the total claimable interest in holding tokesn for charity
      * @param _charityAddress - The address of the charity
      * @return The claimable interest

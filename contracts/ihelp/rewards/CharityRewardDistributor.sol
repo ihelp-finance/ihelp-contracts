@@ -65,9 +65,12 @@ abstract contract CharityRewardDistributor {
     function claimReward(address _charityAddress, address _lenderTokenAddress)
         public
         updateReward(_charityAddress, _lenderTokenAddress)
+        virtual
+        returns (uint256)
     {
         uint256 claimAmount = claimableRewardOf(_charityAddress, _lenderTokenAddress);
         _claim(claimAmount, _charityAddress, _lenderTokenAddress);
+        return claimAmount;
     }
 
     function _claim(uint256 amount, address _charityAddress, address _lenderTokenAddress) internal {

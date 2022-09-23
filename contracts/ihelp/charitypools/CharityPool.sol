@@ -21,10 +21,16 @@ import "../SwapperInterface.sol";
 import "../PriceFeedProviderInterface.sol";
 
 import "../ContributionsAggregatorInterface.sol";
+import "../rewards/ContributorInterestTracker.sol";
 
 import "hardhat/console.sol";
 
-contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract CharityPool is
+    CharityPoolInterface,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ContributorInterestTracker
+{
     using PRBMathUD60x18 for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -190,7 +196,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         address _cTokenAddress,
         uint256 _amount,
         string memory _memo
-    ) public {
+    ) public  {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
@@ -228,7 +234,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         address _spender,
         address _cTokenAddress,
         uint256 _amount
-    ) internal {
+    ) internal updateGeneratedInterest(_cTokenAddress, _spender) {
         require(_amount != 0, "Funding/deposit-zero");
         require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Native-Funding/invalid-ctoken");
         // Update the user's balance
@@ -255,7 +261,7 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         address _sender,
         address _cTokenAddress,
         uint256 _amount
-    ) internal {
+    ) internal updateGeneratedInterest(_cTokenAddress, _sender) {
         require(_amount <= balances[_sender][_cTokenAddress], "Funding/no-funds");
         balances[_sender][_cTokenAddress] -= _amount;
         ihelpToken.notifyBalanceUpdate(_sender, _amount, false);
@@ -357,7 +363,14 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function claimInterest() external {
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
-        aggregatorInstance.claimAllCharityRewards(address(this));
+
+         for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider.getDonationCurrencyAt(i).lendingAddress;
+            uint256 claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
+            totalInterestEarned[lenderTokenAddress] += claimedInterest;
+
+            trackInterest(lenderTokenAddress, claimedInterest);
+        }
 
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
         if (amount == 0) {
@@ -423,6 +436,16 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
      */
     function balanceOf(address _account, address _cTokenAddress) public view returns (uint256) {
         return balances[_account][_cTokenAddress];
+    }
+
+    function balanceOfContributor(address _account, address _cTokenAddress)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {   
+       return balances[_account][_cTokenAddress];
     }
 
     /**
@@ -600,9 +623,21 @@ contract CharityPool is CharityPoolInterface, OwnableUpgradeable, ReentrancyGuar
         emit DirectDonation(msg.sender, charityWallet, amount, _memo);
     }
 
+    function deposited(address _cTokenAddress) public view virtual override returns (uint256) {
+        return accountedBalances[_cTokenAddress];
+    }
+
+
+    function totalRewards(address _cTokenAddress) public view virtual override returns (uint256) {
+        ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
+        return totalInterestEarned[_cTokenAddress] + aggregatorInstance.totalClaimableInterest(address(this));
+    }
+
     function version() public pure virtual returns (uint256) {
         return 4;
     }
 
     uint256[27] private __gap;
+
+
 }

@@ -79,14 +79,12 @@ describe("Contributions aggregator -- Interest Tracker", function () {
             await lenderTokenUnderlyingMock.connect(thirdContributor).increaseAllowance(contributionsAggregator.address, parseEther('1000'));
 
             iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
-
         })
 
         describe('Flow for 1 contributor', () => {
             it('should calculate the correct generated interest ', async () => {
                 await contributionsAggregator.connect(contributor).deposit(lenderTokenMock.address, charity.address, contributor.address, 1000);
 
-                // We set holdingToken to be the same as the redeemed underlying to avoid swapping
                 iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
 
                 await lenderTokenMock.accrueCustom(100);
@@ -112,7 +110,6 @@ describe("Contributions aggregator -- Interest Tracker", function () {
                 await lenderTokenMock.accrueCustom(100);
                 await contributionsAggregator.redeemInterest(lenderTokenMock.address);
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, contributor.address)).to.equal(300);
-
             })
 
         })
@@ -121,7 +118,6 @@ describe("Contributions aggregator -- Interest Tracker", function () {
             it('should calculate the generated interest', async () => {
                 await contributionsAggregator.connect(contributor).deposit(lenderTokenMock.address, charity.address, contributor.address, 1000);
                 await contributionsAggregator.connect(secondContributor).deposit(lenderTokenMock.address, charity.address, secondContributor.address, 1000);
-                // We set holdingToken to be the same as the redeemed underlying to avoid swapping
                 iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
 
                 await lenderTokenMock.accrueCustom(200);
@@ -131,7 +127,6 @@ describe("Contributions aggregator -- Interest Tracker", function () {
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, secondContributor.address)).to.equal(100);
 
                 await contributionsAggregator.connect(contributor).withdraw(lenderTokenMock.address, charity.address, contributor.address, 1000, contributor.address);
-
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, contributor.address)).to.equal(100);
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, secondContributor.address)).to.equal(100);
 
@@ -185,9 +180,7 @@ describe("Contributions aggregator -- Interest Tracker", function () {
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, contributor.address)).to.equal(300);
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, secondContributor.address)).to.equal(600);
                 expect(await contributionsAggregator.generatedInterestOf(lenderTokenMock.address, thirdContributor.address)).to.equal(500);
-
             })
-
         })
     })
 })

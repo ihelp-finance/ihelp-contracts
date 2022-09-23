@@ -283,8 +283,6 @@ contract ContributionsAggregator is
         return (devFeeShare, stakeFeeShare);
     }
 
-   
-
     function deposited(address _lenderTokenAddress)
         public
         view
@@ -424,5 +422,13 @@ contract ContributionsAggregator is
      */
     function connector(address _cTokenAddress) internal view returns (ConnectorInterface) {
         return ConnectorInterface(priceFeedProvider().getDonationCurrency(_cTokenAddress).connector);
+    }
+
+    function claimReward(address _charityAddress, address _lenderTokenAddress)
+        public
+        override(CharityRewardDistributor, ContributionsAggregatorInterface)
+        returns (uint256)
+    {
+        return CharityRewardDistributor.claimReward(_charityAddress, _lenderTokenAddress);
     }
 }
