@@ -363,10 +363,19 @@ contract ContributionsAggregator is
         public
         view
         virtual
-        override(CharityRewardDistributor, ContributorInterestTracker)
+        override(CharityRewardDistributor, ContributorInterestTracker, ContributionsAggregatorInterface)
         returns (uint256)
     {
         return _totalRewards[_lenderTokenAddress];
+    }
+
+    function totalUSDRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
+        uint256 usdValue;
+        for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
+            address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
+            usdValue += usdValueoOfUnderlying(lenderTokenAddress, _totalRewards[_lenderTokenAddress]);
+        }
+        return usdValue;
     }
 
     /**

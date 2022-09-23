@@ -10,12 +10,10 @@ describe("iHelp", function () {
     let owner;
     let addr1;
     let addr2;
-    let addr3;
     let addrs;
     let cTokenMock;
     let stakingPool, cTokenUnderlyingMock, developmentPool;
     let priceFeedProvider, contributionsAggregator
-
 
     beforeEach(async function () {
         const IHelp = await smock.mock("iHelpToken");

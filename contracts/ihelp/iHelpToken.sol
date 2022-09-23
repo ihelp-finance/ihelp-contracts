@@ -322,11 +322,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         contributionsAggregator.distributeIHelp(tokensToCirculate);
 
         emit RedeemedInterest(totalInterest, tokensToCirculate);
-        
-        // TODO: 
-        // Figure out a way to keep track of this 
-        // contributorGeneratedInterest[charityContract.contributorAt(ii)][charity] += userInterest;
-        // totalContributorGeneratedInterest += userInterest;
     }
 
     /**

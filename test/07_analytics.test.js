@@ -2,6 +2,7 @@ const { expect, use } = require("chai");
 
 const { smock } = require("@defi-wonderland/smock");
 const AggregatorInfoAbi = require('@chainlink/contracts/abi/v0.4/AggregatorV3Interface.json')
+        contributionsAggregator = await smock.fake("ContributionsAggregatorExtended");
 
 use(smock.matchers);
 
@@ -16,6 +17,7 @@ describe("Analytics", function () {
     let uMock1, uMock2, cTokenMock1, cTokenMock2;
     let priceFeedProviderMock, xhelpMock;
     let CompoundConnector, CharityPool, chainLinkAggretator;
+    let contributionsAggregator;
 
     beforeEach(async () => {
         const IHelp = await smock.mock("iHelpToken");
@@ -65,6 +67,7 @@ describe("Analytics", function () {
         priceFeedProviderMock.hasDonationCurrency.returns(true);
 
         iHelp = await IHelp.deploy();
+        contributionsAggregator = await smock.fake("ContributionsAggregatorExtended");
 
         await iHelp.initialize(
             "iHelp",
@@ -73,6 +76,10 @@ describe("Analytics", function () {
             developmentPool.address,
             mockContract.address,
             priceFeedProviderMock.address
+        );
+
+        await iHelp.setContributionsAggregator(
+            contributionsAggregator.address
         );
 
         holdingMock = await Mock.deploy("Mock", "MOK", 9);
