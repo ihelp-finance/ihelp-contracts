@@ -1,6 +1,6 @@
 const chalk = require('chalk');
 const { getChainId } = require('hardhat');
-const { chainName, dim, yellow, green } = require("../scripts/deployUtils");
+const { chainName, dim, yellow, green, cyan } = require("../scripts/deployUtils");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = parseInt(await getChainId(), 10);
@@ -63,23 +63,28 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const iHelpInstance = await ethers.getContractAt('iHelpToken', iHelp.address, signer);
   const owner = await iHelpInstance.owner();
 
-  if (!newlyDeployed) {
-    return;
+  const currentContributionsAggregator = await iHelpInstance.contributionsAggregator();
+
+  if (currentContributionsAggregator != ContributionsAggregatorAddress) {
+
+    cyan(`\nupdating contributions aggregator address to ${ContributionsAggregatorAddress}`)
+
+    if (owner === deployer) {
+      console.log(chalk.yellow(`${chalk.gray(`iHelp contributions aggregator...`)} (${ContributionsAggregatorAddress})`));
+      await iHelpInstance.setContributionsAggregator(ContributionsAggregatorAddress);
+      console.log(chalk.yellow(`${chalk.gray(`iHelp contributions aggregator... Success`)}`));
+    }
+    else {
+      const { data } = await iHelpInstance.populateTransaction.setContributionsAggregator(ContributionsAggregatorAddress);
+      console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx from ${chalk.yellow(owner)} to execute the update :
+
+            ${chalk.yellow(`${data}`)}
+        `));
+    }
+
   }
 
-  if (owner === deployer) {
-    console.log(chalk.yellow(`${chalk.gray(`iHelp contributions aggregator...`)} (${ContributionsAggregatorAddress})`));
-    await iHelpInstance.setContributionsAggregator(ContributionsAggregatorAddress);
-    console.log(chalk.yellow(`${chalk.gray(`iHelp contributions aggregator... Success`)}`));
 
-  }
-  else {
-    const { data } = await iHelpInstance.populateTransaction.setContributionsAggregator(ContributionsAggregatorAddress);
-    console.log(chalk.gray(`\nAccount ${chalk.yellow(deployer)} does not have permission to execute the update. \nBroadcast the following tx from ${chalk.yellow(owner)} to execute the update :
-
-          ${chalk.yellow(`${data}`)}
-      `));
-  }
 };
 
 

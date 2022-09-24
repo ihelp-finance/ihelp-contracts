@@ -129,10 +129,10 @@ const validate = async () => {
 
   const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
   const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
-  const daiAddress = (await hardhat.deployments.get('DAI')).address;
-  const cDaiAddress = (await hardhat.deployments.get('cDAI')).address;
+  const daiAddress = (await hardhat.deployments.get('DAI.e')).address;
+  const cDaiAddress = (await hardhat.deployments.get('jDAI.e')).address;
   const usdcAddress = (await hardhat.deployments.get('USDC')).address;
-  const cUsdcAddress = (await hardhat.deployments.get('cUSDC')).address;
+  const cUsdcAddress = (await hardhat.deployments.get('jUSDC')).address;
   const swapperAddress = (await hardhat.deployments.get('swapper')).address;
   const charity1Address = (await hardhat.deployments.get('charityPool1')).address;
   const charity2Address = (await hardhat.deployments.get('charityPool2')).address;
@@ -144,8 +144,6 @@ const validate = async () => {
   green('cDAI Address:', cDaiAddress);
   green('USDC Address:', usdcAddress);
   green('cUSDC Address:', cUsdcAddress);
-  // green('WETH Address:', wethAddress);
-  // green('cETH Address:', cEthAddress);
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
@@ -285,7 +283,6 @@ const validate = async () => {
         break;
       }
     }
-    // console.log(result);
 
     const c1contributionsTx = await charityPool1.accountedBalances(cDaiAddress);
     const c1contributions = fromBigNumber(c1contributionsTx, daiDecimals);
@@ -308,7 +305,7 @@ const validate = async () => {
     const helpunclaimed1 = fromBigNumber(helpunclaimedTx1);
     const helpunclaimedTx2 = await ihelp.getClaimableTokens(userAccount2);
     const helpunclaimed2 = fromBigNumber(helpunclaimedTx2);
-
+    
     const helpunclaimed = helpunclaimed1 + helpunclaimed2;
 
     await charityPool1.claimInterest();
@@ -481,8 +478,6 @@ const validate = async () => {
   let INPUT = 0;
   console.log('\n*** INPUT', INPUT, '***');
   await getOutputs(INPUT);
-
-  //process.exit(0)
 
   INPUT = 1;
   console.log('\n*** INPUT', INPUT, '***');

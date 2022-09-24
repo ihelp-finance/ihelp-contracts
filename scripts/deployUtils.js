@@ -261,26 +261,11 @@ module.exports.getSwapAddresses = async(dex, chainId) => {
 
 module.exports.getNativeWrapper = async(chainId) => {
 
-  const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
-  const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
-
-  if (isTestEnvironment && deployMockTokens == 'true') {
-    try {
-      const hardhatContracts = require(`../build/hardhat_contracts`);
-      return hardhatContracts[chainId.toString()][0]['contracts']['WETH']['address'];
-    }
-    catch (e) {
-      this.yellow('   WARNING - no NativeWrapper found... cannot wrap currency')
-      return '0x0000000000000000000000000000000000000000'
-    }
-  }
-  else {
-    const configurations = await this.getLendingConfigurations(chainId);
-    for (const lender of Object.keys(configurations)) {
-      for (const coin of Object.keys(configurations[lender])) {
-        if (coin.replace('c', '').replace('j', '').replace('a', '') == 'WETH' || coin.replace('c', '').replace('j', '').replace('a', '') == 'WAVAX') {
-          return configurations[lender][coin]['underlyingToken']
-        }
+  const configurations = await this.getLendingConfigurations(chainId);
+  for (const lender of Object.keys(configurations)) {
+    for (const coin of Object.keys(configurations[lender])) {
+      if (coin.replace('c', '').replace('j', '').replace('a', '') == 'WETH' || coin.replace('c', '').replace('j', '').replace('a', '') == 'WAVAX') {
+        return configurations[lender][coin]['underlyingToken']
       }
     }
   }
