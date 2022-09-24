@@ -120,24 +120,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         tokensPerInterestByPhase[_phase] = _newRate;
     }
 
-    function setProcessingState(
-        uint256 newInterestUS,
-        uint256 totalCharityPoolContributions,
-        uint256 tokensToCirculate,
-        uint256 tokensToCirculateInCurrentPhase,
-        uint256 i,
-        uint256 ii,
-        uint256 status
-    ) public onlyOperatorOrOwner {
-        processingState.newInterestUS = newInterestUS;
-        processingState.totalCharityPoolContributions = totalCharityPoolContributions;
-        processingState.tokensToCirculate = tokensToCirculate;
-        processingState.tokensToCirculateInCurrentPhase = tokensToCirculateInCurrentPhase;
-        processingState.i = i;
-        processingState.ii = ii;
-        processingState.status = status;
-    }
-
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
         _transferOperator(newOperator);
@@ -310,7 +292,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     /**
      * @notice Redeems any newly generated interest and distributes the corrsponding iHelp Tokens
      */
-    function upkeep() external {
+    function upkeep() external onlyOperatorOrOwner {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
         uint256 totalInterest;
@@ -339,11 +321,11 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
         // calculate the units to drip this timestamp
 
-        uint256 tokensToCirculate = _interest * tokensPerInterest;
+        uint256 tokensToCirculate = (_interest * tokensPerInterest) / 10 ** underlyingToken.decimals();
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log("totalSupply", __totalSupply);
-        console.log("tokensToCirculate", tokensToCirculate);
+        console.log("tokensToCirculate", tokensToCirculate,  underlyingToken.decimals());
 
         uint256 tokensToCirculateInCurrentPhase;
 
@@ -381,7 +363,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
             console.log("newTokensPerInterest", newTokensPerInterest);
 
-            uint256 remainingTokensToCirculate = remainingInterestToCirculate * newTokensPerInterest;
+            uint256 remainingTokensToCirculate = (remainingInterestToCirculate * newTokensPerInterest) / 10 ** underlyingToken.decimals();
             // e..g $4 * $0.86 = $3.44
             console.log("remainingTokensToCirculate", remainingTokensToCirculate);
 
