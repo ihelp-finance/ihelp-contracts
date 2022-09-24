@@ -11,8 +11,6 @@ import "./AnalyticsUtils.sol";
 import "./IAnalytics.sol";
 import "../utils/IERC20.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Analytics
  */
@@ -481,9 +479,9 @@ contract Analytics is IAnalytics {
         view
         returns (AnalyticsUtils.DonationCurrencyDetails[] memory)
     {
-        PriceFeedProviderInterface priceFeedProvider = PriceFeedProviderInterface(_iHelp.priceFeedProvider());
+        PriceFeedProviderInterface _priceFeedProvider = PriceFeedProviderInterface(_iHelp.priceFeedProvider());
 
-        PriceFeedProviderInterface.DonationCurrency[] memory currencies = priceFeedProvider.getAllDonationCurrencies();
+        PriceFeedProviderInterface.DonationCurrency[] memory currencies = _priceFeedProvider.getAllDonationCurrencies();
 
         AnalyticsUtils.DonationCurrencyDetails[] memory result = new AnalyticsUtils.DonationCurrencyDetails[](
             currencies.length
@@ -502,10 +500,7 @@ contract Analytics is IAnalytics {
             result[i].priceFeed = currencies[i].priceFeed;
             result[i].price = price;
             result[i].priceDecimals = priceDecimals;
-
-            // console.log('\nlendingAddress',currencies[i].lendingAddress);
-
-            result[i].apr = priceFeedProvider.getCurrencyApr(currencies[i].lendingAddress, _blockTime);
+            result[i].apr = _priceFeedProvider.getCurrencyApr(currencies[i].lendingAddress, _blockTime);
         }
 
         return result;

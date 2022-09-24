@@ -103,13 +103,13 @@ describe("Analytics", function () {
     describe("Analytics testing", async () => {
         describe("Isolated calls", () => {
             it("should return the generated interest", async () => {
-                charityPool1.totalInterestCollected.returns(25);
+                charityPool1.calculateTotalInterestEarned.returns(25);
                 expect(await analytics.generatedInterest(charityPool1.address)).to.equal(25);
 
             });
 
             it("should return the total generated interest", async () => {
-                contributionsAggregator.totalContributorGeneratedInterest.returns(50);
+                contributionsAggregator.totalInterestCollected.returns(50);
                 expect(await analytics.totalGeneratedInterest(iHelp.address)).to.equal(50);
             });
 
