@@ -16,6 +16,8 @@ import "./rewards/ContributorInterestTracker.sol";
 
 import "./ContributionsAggregatorInterface.sol";
 
+import "hardhat/console.sol";
+
 contract ContributionsAggregator is
     ContributionsAggregatorInterface,
     OwnableUpgradeable,
@@ -65,9 +67,10 @@ contract ContributionsAggregator is
         return _account == address(ihelpToken);
     }
 
-    function initialize(address _ihelpAddress) public initializer {
+    function initialize(address _ihelpAddress, address _swapperAddress) public initializer {
         __Ownable_init();
         ihelpToken = iHelpTokenInterface(_ihelpAddress);
+        swapper = SwapperInterface(_swapperAddress);
     }
 
     /**
@@ -229,7 +232,8 @@ contract ContributionsAggregator is
             address tokenaddress = address(underlyingToken);
             if (tokenaddress != holdingToken()) {
                 // ensure minimum of 50% redeemed
-                uint256 minAmount = (amount * 50) / 100;
+                uint256 minAmount = (amount * 97) / 100;
+              
                 minAmount = SwapperUtils.toScale(
                     underlyingToken.decimals(),
                     IERC20(holdingToken()).decimals(),
@@ -237,7 +241,8 @@ contract ContributionsAggregator is
                 );
 
                 require(underlyingToken.approve(address(swapper), amount), "Funding/approve");
-                amount = swapper.swap(tokenaddress, holdingToken(), amount, 0, address(this));
+                amount = swapper.swap(tokenaddress, holdingToken(), amount, minAmount, address(this));
+                console.log("SWAP result", underlyingToken.symbol(), amount, minAmount);
             }
 
             (uint256 devFeeShare, uint256 stakeFeeShare) = distributeInterestFees(amount);
@@ -395,7 +400,7 @@ contract ContributionsAggregator is
     }
 
     /**
-     * Returns the total claimable interest in holding tokesn for charity
+     * Returns the total claimable interest in holding tokens for charity
      * @param _charityAddress - The address of the charity
      * @return The claimable interest
      */
