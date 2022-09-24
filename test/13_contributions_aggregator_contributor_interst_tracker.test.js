@@ -55,7 +55,9 @@ describe("Contributions aggregator -- Interest Tracker", function () {
         iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
         iHelpMock.underlyingToken.returns(holdingToken.address);
         iHelpMock.hasCharity.returns(true);
-
+       
+        // ===== Intialize a Swapper =====
+        swapperMock = await smock.fake("Swapper");
 
         const ContributionsAggregator = await smock.mock("ContributionsAggregatorExtended", {
             libraries: {
@@ -64,7 +66,7 @@ describe("Contributions aggregator -- Interest Tracker", function () {
         });
 
         contributionsAggregator = await ContributionsAggregator.deploy();
-        await contributionsAggregator.initialize(iHelpMock.address);
+        await contributionsAggregator.initialize(iHelpMock.address, swapperMock.address);
     })
 
     describe('Interest Tracker', () => {

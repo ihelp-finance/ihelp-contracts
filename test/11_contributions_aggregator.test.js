@@ -11,7 +11,7 @@ describe("Contributions aggregator", function () {
     let contributor, secondContributor, thirdContributor;
     let contributionsAggregator;
     let priceFeedProviderMock;
-    let iHelpMock;
+    let iHelpMock, swapperMock;
     let compoundConnector, aggregator;
     let lenderTokenUnderlyingMock, lenderTokenMock, holdingToken
 
@@ -58,7 +58,9 @@ describe("Contributions aggregator", function () {
         iHelpMock.getFees.returns([100, 100, 800]);
         iHelpMock.getPools.returns([stakingPool.address, devPool.address]);
 
-
+        // ===== Intialize a Swapper =====
+        swapperMock = await smock.fake("Swapper");
+        
         const ContributionsAggregator = await smock.mock("ContributionsAggregatorExtended", {
             libraries: {
                 SwapperUtils: SwapperUtils.address
@@ -66,7 +68,7 @@ describe("Contributions aggregator", function () {
         });
 
         contributionsAggregator = await ContributionsAggregator.deploy();
-        await contributionsAggregator.initialize(iHelpMock.address);
+        await contributionsAggregator.initialize(iHelpMock.address, swapperMock.address);
     })
 
     describe('Deployment', function () {

@@ -137,6 +137,7 @@ const validate = async () => {
   const charity1Address = (await hardhat.deployments.get('charityPool1')).address;
   const charity2Address = (await hardhat.deployments.get('charityPool2')).address;
   const charity3Address = (await hardhat.deployments.get('charityPool3')).address;
+  const contributionsAggregatorAddress = (await hardhat.deployments.get('ContributionsAggregator')).address;
 
   green('Signer Address:', signer._address);
   green('DAI Address:', daiAddress);
@@ -152,13 +153,15 @@ const validate = async () => {
   green('CharityPool 2 Address:', charity2Address);
   green('CharityPool 3 Address:', charity3Address);
   green('Development Pool Address:', developmentPool);
+  green('Contributions Aggregator Address:', contributionsAggregatorAddress);
+
   green('');
 
   // get the contracts
   const mockDai = false;
 
   // get the contracts here
-  let ihelp, xhelp, swapper, dai, cdai, usdc, cusdc, charityPool1, charityPool2, charityPool3;
+  let ihelp, xhelp, swapper, dai, cdai, usdc, cusdc, charityPool1, charityPool2, charityPool3, contributionsAggregator;
   ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
   xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
   dai = await hardhat.ethers.getContractAt('ERC20MintableMock', daiAddress, signer);
@@ -166,6 +169,7 @@ const validate = async () => {
   usdc = await hardhat.ethers.getContractAt('ERC20MintableMock', usdcAddress, signer);
   cusdc = await hardhat.ethers.getContractAt('CTokenMock', cUsdcAddress, signer);
   swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
+  contributionsAggregator =  await hardhat.ethers.getContractAt('ContributionsAggregator', contributionsAggregatorAddress, signer);
 
   yellow("Configurating charity pools...");
   charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
@@ -297,7 +301,6 @@ const validate = async () => {
 
     const helpsupplyTx = await ihelp.totalAvailableSupply();
     const helpsupply = fromBigNumber(helpsupplyTx);
-
     const helpcirculatingTx = await ihelp.totalCirculating();
     const helpcirculating = fromBigNumber(helpcirculatingTx);
 
@@ -308,12 +311,15 @@ const validate = async () => {
 
     const helpunclaimed = helpunclaimed1 + helpunclaimed2;
 
+    await charityPool1.claimInterest();
     const c1interestTx = await charityPool1.totalInterestEarnedUSD();
     const c1interest = fromBigNumber(c1interestTx);
 
+    await charityPool2.claimInterest();
     const c2interestTx = await charityPool2.totalInterestEarnedUSD();
     const c2interest = fromBigNumber(c2interestTx);
 
+    await charityPool3.claimInterest();
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
@@ -410,86 +416,26 @@ const validate = async () => {
   };
 
 
-  const upkeepStatusMapping = {
-    0: "dripStage1",
-    1: "dripStage2",
-    2: "dripStage3",
-    3: "dripStage4",
-    4: "dump"
-  };
-
-
-  // Incrementally go trough all upkeep steps
-  const processUpkeep = async (upkeepStatus) => {
-    let newUpkeepstatus = upkeepStatus;
-    const method = upkeepStatusMapping[upkeepStatus];
-    cyan("Processing upkeep, status ", method);
-    while (upkeepStatus == newUpkeepstatus) {
-      await ihelp.functions[method]();
-      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
-    }
-
-    green("New Upkeep status ", newUpkeepstatus.toNumber());
-
-    // Return when the upkeep status goes back to 0
-    if (newUpkeepstatus.toNumber() === 0) {
-      return;
-    }
-    await processUpkeep(newUpkeepstatus);
-  };
-
-
   const upkeepStep = async () => {
-
-    let upkeepStatus = await ihelp.processingState().then(data => data.status);
-    await processUpkeep(upkeepStatus);
-
-    /*
-      // run the reward distribution script
-      let stakingPoolBalance = await dai.connect(stakingPoolSigner).balanceOf(stakingPool);
-      //console.log('stakingPoolDai', fromBigNumber(stakingPoolBalance));
-      
-      const currentBalanceHoldingBefore = await ihelp.balanceOf(xhelpAddress);
-      //console.log('help before:', fromBigNumber(currentBalanceHoldingBefore));
-  
-      if (fromBigNumber(stakingPoolBalance) > 0) {
-  
-          const minReward = '0';
-          const stakeMe = stakingPoolBalance.toString();
-          
-          //console.log(minReward,stakeMe);
-  
-          let swapApprove = await dai.connect(stakingPoolSigner).approve(swapperAddress, stakeMe);
-          await swapApprove.wait();
-            
-          //try {
-            // swap dai for help and transfer to the xhelp contract to increase the exchange rate
-            let swapme = await swapper.connect(stakingPoolSigner).swap(daiAddress, ihelpAddress, stakeMe, minReward, xhelpAddress,options);
-            //console.log(swapme);
-            await swapme.wait();
-          //}catch(e){}
-          
-          //const currentBalanceHoldingAfter = await ihelp.balanceOf(xhelpAddress);
-          //console.log('help after:', fromBigNumber(currentBalanceHoldingAfter));
-  
-      }
-    */
-
+    await ihelp.upkeep();
   };
 
   const calculateAccrualValueDai = async (value) => {
+    // const c1bTx = await cdai.balanceOfUnderlying(contributionsAggregator.address);
+    // const c1b = (c1bTx.toString());
+    // //console.log('c1b', c1b);
 
-    const c1bTx = await cdai.balanceOfUnderlying(charityPool1.address);
-    const c1b = (c1bTx.toString());
-    //console.log('c1b', c1b);
+    // const c3bTx = await cdai.balanceOfUnderlying(charityPool3.address);
+    // const c3b = (c3bTx.toString());
+    // //console.log('c3b', c3b);
 
-    const c3bTx = await cdai.balanceOfUnderlying(charityPool3.address);
-    const c3b = (c3bTx.toString());
-    //console.log('c3b', c3b);
+    // const totalb = Big(c1b).plus(c3b);
+    // //console.log('totalb', totalb.toFixed(0));
 
-    const totalb = Big(c1b).plus(c3b);
-    //console.log('totalb', totalb.toFixed(0));
 
+    const c1bTx = await cdai.balanceOfUnderlying(contributionsAggregator.address);
+    const totalb = Big(c1bTx.toString());
+    
     const getCashTx = await cdai.getCash();
     const getCash = getCashTx.toString();
     //console.log('getCash', getCash);
@@ -506,9 +452,13 @@ const validate = async () => {
 
   const calculateAccrualValueUsdc = async (value) => {
 
-    const c2bTx = await cusdc.balanceOfUnderlying(charityPool2.address);
-    const c2b = (c2bTx.toString());
+    // const c2bTx = await cusdc.balanceOfUnderlying(charityPool2.address);
+    // const c2b = (c2bTx.toString());
     //console.log('c2b', c2b);
+    // TODO: @Matt, check this, please
+
+    const c2bTx = await cusdc.balanceOfUnderlying(contributionsAggregator.address);
+    const c2b = (c2bTx.toString());
 
     const totalb = Big(c2b);
     //console.log('totalb', totalb.toFixed(0));
@@ -521,7 +471,7 @@ const validate = async () => {
     //console.log('percentCUSDC', percentofcusdc.toFixed(0));
 
     const accrualValue = ethers.utils.parseUnits(Big(value).times(1e6).div(percentofcusdc).toFixed(0), usdcDecimals).toString();
-    //console.log('accrualValue', accrualValue);
+    console.log('accrualValue', accrualValue);
 
     return accrualValue;
 
