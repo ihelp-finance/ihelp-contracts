@@ -45,6 +45,9 @@ contract ContributionsAggregator is
     // Keeps track of holding token rewards for each lender protocol
     mapping(address => uint256) internal _totalRewards;
 
+    // Keeps track of holding token fees for each lender protocol
+    mapping(address => uint256) internal _totalFeesCollected;
+
     SwapperInterface internal swapper;
     iHelpTokenInterface public ihelpToken;
 
@@ -262,6 +265,7 @@ contract ContributionsAggregator is
     ) internal {
         // We calculated the resulted rewards and update distribute them
         _totalRewards[_lenderTokenAddress] += _interest - _fees;
+        _totalFeesCollected[_lenderTokenAddress] += _fees;
         distributeRewards(_lenderTokenAddress);
         trackInterest(_lenderTokenAddress, _interest);
     }
@@ -369,11 +373,11 @@ contract ContributionsAggregator is
         return _totalRewards[_lenderTokenAddress];
     }
 
-    function totalUSDRewards(address _lenderTokenAddress) public view virtual override returns (uint256) {
+    function totalInterestCollected() public view virtual override returns (uint256) {
         uint256 usdValue;
         for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
             address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
-            usdValue += usdValueoOfUnderlying(lenderTokenAddress, _totalRewards[_lenderTokenAddress]);
+            usdValue += usdValueoOfUnderlying(lenderTokenAddress, _totalRewards[lenderTokenAddress] + _totalFeesCollected[lenderTokenAddress]);
         }
         return usdValue;
     }

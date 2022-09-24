@@ -28,15 +28,14 @@ contract Analytics is IAnalytics {
      * Calaculates the total generated interest for all charities
      */
     function totalGeneratedInterest(iHelpTokenInterface _iHelp) public view override returns (uint256) {
-        uint256 result;
-        uint256 cTokens = priceFeedProvider(_iHelp).numberOfDonationCurrencies();
+        return contributionsAggregator(_iHelp).totalInterestCollected();
+    }
 
-        for (uint256 i = 0; i < cTokens; i++) {
-            address cTokenAddress = priceFeedProvider(_iHelp).getDonationCurrencyAt(i).lendingAddress;
-            result += contributionsAggregator(_iHelp).totalRewards(cTokenAddress);
-        }
-
-        return result;
+    /** ^ TODO: Ask Mat is this the same.
+     * Calaculates the total generated interest for a all users
+     */
+    function getTotalUserGeneratedInterest(iHelpTokenInterface _iHelp) external view override returns (uint256) {
+        return _iHelp.totalContributorGeneratedInterest();
     }
 
     /**
@@ -77,6 +76,7 @@ contract Analytics is IAnalytics {
 
         for (uint256 i = 0; i < cTokens; i++) {
             address underlyingToken = priceFeedProvider(_iHelp).getDonationCurrencyAt(i).underlyingToken;
+
             if (underlyingToken == _underlyingCurrency) {
                 address cTokenAddress = priceFeedProvider(_iHelp).getDonationCurrencyAt(i).lendingAddress;
                 result += contributionsAggregator(_iHelp).totalRewards(cTokenAddress);
@@ -104,13 +104,6 @@ contract Analytics is IAnalytics {
         }
 
         return result;
-    }
-
-    /**
-     * Calaculates the total generated interest for a all users
-     */
-    function getTotalUserGeneratedInterest(iHelpTokenInterface _iHelp) external view override returns (uint256) {
-        return totalGeneratedInterest(_iHelp);
     }
 
     /**

@@ -84,12 +84,11 @@ interface ContributionsAggregatorInterface {
     function totalRewards(address _lenderTokenAddress) external view returns (uint256);
 
     /**
-     * @notice Returns the total acumulated interest of all time in USD
+     * @notice Returns the total acumulated interest  of all time in USD 
      *
-     * @dev The redeemed intrest will in holding tokens
+     * @dev The redeemed intrest will in holding tokens. This also takes the collected fees into account
      *
-     * @param _lenderTokenAddress - The address of the lender token
      * @return The redeemed interest expressed in the form of dollars
      */
-    function totalUSDRewards(address _lenderTokenAddress) external view  returns (uint256);
+    function totalInterestCollected() external view  returns (uint256);
 }

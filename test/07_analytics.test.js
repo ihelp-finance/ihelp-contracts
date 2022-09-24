@@ -2,7 +2,6 @@ const { expect, use } = require("chai");
 
 const { smock } = require("@defi-wonderland/smock");
 const AggregatorInfoAbi = require('@chainlink/contracts/abi/v0.4/AggregatorV3Interface.json')
-        contributionsAggregator = await smock.fake("ContributionsAggregatorExtended");
 
 use(smock.matchers);
 
@@ -98,100 +97,74 @@ describe("Analytics", function () {
         charityPool1.getUnderlyingTokenPrice.returns([1e9, 9]);
         charityPool2.getUnderlyingTokenPrice.returns([1e9, 9]);
 
-        await charityPool1.calculateTotalInterestEarned.returns(20);
-        await charityPool2.calculateTotalInterestEarned.returns(30);
+
     });
 
     describe("Analytics testing", async () => {
         describe("Isolated calls", () => {
             it("should return the generated interest", async () => {
-                await analytics.generatedInterest(charityPool1.address);
-                expect(charityPool1.calculateTotalInterestEarned).to.have.been.called;
-                await analytics.generatedInterest(charityPool2.address);
-                expect(charityPool2.calculateTotalInterestEarned).to.have.been.called;
+                charityPool1.totalInterestCollected.returns(25);
+                expect(await analytics.generatedInterest(charityPool1.address)).to.equal(25);
 
             });
 
             it("should return the total generated interest", async () => {
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-
-                expect(await analytics.totalGeneratedInterest(iHelp.address, 0, 0)).to.equal(50);
+                contributionsAggregator.totalContributorGeneratedInterest.returns(50);
+                expect(await analytics.totalGeneratedInterest(iHelp.address)).to.equal(50);
             });
 
             it("should return the total generated interest by a yield protocol", async () => {
-                await charityPool2.setVariable("totalInterestEarned", {
-                    [cTokenMock1.address]: 45,
-                    [cTokenMock2.address]: 25
-                });
+                contributionsAggregator.totalRewards.returns(25);
+                expect(await analytics.getYieldProtocolGeneratedInterest(iHelp.address, cTokenMock1.address)).to.equal(25);
 
-                await charityPool1.setVariable("totalInterestEarned", {
-                    [cTokenMock1.address]: 15,
-                    [cTokenMock2.address]: 10
-                });
-
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                expect(await analytics.getYieldProtocolGeneratedInterest(iHelp.address, cTokenMock1.address, 0, 0)).to.equal(60);
-                expect(await analytics.getYieldProtocolGeneratedInterest(iHelp.address, cTokenMock2.address, 0, 0)).to.equal(35);
+                contributionsAggregator.totalRewards.returns(35);
+                expect(await analytics.getYieldProtocolGeneratedInterest(iHelp.address, cTokenMock2.address)).to.equal(35);
             });
 
             it("should return the total generated interest by a underlying currency", async () => {
-                await charityPool1.setVariable("priceFeedProvider", priceFeedProviderMock.address)
-                await charityPool2.setVariable("priceFeedProvider", priceFeedProviderMock.address)
+                const fixture = (args) => {
+                    const _interest = {
+                        [cTokenMock1.address]: 30,
+                        [cTokenMock2.address]: 25
+                    }
+                    return (_interest[args[0]])
+                };
 
-                await charityPool2.setVariable("totalInterestEarned", {
-                    [cTokenMock1.address]: 25,
-                    [cTokenMock2.address]: 15
-                });
+                contributionsAggregator.totalRewards.returns(fixture);
 
-                await charityPool1.setVariable("totalInterestEarned", {
-                    [cTokenMock1.address]: 5,
-                    [cTokenMock2.address]: 10
-                });
-
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                expect(await analytics.getUnderlyingCurrencyGeneratedInterest(iHelp.address, uMock1.address, 0, 0)).to.equal(30);
-                expect(await analytics.getUnderlyingCurrencyGeneratedInterest(iHelp.address, uMock2.address, 0, 0)).to.equal(25);
+                expect(await analytics.getUnderlyingCurrencyGeneratedInterest(iHelp.address, uMock1.address)).to.equal(30);
+                expect(await analytics.getUnderlyingCurrencyGeneratedInterest(iHelp.address, uMock2.address)).to.equal(25);
             });
 
             it("should return the user generated interest", async () => {
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                await iHelp.setVariable("contributorGeneratedInterest", {
-                    [addr1.address]: {
-                        [charityPool1.address]: 10,
-                        [charityPool2.address]: 20
-                    },
-                    [addr2.address]: {
-                        [charityPool1.address]: 5,
-                        [charityPool2.address]: 5
+                const fixture = (args) => {
+                    const _interest = {
+                        [cTokenMock1.address]: {
+                            [addr1.address]: 15,
+                            [addr2.address]: 5,
+                        },
+                        [cTokenMock2.address]: {
+                            [addr1.address]: 15,
+                            [addr2.address]: 5,
+                        }
                     }
-                });
+                    return (_interest[args[0]][args[1]])
+                };
 
-                expect(await analytics.getUserGeneratedInterest(iHelp.address, addr1.address, 0, 0)).to.equal(30);
-                expect(await analytics.getUserGeneratedInterest(iHelp.address, addr2.address, 0, 0)).to.equal(10);
+                contributionsAggregator.generatedInterestOf.returns(fixture);
+
+                expect(await analytics.getUserGeneratedInterest(iHelp.address, addr1.address)).to.equal(30);
+                expect(await analytics.getUserGeneratedInterest(iHelp.address, addr2.address)).to.equal(10);
             });
 
             it("should return the total user generated interest", async () => {
                 await iHelp.setVariable("totalContributorGeneratedInterest", 40);
-
                 expect(await analytics.getTotalUserGeneratedInterest(iHelp.address)).to.equal(40);
             });
 
             it("should return the total locked value", async () => {
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                charityPool1.accountedBalanceUSD.returns(200);
-                charityPool2.accountedBalanceUSD.returns(200);
-
-                expect(await analytics.totalLockedValue(iHelp.address, 0, 0)).to.equal(400);
+                contributionsAggregator.contributions.returns(400);
+                expect(await analytics.totalLockedValue(iHelp.address)).to.equal(400);
             });
 
             it("should return the total locked value of a charity", async () => {
@@ -202,13 +175,8 @@ describe("Analytics", function () {
             });
 
             it("should return the total number of helpers", async () => {
-                await iHelp.registerCharityPool(charityPool1.address);
-                await iHelp.registerCharityPool(charityPool2.address);
-
-                charityPool1.numberOfContributors.returns(200);
-                charityPool2.numberOfContributors.returns(200);
-
-                expect(await analytics.totalHelpers(iHelp.address, 0, 0)).to.equal(400);
+                iHelp.numberOfContributors.returns(400);
+                expect(await analytics.totalHelpers(iHelp.address)).to.equal(400);
             });
 
             it("should return the total number of helpers for a given charity", async () => {
