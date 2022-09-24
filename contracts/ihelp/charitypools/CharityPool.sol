@@ -376,8 +376,10 @@ contract CharityPool is
         if (amount == 0) {
             return;
         }
-
-        bool success = IERC20(holdingToken).transfer(charityWallet, amount);
+        bool success = true;
+        if(address(0) != charityWallet) {
+            success = IERC20(holdingToken).transfer(charityWallet, amount);
+        }
         require(success, "transfer failed");
     }
 
