@@ -57,7 +57,7 @@ abstract contract IHelpRewardDistributor {
 
     function _claimIHelp(address _contributor , uint256 _amount) internal {
         uint256 totalClaimableAmount = claimableIHelpRewardOf(_contributor);
-        require(totalClaimableAmount >= _amount, "ihelp-claim/insuficient balance");
+        require(totalClaimableAmount >= _amount, "ihelp-claim/insufficient balance");
 
         claimableContributorReward[_contributor] -= _amount;
         claimedContributorReward[_contributor] += _amount;

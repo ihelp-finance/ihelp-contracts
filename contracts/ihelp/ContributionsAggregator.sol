@@ -231,7 +231,7 @@ contract ContributionsAggregator is
 
             address tokenaddress = address(underlyingToken);
             if (tokenaddress != holdingToken()) {
-                // ensure minimum of 50% redeemed
+                // ensure minimum of 97% redeemed
                 uint256 minAmount = (amount * 97) / 100;
               
                 minAmount = SwapperUtils.toScale(
