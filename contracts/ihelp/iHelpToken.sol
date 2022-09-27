@@ -332,17 +332,20 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         uint256 tokensToCirculateInCurrentPhase;
 
         if (tokensToCirculate >= __totalSupply) {
+
             tokensToCirculateInCurrentPhase = __totalSupply;
 
             console.log("");
             console.log("splitting interest division...");
 
-            __totalSupply = 0;
-
             console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
+
+            __totalSupply = 0;
+            __totalCirculating += tokensToCirculateInCurrentPhase;
+
             console.log("tokensPerInterest", tokensPerInterest);
 
-            uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase / tokensPerInterest;
+            uint256 interestForExistingTokenSupply = (tokensToCirculateInCurrentPhase / tokensPerInterest) * 10 ** underlyingToken.decimals();
 
             console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
 
