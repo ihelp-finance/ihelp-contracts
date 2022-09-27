@@ -13,6 +13,7 @@ import "./SwapperInterface.sol";
 import "./rewards/CharityRewardDistributor.sol";
 import "./rewards/IHelpRewardDistributor.sol";
 import "./rewards/ContributorInterestTracker.sol";
+import "./rewards/CharityInterestTracker.sol";
 
 import "./ContributionsAggregatorInterface.sol";
 
@@ -23,6 +24,7 @@ contract ContributionsAggregator is
     OwnableUpgradeable,
     CharityRewardDistributor,
     ContributorInterestTracker,
+    CharityInterestTracker,
     IHelpRewardDistributor
 {
     /**
@@ -90,7 +92,9 @@ contract ContributionsAggregator is
         onlyCharity
         updateReward(_charityAddress, _lenderTokenAddress)
         updateIHelpReward(_contributorAddress)
-        updateGeneratedInterest(_lenderTokenAddress, _contributorAddress)
+        updateContributorGeneratedInterest(_lenderTokenAddress, _contributorAddress)
+        updateCharityGeneratedInterest(_lenderTokenAddress, _charityAddress)
+
     {
         _deposit(_lenderTokenAddress, _charityAddress, _contributorAddress, _amount);
     }
@@ -144,7 +148,8 @@ contract ContributionsAggregator is
         onlyCharity
         updateReward(_charityAddress, _lenderTokenAddress)
         updateIHelpReward(_contributorAddress)
-        updateGeneratedInterest(_lenderTokenAddress, _contributorAddress)
+        updateContributorGeneratedInterest(_lenderTokenAddress, _contributorAddress)
+        updateCharityGeneratedInterest(_lenderTokenAddress, _charityAddress)
     {
         _withdraw(_lenderTokenAddress, _charityAddress, _contributorAddress, _amount, _destination);
     }
@@ -232,7 +237,7 @@ contract ContributionsAggregator is
             address tokenaddress = address(underlyingToken);
             if (tokenaddress != holdingToken()) {
                 // ensure minimum of 97% redeemed
-                uint256 minAmount = (amount * 97) / 100;
+                uint256 minAmount = (amount * 95) / 100;
               
                 minAmount = SwapperUtils.toScale(
                     underlyingToken.decimals(),
@@ -272,7 +277,8 @@ contract ContributionsAggregator is
         _totalRewards[_lenderTokenAddress] += _interest - _fees;
         _totalFeesCollected[_lenderTokenAddress] += _fees;
         distributeRewards(_lenderTokenAddress);
-        trackInterest(_lenderTokenAddress, _interest);
+        trackContributorInterest(_lenderTokenAddress, _interest);
+        trackCharityInterest(_lenderTokenAddress, _interest);
     }
 
     function distributeInterestFees(uint256 _amount) internal returns (uint256, uint256) {
@@ -296,7 +302,7 @@ contract ContributionsAggregator is
         public
         view
         virtual
-        override(CharityRewardDistributor, ContributorInterestTracker)
+        override(CharityInterestTracker, CharityRewardDistributor, ContributorInterestTracker)
         returns (uint256)
     {
         return _deposited[_lenderTokenAddress];
@@ -353,7 +359,7 @@ contract ContributionsAggregator is
     function balanceOfCharity(address _charityAddress, address _lenderTokenAddress)
         public
         view
-        override
+        override(CharityRewardDistributor, CharityInterestTracker)
         returns (uint256)
     {
         return charityAccountedBalance[_charityAddress][_lenderTokenAddress];
@@ -372,7 +378,7 @@ contract ContributionsAggregator is
         public
         view
         virtual
-        override(CharityRewardDistributor, ContributorInterestTracker, ContributionsAggregatorInterface)
+        override(CharityRewardDistributor, ContributionsAggregatorInterface)
         returns (uint256)
     {
         return _totalRewards[_lenderTokenAddress];

@@ -285,6 +285,8 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return totalInterest;
     }
 
+
+    // TODO: Maybe remove this
     function charityInterestShare(CharityPoolInterface _charity) public view returns (uint256) {
         return _charity.newTotalInterestEarnedUSD();
     }

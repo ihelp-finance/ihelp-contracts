@@ -106,11 +106,6 @@ describe("Contributions aggregator", function () {
             expect(await contributionsAggregator.contributorAccountedBalance(owner.address, lenderTokenMock.address)).to.equal(1000);
         })
 
-        it("Should mint lenderTokens", async function () {
-            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000);
-            expect(await lenderTokenMock.balanceOf(contributionsAggregator.address)).to.equal(1000);
-        });
-
         it('should return the usd contributinons for a given user', async () => {
             await lenderTokenUnderlyingMock.mint(owner.address, 1000);
             await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
@@ -166,7 +161,7 @@ describe("Contributions aggregator", function () {
         beforeEach(async () => {
             await lenderTokenUnderlyingMock.mint(owner.address, 1000);
             await lenderTokenUnderlyingMock.increaseAllowance(contributionsAggregator.address, 1000);
-            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, 1000);
+            await contributionsAggregator.deposit(lenderTokenMock.address, charity.address, owner.address, 1000);
         })
 
         it('should redeem interest', async () => {
@@ -178,7 +173,17 @@ describe("Contributions aggregator", function () {
 
             expect(await lenderTokenUnderlyingMock.balanceOf(devPool.address)).to.equal(10, "invalid total dev reward amount");
             expect(await lenderTokenUnderlyingMock.balanceOf(stakingPool.address)).to.equal(10, "invalid total staking reward amount");
-            expect(await contributionsAggregator.currentRewards(lenderTokenMock.address)).to.equal(80, "invalid total charity reward amount");
+            expect(await contributionsAggregator.totalRewards(lenderTokenMock.address)).to.equal(80, "invalid total charity reward amount");
+        })
+
+        it('should track interest', async () => {
+            iHelpMock.underlyingToken.returns(lenderTokenUnderlyingMock.address);
+
+            await lenderTokenMock.accrueCustom(100);
+            await contributionsAggregator.redeemInterest(lenderTokenMock.address);
+
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address,charity.address)).to.equal(100, "invalid total charity reward amount");
+            expect(await contributionsAggregator.generatedInterestOfContributor(lenderTokenMock.address, owner.address)).to.equal(100, "invalid total charity reward amount");
         })
 
         it('should not redeem interest when yield is 0', async () => {
@@ -189,7 +194,7 @@ describe("Contributions aggregator", function () {
 
             expect(await lenderTokenUnderlyingMock.balanceOf(devPool.address)).to.equal(0, "invalid total dev reward amount");
             expect(await lenderTokenUnderlyingMock.balanceOf(stakingPool.address)).to.equal(0, "invalid total staking reward amount");
-            expect(await contributionsAggregator.currentRewards(lenderTokenMock.address)).to.equal(0, "invalid total charity reward amount");
+            expect(await contributionsAggregator.totalRewards(lenderTokenMock.address)).to.equal(0, "invalid total charity reward amount");
         })
 
     })
@@ -217,6 +222,7 @@ describe("Contributions aggregator", function () {
             await contributionsAggregator.redeemInterest(lenderTokenMock.address);
 
             expect(await contributionsAggregator.claimableRewardOf(charity.address, lenderTokenMock.address)).to.equal(100);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, charity.address)).to.equal(100);
 
             await contributionsAggregator.connect(secondCharity).deposit(lenderTokenMock.address, secondCharity.address, 1000);
 
@@ -224,7 +230,10 @@ describe("Contributions aggregator", function () {
             await contributionsAggregator.redeemInterest(lenderTokenMock.address);
 
             expect(await contributionsAggregator.claimableRewardOf(charity.address, lenderTokenMock.address)).to.equal(150);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, charity.address)).to.equal(150);
+
             expect(await contributionsAggregator.claimableRewardOf(secondCharity.address, lenderTokenMock.address)).to.equal(50);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, secondCharity.address)).to.equal(50);
 
             await contributionsAggregator.connect(thirdCharity).deposit(lenderTokenMock.address, thirdCharity.address, 1000);
 
@@ -232,8 +241,14 @@ describe("Contributions aggregator", function () {
             await contributionsAggregator.redeemInterest(lenderTokenMock.address);
 
             expect(await contributionsAggregator.claimableRewardOf(charity.address, lenderTokenMock.address)).to.equal(183);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, charity.address)).to.equal(183);
+
             expect(await contributionsAggregator.claimableRewardOf(secondCharity.address, lenderTokenMock.address)).to.equal(83);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, secondCharity.address)).to.equal(83);
+
             expect(await contributionsAggregator.claimableRewardOf(thirdCharity.address, lenderTokenMock.address)).to.equal(33);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, thirdCharity.address)).to.equal(83);
+
         })
 
         it('should execute correct deposits and reward claims', async () => {
@@ -246,6 +261,7 @@ describe("Contributions aggregator", function () {
                 to.emit(lenderTokenUnderlyingMock, "Transfer").withArgs(contributionsAggregator.address, charity.address, 100);
 
             expect(await contributionsAggregator.claimableRewardOf(charity.address, lenderTokenMock.address)).to.equal(0);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, charity.address)).to.equal(100);
 
             await lenderTokenMock.accrueCustom(100);
             await contributionsAggregator.redeemInterest(lenderTokenMock.address);
@@ -262,7 +278,10 @@ describe("Contributions aggregator", function () {
                 to.emit(lenderTokenUnderlyingMock, "Transfer").withArgs(contributionsAggregator.address, secondCharity.address, 50);
 
             expect(await contributionsAggregator.claimableRewardOf(charity.address, lenderTokenMock.address)).to.equal(0);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, charity.address)).to.equal(250);
+
             expect(await contributionsAggregator.claimableRewardOf(secondCharity.address, lenderTokenMock.address)).to.equal(0);
+            expect(await contributionsAggregator.generatedInterestOfCharity(lenderTokenMock.address, secondCharity.address)).to.equal(50);
 
             await lenderTokenMock.accrueCustom(100);
             await contributionsAggregator.redeemInterest(lenderTokenMock.address);

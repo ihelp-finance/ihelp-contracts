@@ -151,7 +151,7 @@ describe("Analytics", function () {
                     return (_interest[args[0]][args[1]])
                 };
 
-                contributionsAggregator.generatedInterestOf.returns(fixture);
+                contributionsAggregator.generatedInterestOfContributor.returns(fixture);
 
                 expect(await analytics.getUserGeneratedInterest(iHelp.address, addr1.address)).to.equal(30);
                 expect(await analytics.getUserGeneratedInterest(iHelp.address, addr2.address)).to.equal(10);

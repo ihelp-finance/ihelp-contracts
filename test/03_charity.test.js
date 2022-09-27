@@ -506,32 +506,57 @@ describe("Charity Pool", function () {
         describe('Flow for 1 contributor', () => {
             it('should calculate the correct generated interest after deposits', async () => {
                 contributionsAggregator.claimReward.returns(100);
+                contributionsAggregator.generatedInterestOfCharity.returns(100);
 
                 await charityPool.depositTokens(cTokenMock.address, 100, "Test Memo");
                 await charityPool.claimInterest();
 
                 // await charityPool.balanceOf(owner.address)
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                
+                contributionsAggregator.generatedInterestOfCharity.returns(200);
                 await charityPool.claimInterest();
 
                 // await charityPool.balanceOf(owner.address)
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(200);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(200);
             })
 
             it('should calculate the correct generated interest after withdraw', async () => {
                 contributionsAggregator.claimReward.returns(100);
+                contributionsAggregator.generatedInterestOfCharity.returns(100);
 
                 await charityPool.depositTokens(cTokenMock.address, 100, "Test Memo");
                 await charityPool.claimInterest();
 
                 // await charityPool.balanceOf(owner.address)
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
 
                 await charityPool.withdrawTokens(cTokenMock.address, 100);
+               
+                contributionsAggregator.claimReward.returns(200);
+                await charityPool.claimInterest();
+                contributionsAggregator.generatedInterestOfCharity.returns(200);
+
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+            })
+
+            it('should calculate the correct generated interest after withdraw with fee', async () => {
+                contributionsAggregator.claimReward.returns(80);
+                contributionsAggregator.generatedInterestOfCharity.returns(100);
+
+                await charityPool.depositTokens(cTokenMock.address, 100, "Test Memo");
                 await charityPool.claimInterest();
 
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
+                // await charityPool.balanceOf(owner.address)
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+
+                await charityPool.withdrawTokens(cTokenMock.address, 100);
+               
+                contributionsAggregator.claimReward.returns(200);
+                await charityPool.claimInterest();
+                contributionsAggregator.generatedInterestOfCharity.returns(200);
+
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
             })
         })
 
@@ -547,6 +572,7 @@ describe("Charity Pool", function () {
             });
             it('should calculate the generated interest', async () => {
                 contributionsAggregator.claimReward.returns(200);
+                contributionsAggregator.generatedInterestOfCharity.returns(200);
 
 
                 // User 1 and 2 deposit
@@ -555,74 +581,80 @@ describe("Charity Pool", function () {
                 await charityPool.claimInterest();
 
                 // Should have equally generated interest
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(100);
 
 
                 // User 1 withdraws
                 await charityPool.withdrawTokens(cTokenMock.address, 100);
 
                 // Should have equally generated interest
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(100);
 
+                contributionsAggregator.generatedInterestOfCharity.returns(400);
                 await charityPool.claimInterest();
 
                 // User 2 should take all the new interest +200
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(300);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(300);
 
                 // User 3 deposits
                 await charityPool.connect(addr2).depositTokens(cTokenMock.address, 100, "Test Memo");
 
                 // No interest was generated
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(300);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(0);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(300);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(0);
 
+                contributionsAggregator.generatedInterestOfCharity.returns(600);
                 await charityPool.claimInterest();
 
                 // User 2 and 3 should take all the new interest +100 each
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(400);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(400);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(100);
 
                 // User 1 and 2 deposit
                 await charityPool.depositTokens(cTokenMock.address, 100, "Test Memo");
                 await charityPool.connect(addr1).depositTokens(cTokenMock.address, 100, "Test Memo");
 
                 // No interest was generated
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(100);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(400);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(100);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(400);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(100);
 
                 contributionsAggregator.claimReward.returns(400);
+                contributionsAggregator.generatedInterestOfCharity.returns(1000);
                 await charityPool.claimInterest();
 
                 // User 1,2 and 3 should split interest User 1 +100, User 2 + 200, user 3 +100
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(200);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(600);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(200);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(200);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(600);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(200);
 
                 // User 2 withdraws all
                 await charityPool.connect(addr1).withdrawTokens(cTokenMock.address, 200);
-                
+
                 contributionsAggregator.claimReward.returns(200);
+                contributionsAggregator.generatedInterestOfCharity.returns(1200);
+
                 await charityPool.claimInterest();
 
                 // User 1 and 2 sgould  split interest User 1 +100, user 3 +100
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(300);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(600);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(300);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(300);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(600);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(300);
 
                 // User 1 withdraws all
                 await charityPool.withdrawTokens(cTokenMock.address, 100);
+                contributionsAggregator.generatedInterestOfCharity.returns(1400);
                 await charityPool.claimInterest();
 
                 // User 3 takes all interest +200
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, owner.address)).to.equal(300);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr1.address)).to.equal(600);
-                expect(await charityPool.generatedInterestOf(cTokenMock.address, addr2.address)).to.equal(500);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(300);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr1.address)).to.equal(600);
+                expect(await charityPool.generatedInterestOfContributor(cTokenMock.address, addr2.address)).to.equal(500);
             })
         })
     })

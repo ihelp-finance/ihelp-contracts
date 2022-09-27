@@ -98,7 +98,7 @@ contract Analytics is IAnalytics {
 
         for (uint256 i = 0; i < cTokens; i++) {
             address lendingAddress = priceFeedProvider(_iHelp).getDonationCurrencyAt(i).lendingAddress;
-            result += contributionsAggregator(_iHelp).generatedInterestOf(lendingAddress, _account);
+            result += contributionsAggregator(_iHelp).generatedInterestOfContributor(lendingAddress, _account);
         }
 
         return result;

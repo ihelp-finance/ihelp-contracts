@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.9;
 
+import "hardhat/console.sol";
+
 abstract contract ContributorInterestTracker {
     // Rewards stored grouped by lender token
-    mapping(address => uint256) public interestPerTokenStored;
+    mapping(address => uint256) public contributorInterestPerTokenStored;
 
     // Total rewards awarded, by underlying token
-    mapping(address => uint256) internal interestAwarded;
+    mapping(address => uint256) internal contributorInterestAwarded;
 
     // We keep track of charity rewards depeding on their deposited amounts
-    mapping(address => mapping(address => uint256)) internal generatedInterest;
-    mapping(address => mapping(address => uint256)) public generatedInterestTracked;
+    mapping(address => mapping(address => uint256)) internal contributorGeneratedInterest;
+    mapping(address => mapping(address => uint256)) public contributorGeneratedInterestTracked;
 
     // Get total deposited lenderTokens
     function deposited(address _lenderTokenAddress) public view virtual returns (uint256);
@@ -18,15 +20,12 @@ abstract contract ContributorInterestTracker {
     // Returns contributions for a given contributor under a specific lender token
     function balanceOfContributor(address _contributor, address _lenderTokenAddress) public virtual view returns (uint256);
 
-    // Returns the generated charity rewards
-    function totalRewards(address _lenderTokenAddress) public view virtual returns (uint256);
-
     // Keeps track of the generated interest
-    modifier updateGeneratedInterest(address _lenderTokenAddress, address _contributor) {
-        interestPerTokenStored[_lenderTokenAddress] = interestGeneratedPerToken(_lenderTokenAddress);
-        generatedInterest[_lenderTokenAddress][_contributor] = generatedInterestOf(_lenderTokenAddress, _contributor);
+    modifier updateContributorGeneratedInterest(address _lenderTokenAddress, address _contributor) {
+        contributorInterestPerTokenStored[_lenderTokenAddress] = contributorInterestGeneratedPerToken(_lenderTokenAddress);
+        contributorGeneratedInterest[_lenderTokenAddress][_contributor] = generatedInterestOfContributor(_lenderTokenAddress, _contributor);
 
-        generatedInterestTracked[_lenderTokenAddress][_contributor] = interestPerTokenStored[_lenderTokenAddress];
+        contributorGeneratedInterestTracked[_lenderTokenAddress][_contributor] = contributorInterestPerTokenStored[_lenderTokenAddress];
         _;
     }
 
@@ -37,31 +36,31 @@ abstract contract ContributorInterestTracker {
      * @return The generated interest in the form of the lender token and it's coressponding 
      * holding token value         
      */
-    function generatedInterestOf(address _lenderTokenAddress, address _contributor) public view returns (uint256) {
+    function generatedInterestOfContributor(address _lenderTokenAddress, address _contributor) public view returns (uint256) {
         uint256 _balance = balanceOfContributor(_contributor, _lenderTokenAddress);
         if (_balance == 0) {
-            return generatedInterest[_lenderTokenAddress][_contributor];
+            return contributorGeneratedInterest[_lenderTokenAddress][_contributor];
         }
 
-        return generatedInterest[_lenderTokenAddress][_contributor] + 
-            (_balance * (interestGeneratedPerToken(_lenderTokenAddress) - generatedInterestTracked[_lenderTokenAddress][_contributor])) / 1e9;
+        return contributorGeneratedInterest[_lenderTokenAddress][_contributor] + 
+            (_balance * (contributorInterestGeneratedPerToken(_lenderTokenAddress) - contributorGeneratedInterestTracked[_lenderTokenAddress][_contributor])) / 1e9;
     }
 
-    function interestGeneratedPerToken(address _lenderTokenAddress) public view returns (uint256) {
+    function contributorInterestGeneratedPerToken(address _lenderTokenAddress) public view returns (uint256) {
         if (deposited(_lenderTokenAddress) == 0) {
             return 0;
         }
-        return interestPerTokenStored[_lenderTokenAddress];
+        return contributorInterestPerTokenStored[_lenderTokenAddress];
     }
 
     // Calculates the new reward ratio after new rewards are added to the pool
-    function trackInterest(address _lenderTokenAddress, uint256 _newInterest) internal  {
+    function trackContributorInterest(address _lenderTokenAddress, uint256 _newInterest) internal  {
         uint256 totalDeposited = deposited(_lenderTokenAddress);
         if (totalDeposited > 0) {
-            interestPerTokenStored[_lenderTokenAddress] += (_newInterest * 1e9) / totalDeposited;
-            interestAwarded[_lenderTokenAddress] += _newInterest;
+            contributorInterestPerTokenStored[_lenderTokenAddress] += (_newInterest * 1e9) / totalDeposited;
+            contributorInterestAwarded[_lenderTokenAddress] += _newInterest;
         } else {
-            interestPerTokenStored[_lenderTokenAddress] = 0;
+            contributorInterestPerTokenStored[_lenderTokenAddress] = 0;
         }
     }
 

@@ -22,6 +22,7 @@ import "../PriceFeedProviderInterface.sol";
 
 import "../ContributionsAggregatorInterface.sol";
 import "../rewards/ContributorInterestTracker.sol";
+import "../rewards/CharityInterestTracker.sol";
 
 import "hardhat/console.sol";
 
@@ -85,6 +86,8 @@ contract CharityPool is
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => mapping(address => uint256)) public donationBalances;
 
+
+
     mapping(address => uint256) public accountedBalances;
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
@@ -95,6 +98,10 @@ contract CharityPool is
     IWrappedNative public wrappedNative;
     iHelpTokenInterface public ihelpToken;
     PriceFeedProviderInterface public priceFeedProvider;
+
+    mapping(address => uint256) public lastTrackedInterest;
+    mapping(address => uint256) public claimedInterest;
+
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
@@ -234,7 +241,7 @@ contract CharityPool is
         address _spender,
         address _cTokenAddress,
         uint256 _amount
-    ) internal updateGeneratedInterest(_cTokenAddress, _spender) {
+    ) internal updateContributorGeneratedInterest(_cTokenAddress, _spender) {
         require(_amount != 0, "Funding/deposit-zero");
         require(priceFeedProvider.hasDonationCurrency(_cTokenAddress), "Native-Funding/invalid-ctoken");
         // Update the user's balance
@@ -261,7 +268,7 @@ contract CharityPool is
         address _sender,
         address _cTokenAddress,
         uint256 _amount
-    ) internal updateGeneratedInterest(_cTokenAddress, _sender) {
+    ) internal updateContributorGeneratedInterest(_cTokenAddress, _sender) {
         require(_amount <= balances[_sender][_cTokenAddress], "Funding/no-funds");
         balances[_sender][_cTokenAddress] -= _amount;
         ihelpToken.notifyBalanceUpdate(_sender, _amount, false);
@@ -363,19 +370,26 @@ contract CharityPool is
      */
     function claimInterest() external {
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
-
          for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
             address lenderTokenAddress = priceFeedProvider.getDonationCurrencyAt(i).lendingAddress;
-            uint256 claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
-            totalInterestEarned[lenderTokenAddress] += claimedInterest;
-
-            trackInterest(lenderTokenAddress, claimedInterest);
+    
+            uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(lenderTokenAddress, address(this));
+            uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
+            lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
+            
+            // TODO:SHould we also keep track  claimed interest which fees @matt?
+            uint256 _claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
+            claimedInterest[lenderTokenAddress] += _claimedInterest;
+            
+            totalInterestEarned[lenderTokenAddress] += newlyGeneratedInterest;
+            trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
         }
 
         uint256 amount = IERC20(holdingToken).balanceOf(address(this));
         if (amount == 0) {
             return;
         }
+
         bool success = true;
         if(address(0) != charityWallet) {
             success = IERC20(holdingToken).transfer(charityWallet, amount);
@@ -565,10 +579,10 @@ contract CharityPool is
 
     function totalInterestEarnedUSD() public view returns (uint256) {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
+        ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
-            address cTokenAddress = cTokens[i].lendingAddress;
-            result += cTokenTotalUSDInterest(cTokenAddress);
+            result += CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(cTokens[i].lendingAddress, address(this));
         }
         return result;
     }
@@ -629,8 +643,7 @@ contract CharityPool is
         return accountedBalances[_cTokenAddress];
     }
 
-
-    function totalRewards(address _cTokenAddress) public view virtual override returns (uint256) {
+    function totalRewards(address _cTokenAddress) public view virtual returns (uint256) {
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         return totalInterestEarned[_cTokenAddress] + aggregatorInstance.totalClaimableInterest(address(this));
     }
