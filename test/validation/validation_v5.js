@@ -554,6 +554,7 @@ const validate = async () => {
 
   await getOutputs(INPUT);
 
+  
   INPUT = 4;
   console.log('\n*** INPUT', INPUT, '***');
 
