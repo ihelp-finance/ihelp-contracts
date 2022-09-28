@@ -34,6 +34,7 @@ describe("Charity Pool", function () {
         Mock = await smock.mock("ERC20MintableMock");
         const WMock = await ethers.getContractFactory("WTokenMock");
         wTokenMock = await WMock.deploy();
+        holdingMock = await Mock.deploy("Mock", "MOK", 9);
 
         // ======= Initialize Compound ============
         CTokenMock = await smock.mock("CTokenMock");
@@ -82,17 +83,18 @@ describe("Charity Pool", function () {
         await AAVEConnector.initialize();
         // =========================================
 
-        
+
         //  ======= Initialize IHelp ===============
         iHelpMock = await smock.fake("iHelpToken");
         iHelpMock.stakingPool.returns(stakingPool.address);
         iHelpMock.developmentPool.returns(developmentPool.address);
         iHelpMock.hasCharity.returns(true);
+        iHelpMock.underlyingToken.returns(holdingMock.address);
 
         iHelpMock.getPools.returns([developmentPool.address, stakingPool.address]);
         // =========================================
 
-        
+
         //  ======= Initialize Swappers Items =======
         let SwapperUtils = await ethers.getContractFactory("SwapperUtils");
         SwapperUtils = await SwapperUtils.deploy();
@@ -164,6 +166,7 @@ describe("Charity Pool", function () {
 
         swapperMock.nativeToken.returns(wTokenMock.address);
         swapperMock.getAmountsOutByPath.returns(arg => arg[1] * 1e9);
+        iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
 
     });
 
@@ -189,7 +192,21 @@ describe("Charity Pool", function () {
         });
 
         it('should perform the migration', async () => {
+            const charity_cTokenBalance = await cTokenMock.balanceOf(charityPool.address);
+            const charity_aTokenBalance = await aTokenMock.balanceOf(charityPool.address);
+            const charity_tjTokenBalance = await tjTokenMock.balanceOf(charityPool.address);
+
+            console.log(charity_cTokenBalance, charity_aTokenBalance, charity_tjTokenBalance)
+           
             await charityPool.migrate(0, 0);
+
+            const aggregator_aTokenBalance = await aTokenMock.balanceOf(contributionsAggregator.address);
+            const aggregator_cTokenBalance = await cTokenMock.balanceOf(contributionsAggregator.address);
+            const aggregator_tjTokenBalance = await tjTokenMock.balanceOf(contributionsAggregator.address);
+            
+            console.log(aggregator_cTokenBalance, aggregator_aTokenBalance, aggregator_tjTokenBalance)
+            
+
         })
 
     });

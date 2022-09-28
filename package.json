@@ -70,6 +70,7 @@
     "updateGasLimit": "hardhat run scripts/updateGasLimit.js",
     "updateFees": "hardhat run scripts/updateFees.js",
     "updateCharities": "hardhat run scripts/updateCharities.js",
+    "migrate": "hardhat run scripts/migrateToNewAggregator.js",
     "updateCharitiesDefaultConfiguration": "hardhat run  scripts/updateCharitiesDefaultConfig.js",
     "addDonationCurrencies": "hardhat run scripts/addDonationsCurrencies.js",
     "updateDonationCurrencies": "hardhat run scripts/updateCurrencies.js",
