@@ -8,8 +8,6 @@ import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 import "./ConnectorInterface.sol";
 import "../utils/TJErc20.sol";
 
-import "hardhat/console.sol";
-
 contract TraderJoeConnector is ConnectorInterface, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using PRBMathUD60x18 for uint256;

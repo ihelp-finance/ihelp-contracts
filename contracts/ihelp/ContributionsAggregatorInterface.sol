@@ -2,6 +2,30 @@
 pragma solidity ^0.8.9;
 
 interface ContributionsAggregatorInterface {
+
+    /**
+     * @notice Returns the total lender tokens a contributor added
+     * @param _contributorAddress - The address of the contributor
+     * @param _lenderTokenAddress - The address of the lender token
+     * @return The amount of underlying tokens that the contributor deposited
+     */
+    function contributorAccountedBalance(
+        address _contributorAddress,
+        address _lenderTokenAddress
+    ) external returns(uint256);
+
+    /**
+     * @notice Returns the total lender tokens a charity added
+     * @param _contributorAddress - The address of the charity
+     * @param _lenderTokenAddress - The address of the lender token
+     * @return The amount of underlying tokens that the charity deposited
+     */
+    function charityAccountedBalance(
+        address _contributorAddress,
+        address _lenderTokenAddress
+    ) external returns(uint256);
+
+
     /**
      * @notice Deposits underlying tokens in exchange for lender tokens
      * @param _lenderTokenAddress - The address of the lender token

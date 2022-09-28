@@ -33,14 +33,8 @@ describe('AAVE Connector tests', function () {
         const AToken = await smock.mock("ATokenMock");
         const APool = await smock.mock("APoolMock");
 
-        const ProtocolConnector = await smock.mock("AAVEConnector");
-        AAVEConnector = await ProtocolConnector.deploy();
-        await AAVEConnector.initialize();
-
         aTokenPoolMock = await APool.deploy();
-
         uMock = await Mock.deploy("uMock", "uMOK", 18);
-
         aTokenMock = await AToken.deploy(aTokenPoolMock.address);
 
         await aTokenMock.initialize(
@@ -56,6 +50,7 @@ describe('AAVE Connector tests', function () {
 
         await aTokenPoolMock.setAToken(aTokenMock.address);
 
+        const ProtocolConnector = await smock.mock("AAVEConnector");
         AAVEConnector = await ProtocolConnector.deploy();
         await AAVEConnector.initialize();
 

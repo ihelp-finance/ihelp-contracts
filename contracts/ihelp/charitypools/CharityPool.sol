@@ -86,8 +86,6 @@ contract CharityPool is
     mapping(address => mapping(address => uint256)) public balances;
     mapping(address => mapping(address => uint256)) public donationBalances;
 
-
-
     mapping(address => uint256) public accountedBalances;
     mapping(address => uint256) public totalInterestEarned;
     mapping(address => uint256) public currentInterestEarned;
@@ -101,7 +99,6 @@ contract CharityPool is
 
     mapping(address => uint256) public lastTrackedInterest;
     mapping(address => uint256) public claimedInterest;
-
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
         require(newOperator != address(0), "Ownable: new operator is the zero address");
@@ -203,7 +200,7 @@ contract CharityPool is
         address _cTokenAddress,
         uint256 _amount,
         string memory _memo
-    ) public  {
+    ) public {
         require(_amount > 0, "Funding/small-amount");
         // Transfer the tokens into this contract
         require(getUnderlying(_cTokenAddress).transferFrom(msg.sender, address(this), _amount), "Funding/t-fail");
@@ -370,17 +367,18 @@ contract CharityPool is
      */
     function claimInterest() external {
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
-         for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
+        for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
             address lenderTokenAddress = priceFeedProvider.getDonationCurrencyAt(i).lendingAddress;
-    
-            uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(lenderTokenAddress, address(this));
+
+            uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
+                .generatedInterestOfCharity(lenderTokenAddress, address(this));
             uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
             lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
-            
+
             // TODO:SHould we also keep track  claimed interest which fees @matt?
             uint256 _claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
             claimedInterest[lenderTokenAddress] += _claimedInterest;
-            
+
             totalInterestEarned[lenderTokenAddress] += newlyGeneratedInterest;
             trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
         }
@@ -391,7 +389,7 @@ contract CharityPool is
         }
 
         bool success = true;
-        if(address(0) != charityWallet) {
+        if (address(0) != charityWallet) {
             success = IERC20(holdingToken).transfer(charityWallet, amount);
         }
         require(success, "transfer failed");
@@ -460,8 +458,8 @@ contract CharityPool is
         virtual
         override
         returns (uint256)
-    {   
-       return balances[_account][_cTokenAddress];
+    {
+        return balances[_account][_cTokenAddress];
     }
 
     /**
@@ -582,7 +580,10 @@ contract CharityPool is
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {
-            result += CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(cTokens[i].lendingAddress, address(this));
+            result += CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(
+                cTokens[i].lendingAddress,
+                address(this)
+            );
         }
         return result;
     }
@@ -629,6 +630,10 @@ contract CharityPool is
         return contributors.at(index);
     }
 
+    function addContributor(address _account) internal returns (address) {
+        contributors.add(_account);
+    }
+
     receive() external payable {}
 
     function directDonationNative(string memory _memo) public payable {
@@ -652,7 +657,49 @@ contract CharityPool is
         return 4;
     }
 
+    function migrate(uint256 startIndex, uint256 endIndex) external onlyOwner {
+        require(startIndex >= 0, "invalid configuration");
+        require(endIndex <= contributors.length(), "invalid configuration");
+
+        if (startIndex + endIndex > contributors.length()) {
+            endIndex = contributors.length();
+        }
+
+        uint256 numberOfCurrencies = priceFeedProvider.numberOfDonationCurrencies();
+        ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            // Check how much gas was used and break
+            address _contributor = contributors.at(i);
+
+            for (uint256 ii = 0; ii < numberOfCurrencies; ii++) {
+                PriceFeedProviderInterface.DonationCurrency memory currency = priceFeedProvider.getDonationCurrencyAt(
+                    i
+                );
+                address _cTokenAddress = currency.lendingAddress;
+                uint256 _amount = balances[_contributor][_cTokenAddress];
+
+                ConnectorInterface connectorIntance = connector(_cTokenAddress);
+
+                // Allow connector to pull cTokens from this contracts
+                uint256 cTokenAmount = connectorIntance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+                require(IERC20(_cTokenAddress).approve(address(connectorIntance), cTokenAmount), "Funding/approve");
+
+                // Redeem the underlying tokens
+                require(connectorIntance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+
+                uint256 charityBalance = aggregatorInstance.charityAccountedBalance(address(this), _cTokenAddress);
+                // Send tokens to aggregator
+                aggregatorInstance.deposit(_cTokenAddress, address(this), _contributor, _amount);
+
+                // Perform contributions check
+                uint256 contributions = aggregatorInstance.contributorAccountedBalance(_contributor, _cTokenAddress);
+                uint256 newCharityBalance = aggregatorInstance.charityAccountedBalance(address(this), _cTokenAddress);
+
+                assert(contributions == _amount);
+                assert(newCharityBalance - charityBalance == _amount);
+            }
+        }
+    }
+
     uint256[27] private __gap;
-
-
 }
