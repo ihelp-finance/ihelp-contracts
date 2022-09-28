@@ -667,10 +667,17 @@ contract CharityPool is
 
         uint256 numberOfCurrencies = priceFeedProvider.numberOfDonationCurrencies();
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
+
+        // We iterate over a range of contributors
         for (uint256 i = startIndex; i < endIndex; i++) {
             // Check how much gas was used and break
             address _contributor = contributors.at(i);
 
+
+            // We for each  lender currency we need to
+            //  - withdraw the amount that this charity deposited in the name of the user ( --> balances[contributor][cToken])
+            //  - deposit the wihdrawn tokens to the new aggregator in the name of the user
+            //  - forward the remaning interest to the new aggregator
             for (uint256 ii = 0; ii < numberOfCurrencies; ii++) {
                 PriceFeedProviderInterface.DonationCurrency memory currency = priceFeedProvider.getDonationCurrencyAt(
                     i
@@ -697,6 +704,25 @@ contract CharityPool is
 
                 assert(contributions == _amount);
                 assert(newCharityBalance - charityBalance == _amount);
+
+                // redeem remaining interest and sent it to the aggregator
+                uint256 remainingInterestTokens = connectorIntance.accrueAndGetBalance(_cTokenAddress, address(this));
+
+                if(remainingInterestTokens > 0) {
+                
+                    address tokenaddress =  address(getUnderlying(_cTokenAddress));
+                    uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(tokenaddress, holdingToken, remainingInterestTokens);
+
+                    // swap these tokens to the holding tokens
+                    if(tokenaddress != holdingToken) {
+                        uint256 minAmount = (holdingTokenAmount * 95) / 100;
+
+                        require(IERC20(tokenaddress).approve(swapperPool, _amount), "Funding/staking swapper approve");
+                        remainingInterestTokens = swapper.swap(tokenaddress, holdingToken, _amount, minAmount, address(this));
+                    }
+
+                    aggregatorInstance.injectInterest(_cTokenAddress, remainingInterestTokens);
+                }
             }
         }
     }

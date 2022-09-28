@@ -94,7 +94,6 @@ contract ContributionsAggregator is
         updateIHelpReward(_contributorAddress)
         updateContributorGeneratedInterest(_lenderTokenAddress, _contributorAddress)
         updateCharityGeneratedInterest(_lenderTokenAddress, _charityAddress)
-
     {
         _deposit(_lenderTokenAddress, _charityAddress, _contributorAddress, _amount);
     }
@@ -238,7 +237,7 @@ contract ContributionsAggregator is
             if (tokenaddress != holdingToken()) {
                 // ensure minimum of 95% redeemed
                 uint256 minAmount = (amount * 95) / 100;
-              
+
                 minAmount = SwapperUtils.toScale(
                     underlyingToken.decimals(),
                     IERC20(holdingToken()).decimals(),
@@ -279,6 +278,19 @@ contract ContributionsAggregator is
         distributeRewards(_lenderTokenAddress);
         trackContributorInterest(_lenderTokenAddress, _interest);
         trackCharityInterest(_lenderTokenAddress, _interest);
+    }
+
+    /**
+     *  Used to strategicaly inject interest
+     *  @param _lenderTokenAddress - The interest must be associated with a lender token
+     *  @param _interest - The interest amount in holding tokens
+     */
+    function injectInterest(address _lenderTokenAddress, uint256 _interest) public {
+        require(priceFeedProvider().hasDonationCurrency(_lenderTokenAddress), "not-found/lender");
+        require(IERC20(holdingToken()).transferFrom(msg.sender, address(this), _interest), "Funding/transfer");
+
+        (uint256 devFeeShare, uint256 stakeFeeShare) = distributeInterestFees(_interest);
+        addRewards(_lenderTokenAddress, _interest, (devFeeShare + stakeFeeShare));
     }
 
     function distributeInterestFees(uint256 _amount) internal returns (uint256, uint256) {
@@ -388,7 +400,10 @@ contract ContributionsAggregator is
         uint256 usdValue;
         for (uint256 i = 0; i < priceFeedProvider().numberOfDonationCurrencies(); i++) {
             address lenderTokenAddress = priceFeedProvider().getDonationCurrencyAt(i).lendingAddress;
-            usdValue += usdValueoOfUnderlying(lenderTokenAddress, _totalRewards[lenderTokenAddress] + _totalFeesCollected[lenderTokenAddress]);
+            usdValue += usdValueoOfUnderlying(
+                lenderTokenAddress,
+                _totalRewards[lenderTokenAddress] + _totalFeesCollected[lenderTokenAddress]
+            );
         }
         return usdValue;
     }

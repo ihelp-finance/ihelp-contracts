@@ -115,4 +115,11 @@ interface ContributionsAggregatorInterface {
      * @return The redeemed interest expressed in the form of dollars
      */
     function totalInterestCollected() external view  returns (uint256);
+
+    /**
+     *  Used to strategicaly inject interest
+     *  @param _lenderTokenAddress - The interest must be associated with a lender token
+     *  @param _interest - The interest amount in holding tokens
+     */
+    function injectInterest(address _lenderTokenAddress, uint256 _interest) external ;
 }
