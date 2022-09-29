@@ -29,7 +29,7 @@ contract Analytics is IAnalytics {
         return contributionsAggregator(_iHelp).totalInterestCollected();
     }
 
-    /** ^ TODO: Ask Mat is this the same.
+    /**
      * Calaculates the total generated interest for a all users
      */
     function getTotalUserGeneratedInterest(iHelpTokenInterface _iHelp) external view override returns (uint256) {

@@ -177,7 +177,6 @@ contract ContributionsAggregator is
         require(connectorInstance.redeemUnderlying(_lenderTokenAddress, _amount) == 0, "Funding/supply");
         uint256 balanceNow = underlyingToken.balanceOf(address(this));
 
-        // Perform a sanity check; TODO: Discuss this
         assert(balanceNow - balanceBefore == _amount);
 
         require(underlyingToken.transfer(_destination, _amount), "Funding/underlying-transfer-fail");

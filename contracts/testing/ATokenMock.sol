@@ -30,7 +30,8 @@ contract ATokenMock is AToken {
         uint256 index
     ) external virtual override onlyPool {
         // burn
-        _userState[receiverOfUnderlying].balance -=  uint128(amount.rayDiv(1));
+        // console.log(" _userState[receiverOfUnderlying].balance",  _userState[receiverOfUnderlying].balance);
+        _userState[from].balance -=  uint128(amount.rayDiv(1));
         IERC20(_underlyingAsset).transfer(receiverOfUnderlying, amount);
     }
 

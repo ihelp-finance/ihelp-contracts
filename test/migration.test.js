@@ -156,14 +156,14 @@ describe("Charity Pool", function () {
             connector: TraderJoeConnector.address
 
         },
-            //{
-            //     provider: "AAVEProvider",
-            //     lendingAddress: aTokenMock.address,
-            //     currency: "AAVETokenMock",
-            //     underlyingToken: aUnderlyingTokenMock.address,
-            //     priceFeed: aggregator.address,
-            //     connector: AAVEConnector.address
-            // }
+        {
+            provider: "AAVEProvider",
+            lendingAddress: aTokenMock.address,
+            currency: "AAVETokenMock",
+            underlyingToken: aUnderlyingTokenMock.address,
+            priceFeed: aggregator.address,
+            connector: AAVEConnector.address
+        }
         ]);
 
         swapperMock.nativeToken.returns(wTokenMock.address);
@@ -173,10 +173,11 @@ describe("Charity Pool", function () {
     });
 
     describe("Test Migration", function () {
+        const AMOUNT = 1000;
         const distributeTokens = async (token, uToken, to) => {
-            await uToken.mint(to.address, parseEther('100000'));
-            await uToken.connect(to).increaseAllowance(charityPool.address, parseEther('100000'));
-            await charityPool.connect(to).__plainSimpleDeposit_dont_use_(token.address, 82561);
+            await uToken.mint(to.address, AMOUNT);
+            await uToken.connect(to).increaseAllowance(charityPool.address, AMOUNT);
+            await charityPool.connect(to).__plainSimpleDeposit_dont_use_(token.address, AMOUNT);
         }
 
         beforeEach(async function () {
@@ -184,33 +185,171 @@ describe("Charity Pool", function () {
             await distributeTokens(cTokenMock, cTokenUnderlyingMock, addr1);
             await distributeTokens(cTokenMock, cTokenUnderlyingMock, addr2);
 
-            // await distributeTokens(aTokenMock, aUnderlyingTokenMock, owner);
-            // await distributeTokens(aTokenMock, aUnderlyingTokenMock, addr1);
-            // await distributeTokens(aTokenMock, aUnderlyingTokenMock, addr2);
+            await distributeTokens(aTokenMock, aUnderlyingTokenMock, owner);
+            await distributeTokens(aTokenMock, aUnderlyingTokenMock, addr1);
+            await distributeTokens(aTokenMock, aUnderlyingTokenMock, addr2);
 
             await distributeTokens(tjTokenMock, tjTokenUnderlyingMock, owner);
             await distributeTokens(tjTokenMock, tjTokenUnderlyingMock, addr1);
             await distributeTokens(tjTokenMock, tjTokenUnderlyingMock, addr2);
         });
 
-        it('should perform the migration', async () => {
-            const charity_cTokenBalance = await cTokenMock.balanceOf(charityPool.address);
-            // const charity_aTokenBalance = await aTokenMock.balanceOf(charityPool.address);
-            const charity_tjTokenBalance = await tjTokenMock.balanceOf(charityPool.address);
 
-            console.log(charity_cTokenBalance, charity_tjTokenBalance)
+        describe('Migration Cases', () => {
+            it('should perform the migration', async () => {
+                const charity_cTokenBalance = await cTokenMock.balanceOf(charityPool.address);
+                const charity_aTokenBalance = await aTokenMock.balanceOf(charityPool.address);
+                const charity_tjTokenBalance = await tjTokenMock.balanceOf(charityPool.address);
 
-            await charityPool.migrate(0, 0);
+                console.log(charity_cTokenBalance, charity_tjTokenBalance)
 
-            const aggregator_cTokenBalance = await cTokenMock.balanceOf(contributionsAggregator.address);
-            // const aggregator_aTokenBalance = await aTokenMock.balanceOf(contributionsAggregator.address);
-            const aggregator_tjTokenBalance = await tjTokenMock.balanceOf(contributionsAggregator.address);
+                await charityPool.migrate(0, 0);
 
-            expect(aggregator_cTokenBalance).to.equal(charity_cTokenBalance);
-            expect(aggregator_tjTokenBalance).to.equal(charity_tjTokenBalance);
+                const aggregator_cTokenBalance = await cTokenMock.balanceOf(contributionsAggregator.address);
+                const aggregator_aTokenBalance = await aTokenMock.balanceOf(contributionsAggregator.address);
+                const aggregator_tjTokenBalance = await tjTokenMock.balanceOf(contributionsAggregator.address);
 
+                expect(aggregator_cTokenBalance).to.equal(charity_cTokenBalance);
+                expect(aggregator_tjTokenBalance).to.equal(charity_tjTokenBalance);
+                expect(aggregator_aTokenBalance).to.equal(charity_aTokenBalance);
+            })
+
+            it('should set the correct deposited values ', async () => {
+                const charity_cTokenBalance = await cTokenMock.balanceOfUnderlying(charityPool.address);
+                const charity_aTokenBalance = await aTokenMock.balanceOf(charityPool.address);
+                const charity_tjTokenBalance = await tjTokenMock.balanceOfUnderlying(charityPool.address);
+
+                await charityPool.migrate(0, 0);
+
+                const deposited_cTokenBalance = await contributionsAggregator.deposited(cTokenMock.address);
+                const deposited_aTokenBalance = await contributionsAggregator.deposited(aTokenMock.address);
+                const deposited_tjTokenBalance = await contributionsAggregator.deposited(tjTokenMock.address);
+
+
+                expect(deposited_cTokenBalance).to.equal(charity_cTokenBalance);
+                expect(deposited_aTokenBalance).to.equal(charity_aTokenBalance);
+                expect(deposited_tjTokenBalance).to.equal(charity_tjTokenBalance);
+            })
+
+            it('should set the correct charity accountedBalances ', async () => {
+                const charity_cTokenBalance = await cTokenMock.balanceOfUnderlying(charityPool.address);
+                const charity_aTokenBalance = await aTokenMock.balanceOf(charityPool.address);
+                const charity_tjTokenBalance = await tjTokenMock.balanceOfUnderlying(charityPool.address);
+                await charityPool.migrate(0, 0);
+
+                const charity_cTokenAccountedBalance = await contributionsAggregator.charityAccountedBalance(charityPool.address, cTokenMock.address);
+                const charity_aTokenAccountedBalance = await contributionsAggregator.charityAccountedBalance(charityPool.address, aTokenMock.address);
+                const charity_tjTokenAccountedBalance = await contributionsAggregator.charityAccountedBalance(charityPool.address, tjTokenMock.address);
+
+                expect(charity_cTokenAccountedBalance).to.equal(charity_cTokenBalance);
+                expect(charity_aTokenAccountedBalance).to.equal(charity_aTokenBalance);
+                expect(charity_tjTokenAccountedBalance).to.equal(charity_tjTokenBalance);
+            })
+
+
+            it('should set the correct contributor accountedBalances', async () => {
+                await charityPool.migrate(0, 0);
+
+                const owner_cTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(owner.address, cTokenMock.address);
+                const owner_aTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(owner.address, aTokenMock.address);
+                const owner_tjTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(owner.address, tjTokenMock.address);
+
+                const addr1_cTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr1.address, cTokenMock.address);
+                const addr1_aTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr1.address, aTokenMock.address);
+                const addr1_tjTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr1.address, tjTokenMock.address);
+
+                const addr2_cTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr2.address, cTokenMock.address);
+                const addr2_aTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr2.address, aTokenMock.address);
+                const addr2_tjTokenAccountedBalance = await contributionsAggregator.contributorAccountedBalance(addr2.address, tjTokenMock.address);
+
+                expect(owner_cTokenAccountedBalance).to.equal(AMOUNT);
+                expect(owner_aTokenAccountedBalance).to.equal(AMOUNT);
+                expect(owner_tjTokenAccountedBalance).to.equal(AMOUNT);
+
+                expect(addr1_cTokenAccountedBalance).to.equal(AMOUNT);
+                expect(addr1_aTokenAccountedBalance).to.equal(AMOUNT);
+                expect(addr1_tjTokenAccountedBalance).to.equal(AMOUNT);
+
+                expect(addr2_cTokenAccountedBalance).to.equal(AMOUNT);
+                expect(addr2_aTokenAccountedBalance).to.equal(AMOUNT);
+                expect(addr2_tjTokenAccountedBalance).to.equal(AMOUNT);
+            })
+
+
+            it('should migrate any leftover interest', async () => {
+                iHelpMock.getFees.returns([100, 100, 800]);
+                iHelpMock.underlyingToken.returns(cTokenUnderlyingMock.address);
+                iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
+
+                await cTokenMock.accrueCustom(1200);
+
+                await charityPool.migrate(0, 0);
+
+                expect(await contributionsAggregator.totalRewards(cTokenMock.address)).to.equal(960, "invalid total charity reward amount");
+
+                expect(await contributionsAggregator.claimableRewardOf(charityPool.address, cTokenMock.address)).to.equal(960);
+                expect(await contributionsAggregator.generatedInterestOfCharity(cTokenMock.address, charityPool.address)).to.equal(1200, "invalid total charity reward amount");
+                expect(await contributionsAggregator.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(400, "invalid total charity reward amount")
+            })
 
         })
 
-    });
+        describe('Post Migration Cases', () => {
+
+            it('should let contributors withdraw', async () => {
+                await charityPool.migrate(0, 0);
+
+                await charityPool.withdrawAll(owner.address);
+
+                const owner_cUnderlyingBalance = await cTokenUnderlyingMock.balanceOf(owner.address)
+                const owner_aUnderlyingBalance = await aUnderlyingTokenMock.balanceOf(owner.address)
+                const owner_tjUnderlyingBalance = await tjTokenUnderlyingMock.balanceOf(owner.address)
+
+                expect(owner_cUnderlyingBalance).to.equal(AMOUNT);
+                expect(owner_aUnderlyingBalance).to.equal(AMOUNT);
+                expect(owner_tjUnderlyingBalance).to.equal(AMOUNT);
+            })
+
+            it('should continue acumulating interest', async () => {
+                iHelpMock.getFees.returns([100, 100, 800]);
+                iHelpMock.underlyingToken.returns(cTokenUnderlyingMock.address);
+                iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
+                await charityPool.migrate(0, 0);
+
+                await cTokenMock.accrueCustom(1000);
+                await contributionsAggregator.redeemInterest(cTokenMock.address);
+
+                expect(await contributionsAggregator.totalRewards(cTokenMock.address)).to.equal(800, "invalid total charity reward amount");
+
+                expect(await contributionsAggregator.generatedInterestOfCharity(cTokenMock.address, charityPool.address)).to.equal(999, "invalid total charity reward amount");
+                expect(await contributionsAggregator.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(333, "invalid total charity reward amount")
+            })
+
+            it('should allow charity claims', async () => {
+                iHelpMock.getFees.returns([100, 100, 800]);
+                iHelpMock.underlyingToken.returns(cTokenUnderlyingMock.address);
+                iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
+                await charityPool.migrate(0, 0);
+
+                await charityPool.setVariable("claimedInterest", {
+                    [cTokenMock.address]: 90,
+                })
+
+                await charityPool.setVariable("totalInterestEarned", {
+                    [cTokenMock.address]: 100,
+                })
+
+                await cTokenMock.accrueCustom(1200);
+                await contributionsAggregator.redeemInterest(cTokenMock.address);
+
+                expect(await contributionsAggregator.claimableRewardOf(charityPool.address, cTokenMock.address)).to.equal(960);
+                await expect(charityPool.claimInterest()).
+                    to.emit(cTokenUnderlyingMock, "Transfer").withArgs(contributionsAggregator.address, charityPool.address, 960);
+
+                expect(await charityPool.claimedInterest(cTokenMock.address)).to.equal(1050);
+                expect(await charityPool.totalInterestEarned(cTokenMock.address)).to.equal(1300);
+            })
+        })
+    })
+
 });

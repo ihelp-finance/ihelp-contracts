@@ -371,13 +371,18 @@ contract CharityPool is
 
             uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
                 .generatedInterestOfCharity(lenderTokenAddress, address(this));
+
             uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
             lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
 
             uint256 _claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
+
+            // We keep track of the clamied interest (after tax)
             claimedInterest[lenderTokenAddress] += _claimedInterest;
 
+            // We keep track of the totalInterestEarned (before bax)
             totalInterestEarned[lenderTokenAddress] += newlyGeneratedInterest;
+           
             trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
         }
 
@@ -669,15 +674,14 @@ contract CharityPool is
                 address _cTokenAddress = currency.lendingAddress;
                 uint256 _amount = balances[_contributor][_cTokenAddress];
 
-
-                ConnectorInterface connectorIntance = connector(_cTokenAddress);
+                ConnectorInterface connectorInstance = connector(_cTokenAddress);
 
                 // Allow connector to pull cTokens from this contracts
-                uint256 cTokenAmount = connectorIntance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
-                require(IERC20(_cTokenAddress).approve(address(connectorIntance), cTokenAmount), "Funding/approve");
+                uint256 cTokenAmount = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+                require(IERC20(_cTokenAddress).approve(address(connectorInstance), cTokenAmount), "Funding/approve");
 
                 // Redeem the underlying tokens
-                require(connectorIntance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+                require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
               
                 uint256 charityBalance = aggregatorInstance.charityAccountedBalance(address(this), _cTokenAddress);
 
@@ -685,6 +689,8 @@ contract CharityPool is
 
                 // Send tokens to aggregator
                 require(IERC20(underlyingTokenAddress).approve(address(aggregatorInstance), _amount), "Funding/approve");
+
+                // console.log("DEPOSITING", _amount,_cTokenAddress, _contributor);
                 aggregatorInstance.deposit(_cTokenAddress, address(this), _contributor, _amount);
 
                 // Perform contributions check
@@ -695,13 +701,22 @@ contract CharityPool is
                 assert(newCharityBalance - charityBalance == _amount);
 
                 // redeem remaining interest and sent it to the aggregator
-                uint256 remainingInterestTokens = connectorIntance.accrueAndGetBalance(_cTokenAddress, address(this));
+                _amount = connectorInstance.accrueAndGetBalance(_cTokenAddress, address(this));
 
-                if (remainingInterestTokens > 0) {
+                if (_amount > 0) {
+                console.log("remainingInterestTokens", _amount, _cTokenAddress);
+
+                    // Allow connector to pull cTokens from this contracts
+                    uint256 rInterestcTokenAmount = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+                    require(IERC20(_cTokenAddress).approve(address(connectorInstance), rInterestcTokenAmount), "Funding/approve");
+
+                    // Redeem the remaning underlying tokens
+                    require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+
                     uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(
                         underlyingTokenAddress,
                         holdingToken,
-                        remainingInterestTokens
+                        _amount
                     );
 
                     // swap these tokens to the holding tokens
@@ -709,7 +724,7 @@ contract CharityPool is
                         uint256 minAmount = (holdingTokenAmount * 95) / 100;
 
                         require(IERC20(underlyingTokenAddress).approve(swapperPool, _amount), "Funding/staking swapper approve");
-                        remainingInterestTokens = swapper.swap(
+                        _amount = swapper.swap(
                             underlyingTokenAddress,
                             holdingToken,
                             _amount,
@@ -718,7 +733,7 @@ contract CharityPool is
                         );
                     }
 
-                    aggregatorInstance.injectInterest(_cTokenAddress, remainingInterestTokens);
+                    aggregatorInstance.injectInterest(_cTokenAddress, _amount);
                 }
             }
         }

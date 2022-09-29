@@ -24,11 +24,11 @@ contract TJTokenMock is ERC20Upgradeable {
 
     function mint(uint256 _pie) external returns (uint256) {
         uint256 exchangeRate = exchangeRateCurrent();
-        console.log("exchangeRate", exchangeRate);
-        console.log("_pie", _pie);
+        // console.log("exchangeRate", exchangeRate);
+        // console.log("_pie", _pie);
 
         uint256 newCTokens = _pie.div(exchangeRate);
-        console.log("newTokens", newCTokens);
+        // console.log("newTokens", newCTokens);
         _mint(msg.sender, newCTokens);
         require(underlying.transferFrom(msg.sender, address(this), _pie), "could not transfer tokens");
         return 0;
@@ -40,11 +40,11 @@ contract TJTokenMock is ERC20Upgradeable {
 
     function redeemUnderlying(uint256 requestedAmount) external returns (uint256) {
         uint256 exchangeRate = exchangeRateCurrent();
-        console.log("exchangeRate", exchangeRate);
-        console.log("cTokens", requestedAmount.div(exchangeRate));
+        // console.log("exchangeRate", exchangeRate);
+        // console.log("cTokens", requestedAmount.div(exchangeRate));
 
         uint256 cTokens = requestedAmount.div(exchangeRate);
-        console.log("burnTokens", cTokens, requestedAmount);
+        // console.log("burnTokens", cTokens, requestedAmount);
 
         _burn(msg.sender, cTokens);
         require(underlying.transfer(msg.sender, requestedAmount), "could not transfer tokens");
@@ -100,7 +100,7 @@ contract TJTokenMock is ERC20Upgradeable {
         uint8 _fromScale,
         uint8 _toScale
     ) internal view returns (uint256) {
-        console.log("DECIMALS", _toScale, _fromScale);
+        // console.log("DECIMALS", _toScale, _fromScale);
         if (_toScale < _fromScale) {
             amount = amount / safepow(10, _fromScale - _toScale);
         } else if (_toScale > _fromScale) {
