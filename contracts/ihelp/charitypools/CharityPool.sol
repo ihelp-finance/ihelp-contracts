@@ -282,7 +282,6 @@ contract CharityPool is
         }
     }
 
-    //TODO: What happens to the direct dibations
     function directDonation(
         IERC20 _donationToken,
         uint256 _amount,
@@ -375,7 +374,6 @@ contract CharityPool is
             uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
             lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
 
-            // TODO:SHould we also keep track  claimed interest which fees @matt?
             uint256 _claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
             claimedInterest[lenderTokenAddress] += _claimedInterest;
 
@@ -557,23 +555,6 @@ contract CharityPool is
         return result;
     }
 
-    function newTotalInterestEarnedUSD() public view returns (uint256) {
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
-        return newTotalInterestEarnedUSDByCurrencies(cTokens);
-    }
-
-    function newTotalInterestEarnedUSDByCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens)
-        public
-        view
-        returns (uint256)
-    {
-        uint256 result;
-        for (uint256 i = 0; i < cTokens.length; i++) {
-            address cTokenAddress = cTokens[i].lendingAddress;
-            result += convertToUsd(cTokenAddress, newTotalInterestEarned[cTokenAddress]);
-        }
-        return result;
-    }
 
     function totalInterestEarnedUSD() public view returns (uint256) {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
