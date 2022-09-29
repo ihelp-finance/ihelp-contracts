@@ -11,7 +11,7 @@ const run = async () => {
 
 
     // TODO: This needs to be tested
-    const batchMigrate = (batchSize) => async (charityAddress, destinationWallet, confirmations = 1) => {
+    const batchMigrate = (batchSize) => async (charityAddress, confirmations = 1) => {
         const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
         
         const numberOfContributors = await charity.numberOfContributors();
@@ -33,7 +33,7 @@ const run = async () => {
     const migrate = batchMigrate(BATCH_SIZE);
     for (const charityAddress of charities) {
         try {
-            await migrate(depositWallet, charityAddress); 
+            await migrate(charityAddress); 
         } catch (error) {
             console.log(error)
         }
