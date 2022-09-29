@@ -700,41 +700,41 @@ contract CharityPool is
                 assert(contributions == _amount);
                 assert(newCharityBalance - charityBalance == _amount);
 
-                // redeem remaining interest and sent it to the aggregator
-                _amount = connectorInstance.accrueAndGetBalance(_cTokenAddress, address(this));
+                // // redeem remaining interest and sent it to the aggregator
+                // _amount = connectorInstance.accrueAndGetBalance(_cTokenAddress, address(this));
 
-                if (_amount > 0) {
-                console.log("remainingInterestTokens", _amount, _cTokenAddress);
+                // if (_amount > 0) {
+                // console.log("remainingInterestTokens", _amount, _cTokenAddress);
 
-                    // Allow connector to pull cTokens from this contracts
-                    uint256 rInterestcTokenAmount = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
-                    require(IERC20(_cTokenAddress).approve(address(connectorInstance), rInterestcTokenAmount), "Funding/approve");
+                //     // Allow connector to pull cTokens from this contracts
+                //     uint256 rInterestcTokenAmount = connectorInstance.cTokenValueOfUnderlying(_cTokenAddress, _amount);
+                //     require(IERC20(_cTokenAddress).approve(address(connectorInstance), rInterestcTokenAmount), "Funding/approve");
 
-                    // Redeem the remaning underlying tokens
-                    require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
+                //     // Redeem the remaning underlying tokens
+                //     require(connectorInstance.redeemUnderlying(_cTokenAddress, _amount) == 0, "Funding/redeem");
 
-                    uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(
-                        underlyingTokenAddress,
-                        holdingToken,
-                        _amount
-                    );
+                //     uint256 holdingTokenAmount = swapper.getNativeRoutedTokenPrice(
+                //         underlyingTokenAddress,
+                //         holdingToken,
+                //         _amount
+                //     );
 
-                    // swap these tokens to the holding tokens
-                    if (underlyingTokenAddress != holdingToken) {
-                        uint256 minAmount = (holdingTokenAmount * 95) / 100;
+                //     // swap these tokens to the holding tokens
+                //     if (underlyingTokenAddress != holdingToken) {
+                //         uint256 minAmount = (holdingTokenAmount * 95) / 100;
 
-                        require(IERC20(underlyingTokenAddress).approve(swapperPool, _amount), "Funding/staking swapper approve");
-                        _amount = swapper.swap(
-                            underlyingTokenAddress,
-                            holdingToken,
-                            _amount,
-                            minAmount,
-                            address(this)
-                        );
-                    }
+                //         require(IERC20(underlyingTokenAddress).approve(swapperPool, _amount), "Funding/staking swapper approve");
+                //         _amount = swapper.swap(
+                //             underlyingTokenAddress,
+                //             holdingToken,
+                //             _amount,
+                //             minAmount,
+                //             address(this)
+                //         );
+                //     }
 
-                    aggregatorInstance.injectInterest(_cTokenAddress, _amount);
-                }
+                //     aggregatorInstance.injectInterest(_cTokenAddress, _amount);
+                // }
             }
         }
     }
