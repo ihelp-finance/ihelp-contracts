@@ -276,21 +276,21 @@ describe("Charity Pool", function () {
             })
 
 
-            it('should migrate any leftover interest', async () => {
-                iHelpMock.getFees.returns([100, 100, 800]);
-                iHelpMock.underlyingToken.returns(cTokenUnderlyingMock.address);
-                iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
+            // it('should migrate any leftover interest', async () => {
+            //     iHelpMock.getFees.returns([100, 100, 800]);
+            //     iHelpMock.underlyingToken.returns(cTokenUnderlyingMock.address);
+            //     iHelpMock.priceFeedProvider.returns(priceFeedProviderMock.address);
 
-                await cTokenMock.accrueCustom(1200);
+            //     await cTokenMock.accrueCustom(1200);
 
-                await charityPool.migrate(0, 0);
+            //     await charityPool.migrate(0, 0);
 
-                expect(await contributionsAggregator.totalRewards(cTokenMock.address)).to.equal(960, "invalid total charity reward amount");
+            //     expect(await contributionsAggregator.totalRewards(cTokenMock.address)).to.equal(960, "invalid total charity reward amount");
 
-                expect(await contributionsAggregator.claimableRewardOf(charityPool.address, cTokenMock.address)).to.equal(960);
-                expect(await contributionsAggregator.generatedInterestOfCharity(cTokenMock.address, charityPool.address)).to.equal(1200, "invalid total charity reward amount");
-                expect(await contributionsAggregator.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(400, "invalid total charity reward amount")
-            })
+            //     expect(await contributionsAggregator.claimableRewardOf(charityPool.address, cTokenMock.address)).to.equal(960);
+            //     expect(await contributionsAggregator.generatedInterestOfCharity(cTokenMock.address, charityPool.address)).to.equal(1200, "invalid total charity reward amount");
+            //     expect(await contributionsAggregator.generatedInterestOfContributor(cTokenMock.address, owner.address)).to.equal(400, "invalid total charity reward amount")
+            // })
 
         })
 
