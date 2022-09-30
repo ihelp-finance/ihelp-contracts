@@ -25,7 +25,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   
   
   let nativeTokenAddress = null;
-  if (process.env.SWAPPER_ADDRESSES == 'traderjoe') {
+  if ( (process.env.SWAPPER_ADDRESSES || 'traderjoe') == 'traderjoe') {
     
     const abi = [
       {
