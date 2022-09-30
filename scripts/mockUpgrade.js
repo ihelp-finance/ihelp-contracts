@@ -12,7 +12,13 @@ if (process.argv.length < 2) {
   process.exit(1)
 }
 
-const upgradeBatchFile = fs.readFileSync(process.argv[2], 'utf8')
+let upgradeBatchFile;
+try {
+  upgradeBatchFile = fs.readFileSync(process.argv[2], 'utf8')
+}catch(e){
+  console.log('no update batch to process...')
+  process.exit(0)
+}
 
 const upgradeBatch = JSON.parse(upgradeBatchFile)
 

@@ -308,24 +308,27 @@ const validate = async () => {
     
     const helpunclaimed = helpunclaimed1 + helpunclaimed2;
 
-    await charityPool1.claimInterest();
+    await charityPool1.incrementTotalInterest();
     const c1interestTx = await charityPool1.totalInterestEarnedUSD();
     const c1interest = fromBigNumber(c1interestTx);
 
-    await charityPool2.claimInterest();
+    await charityPool2.incrementTotalInterest();
     const c2interestTx = await charityPool2.totalInterestEarnedUSD();
     const c2interest = fromBigNumber(c2interestTx);
 
-    await charityPool3.claimInterest();
+    await charityPool3.incrementTotalInterest();
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
+    await charityPool1.claimInterest();
     const c1walletTx = await charityPool1.claimableInterest();
     const c1wallet = fromBigNumber(c1walletTx);
 
+    await charityPool2.claimInterest();
     const c2walletTx = await charityPool2.claimableInterest();
     const c2wallet = fromBigNumber(c2walletTx);
 
+    await charityPool3.claimInterest();
     const c3walletTx = await charityPool3.claimableInterest();
     const c3wallet = fromBigNumber(c3walletTx);
 
@@ -403,12 +406,6 @@ const validate = async () => {
   };
 
   const rewardStep = async () => {
-
-    // take the staking pool dai amount and distribute this across stakers
-    // const stakepoolTx = await dai.balanceOf(stakingPool);
-    // approve the staking pool address to send from xhelp contract
-    // let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
-    // await rewardApprove.wait();
     await xhelp.distributeRewards();
   };
 

@@ -75,13 +75,11 @@ const getBalanceDetails = async(charityInstance,configurations) => {
                 
                 let balances = await getBalances(cToken,charityInstance,lender,currency,decimals);
 
-                console.log('   ',lender,token,'lenderbalance',balances.cTokenBalance)
-                
+                console.log('   ',lender,token,'lenderbalance',balances.cTokenBalance)                
 
                 sumLenderBalances+=balances.cTokenBalance;
 
-
-                const CORRECT_BALANCES = true;
+                const CORRECT_BALANCES = false;
 
                 if (CORRECT_BALANCES) {
                     const currentInterestEarned = await charityInstance.currentInterestEarned(currency.lendingAddress);
@@ -101,12 +99,12 @@ const getBalanceDetails = async(charityInstance,configurations) => {
 
                         const tokenContract = await hardhat.ethers.getContractAt("ERC20", currency.underlyingToken);
 
-                        console.log('     signer balance:',(await tokenContract.balanceOf(signer._address))/Math.pow(10,decimals));
+                        // console.log('     signer balance:',(await tokenContract.balanceOf(signer._address))/Math.pow(10,decimals));
     
                         let approve = await tokenContract.approve(charityInstance.address,difference.toString());
                         await approve.wait();
     
-                        await charityInstance.lenderCorrection(currency.lendingAddress,difference.toString());
+                        // await charityInstance.lenderCorrection(currency.lendingAddress,difference.toString());
     
                         balances = await getBalances(cToken,charityInstance,lender,currency,decimals);
                         console.log('    ',lender,token,'new lenderbalance',balances.cTokenBalance)
