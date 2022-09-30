@@ -19,7 +19,7 @@ contract Analytics is IAnalytics {
      * Calaculates the generated interest for a given charity
      */
     function generatedInterest(address _charityPool) external view override returns (uint256) {
-        return CharityPoolInterface(_charityPool).calculateTotalInterestEarned();
+        return CharityPoolInterface(_charityPool).totalInterestEarnedUSD();
     }
 
     /**
