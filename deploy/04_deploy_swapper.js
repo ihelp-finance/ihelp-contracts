@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const isTestEnvironment = chainId === 31337 || chainId === 1337 || chainId === 43113;
   const deployMockTokens = process.env.REACT_APP_TEST_TOKENS || 'true';
 
-  const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
+  const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'traderjoe', chainId);
   const swapv2RouterAddress = swapperAddresses['router'];
 
   const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.TEST_FORK);
