@@ -631,23 +631,12 @@ contract CharityPool is
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         uint256 result;
-        for (uint256 i = 0; i < cTokens.length; i++) {
-            result += convertToUsd(cTokens[i].lendingAddress,totalInterestEarned[cTokens[i].lendingAddress]);
+        for (uint256 i = 0; i < cTokens.length; i++) {            
+            result += totalInterestEarned[cTokens[i].lendingAddress];
             // CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(
             //     cTokens[i].lendingAddress,
             //     address(this)
             // );
-        }
-        return result;
-    }
-
-    function calculateTotalInterestEarned() public view returns (uint256) {
-        uint256 result;
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
-
-        for (uint256 i = 0; i < cTokens.length; i++) {
-            address cTokenAddress = cTokens[i].lendingAddress;
-            result += totalInterestEarned[cTokenAddress];
         }
         return result;
     }
