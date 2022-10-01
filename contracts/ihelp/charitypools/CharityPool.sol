@@ -480,7 +480,6 @@ contract CharityPool is
         Claims the interest for charities that do not have an onchain wallet
      */
     function collectOffChainInterest(address _destAddr, address _depositCurrency) external onlyOperatorOrOwner {
-        // TODO: Ask Matt how do we handle this
         // uint256 amount = IERC20(holdingToken).balanceOf(address(this));
         // require(amount > 0, "OffChain/nothing-to-claim");
         // uint256 claimAmount = amount;
@@ -754,14 +753,14 @@ contract CharityPool is
                     if (cTokenAmount > 0) {
 
                         uint256 gasUsed = startGas - gasleft();
-                        console.log('gasUsed',gasUsed);
+                        // console.log('gasUsed',gasUsed);
                         if (gasUsed > 6_500_000) {
                             return;
                         }
 
                         uint256 charityBalance = aggregatorInstance.charityAccountedBalance(address(this), _cTokenAddress);
                         if (charityBalance == accountedBalances[_cTokenAddress]) {
-                            console.log('already migrated lender...');
+                            // console.log('already migrated lender...');
                             continue;
                         }
 
@@ -775,7 +774,7 @@ contract CharityPool is
                         // Send tokens to aggregator
                         require(IERC20(underlyingTokenAddress).approve(address(aggregatorInstance), _amount), "Funding/approve");
 
-                        console.log("DEPOSITING", _amount, _cTokenAddress, _contributor);
+                        // console.log("DEPOSITING", _amount, _cTokenAddress, _contributor);
                         aggregatorInstance.deposit(_cTokenAddress, address(this), _contributor, _amount);
 
                         // Perform contributions check
