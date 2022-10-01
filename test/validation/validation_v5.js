@@ -408,8 +408,13 @@ const validate = async () => {
 
 
   const upkeepStep = async () => {
-    await ihelp.upkeep();
-    // await ihelp.incrementTotalInterest();
+
+    const upkeepTx = await ihelp.upkeep();
+    await upkeepTx.wait(1);
+
+    const incrementTx = await ihelp.incrementTotalInterest([charity1Address,charity2Address,charity3Address]);
+    await incrementTx.wait(1);
+
   };
 
   const calculateAccrualValueDai = async (value) => {
