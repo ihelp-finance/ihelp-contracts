@@ -450,6 +450,7 @@ contract CharityPool is
         for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
 
             address lenderTokenAddress = priceFeedProvider.getDonationCurrencyAt(i).lendingAddress;
+            uint256 tokenDecimals = IERC20(priceFeedProvider.getDonationCurrencyAt(i).underlyingToken).decimals();
         
             uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
                 .generatedInterestOfCharity(lenderTokenAddress, address(this));
@@ -458,7 +459,8 @@ contract CharityPool is
             lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
 
             // We keep track of the totalInterestEarned (before tax)
-            totalInterestEarned[lenderTokenAddress] += newlyGeneratedInterest;
+            // convert this to lender currency decimals so usd convert funtion works properly
+            totalInterestEarned[lenderTokenAddress] += toTokenScale(newlyGeneratedInterest,tokenDecimals);
             
             trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
 
@@ -605,6 +607,15 @@ contract CharityPool is
             amount = amount * safepow(10, holdingDecimals - _decimals);
         } else if (_decimals > holdingDecimals) {
             amount = amount / safepow(10, _decimals - holdingDecimals);
+        }
+        return amount;
+    }
+
+    function toTokenScale(uint256 amount, uint256 _decimals) internal view returns (uint256) {
+        if (_decimals < holdingDecimals) {
+            amount = amount / safepow(10, holdingDecimals - _decimals);
+        } else if (_decimals > holdingDecimals) {
+            amount = amount * safepow(10, _decimals - holdingDecimals);
         }
         return amount;
     }
