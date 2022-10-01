@@ -31,7 +31,7 @@ const run = async () => {
     const charitiesWithContributions = [];
     for (const [ci,charityAddress] of charities.entries()) {
 
-        // if (ci <140) {
+        // if (ci < 97) {
         //     continue
         // }
 
@@ -52,6 +52,7 @@ const run = async () => {
 
             let charityContributionCounter = 0;
             for (const currency of supportedCurrencies) {
+                await new Promise(resolve => setTimeout(resolve, 10));
                 charityContributionCounter+=parseFloat(hardhat.ethers.utils.formatUnits(await charity.deposited(currency['lendingAddress']),currency['decimals'])) *parseFloat(hardhat.ethers.utils.formatUnits(currency['price'], currency['priceDecimals']))
             }
 
@@ -59,6 +60,7 @@ const run = async () => {
 
             let charityAccountedBalance = 0;
             for (const currency of supportedCurrencies) {
+                await new Promise(resolve => setTimeout(resolve, 10));
                 charityAccountedBalance += parseFloat(hardhat.ethers.utils.formatUnits(await contributionsAggregator.charityAccountedBalance(charity.address, currency['lendingAddress']), currency['decimals']))*parseFloat(hardhat.ethers.utils.formatUnits(currency['price'], currency['priceDecimals']))
             }
 

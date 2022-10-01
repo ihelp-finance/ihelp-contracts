@@ -632,7 +632,7 @@ contract CharityPool is
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {            
-            result += totalInterestEarned[cTokens[i].lendingAddress];
+            result += convertToUsd(cTokens[i].lendingAddress,totalInterestEarned[cTokens[i].lendingAddress]);
             // CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(
             //     cTokens[i].lendingAddress,
             //     address(this)
