@@ -39,6 +39,7 @@ const verifyContracts = async() => {
       xHelp: 'xHelpToken',
       priceFeedProvider:'PriceFeedProvider',
       swapper:'Swapper',
+      ContributionsAggregator:'ContributionsAggregator'
     };
 
     for (let i=0;i<Object.keys(contractsToVerify).length;i++) {
