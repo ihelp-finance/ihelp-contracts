@@ -12,27 +12,28 @@ contract ATokenMock is AToken {
 
     constructor(IPool pool) AToken(pool) {}
 
-    // function mint(
-    //     address caller,
-    //     address onBehalfOf,
-    //     uint256 amount,
-    //     uint256 index
-    // ) external virtual override onlyPool returns (bool) {
-    //     // mint
-    //     _userState[onBehalfOf].balance += uint128(amount.rayDiv(1));
-    //     return true;
-    // }
+    function mint(
+        address caller,
+        address onBehalfOf,
+        uint256 amount,
+        uint256 index
+    ) external virtual override onlyPool returns (bool) {
+        // mint
+        _userState[onBehalfOf].balance += uint128(amount.rayDiv(1));
+        return true;
+    }
 
-    // function burn(
-    //     address from,
-    //     address receiverOfUnderlying,
-    //     uint256 amount,
-    //     uint256 index
-    // ) external virtual override onlyPool {
-    //     // burn
-    //     _userState[receiverOfUnderlying].balance -=  uint128(amount.rayDiv(1));
-    //     IERC20(_underlyingAsset).transfer(receiverOfUnderlying, amount);
-    // }
+    function burn(
+        address from,
+        address receiverOfUnderlying,
+        uint256 amount,
+        uint256 index
+    ) external virtual override onlyPool {
+        // burn
+        // console.log(" _userState[receiverOfUnderlying].balance",  _userState[receiverOfUnderlying].balance);
+        _userState[from].balance -=  uint128(amount.rayDiv(1));
+        IERC20(_underlyingAsset).transfer(receiverOfUnderlying, amount);
+    }
 
 
 }

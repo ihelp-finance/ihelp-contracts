@@ -24,7 +24,6 @@ interface CharityPoolInterface {
     function withdrawTokens(address _cTokenAddress, uint256 _amount) external;
     function withdrawAll(address _account) external;
     function directDonation(IERC20 _donationToken, uint256 _amount, string memory _memo) external;
-    function redeemInterest(address _cTokenAddress) external;
     function claimInterest() external;
     function claimableInterest() external view returns (uint256);
     function collectOffChainInterest(address _destAddr, address _depositCurrency) external;
@@ -34,16 +33,10 @@ interface CharityPoolInterface {
     function supplyRatePerBlock(address _cTokenAddress) external view returns (uint256);
     function getUnderlyingTokenPrice(address _cTokenAdddress) external view returns (uint256, uint256);
     function getContributors() external view returns (address[] memory);
-    function balanceOfUSDByCurrency(address _addr, PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns(uint256);
-    function calculateTotalIncrementalInterest(address _cTokenAddress) external;
     function accountedBalanceUSD() external view returns (uint256);
-    function newTotalInterestEarnedUSD() external view returns (uint256);
     function accountedBalanceUSDOfCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns(uint256);
-    function newTotalInterestEarnedUSDByCurrencies(PriceFeedProviderInterface.DonationCurrency[] memory cTokens) external view returns (uint256);
     function totalInterestEarnedUSD() external view returns (uint256);
-    function calculateTotalInterestEarned() external view returns (uint256);
     function cTokenTotalUSDInterest(address _cTokenAddress) external view returns (uint256);
-    function newCTokenTotalUSDInterest(address _cTokenAddress) external view returns (uint256);
     function decimals(address _cTokenAddress) external view returns (uint8);
     function getAllDonationCurrencies() external view returns (PriceFeedProviderInterface.DonationCurrency[] memory);
     function balanceOfUSD(address _addr) external view returns (uint256);
@@ -61,4 +54,5 @@ interface CharityPoolInterface {
     function redeemableInterest(address _account) external view returns (uint256);
     function priceFeedProvider() external view returns (PriceFeedProviderInterface);
     function ihelpToken() external view returns (iHelpTokenInterface);
+    function incrementTotalInterest() external;
 }

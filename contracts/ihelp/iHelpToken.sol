@@ -12,6 +12,7 @@ import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
 import "../utils/IERC20.sol";
 import "./charitypools/CharityPoolInterface.sol";
 import "../ihelp/PriceFeedProviderInterface.sol";
+import "./ContributionsAggregator.sol";
 
 import "hardhat/console.sol";
 
@@ -26,17 +27,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     // if this number reaches 0, the contributor will be removed from the uniqueContributors list
     mapping(address => uint256) public _contributionsSum;
 
-    /** Keep track of the current processing state
-
-        Status Meaning:
-
-        -- 0 --> Must run dripStage1 until status changes to 1
-        -- 1 --> Must run dripStage2 , changes status to 2 or 3
-        -- 2 --> must run dripStage3 1 until status changes to 3
-        -- 3 --> must run dripStage4 1 until status changes to 4
-        -- 4 --> must run dump()  until status changes to 0
-        
-     */
     struct ProcessingState {
         uint256 newInterestUS;
         uint256 totalCharityPoolContributions;
@@ -83,6 +73,23 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     uint256 public directDonationDevelopmentShareOfInterest;
     uint256 public directDonationStakingShareOfInterest;
 
+    ContributionsAggregator public contributionsAggregator;
+
+    /**
+     * Emited after running the upkeep function
+     * @param totalAmount - The total interest in holding tokens
+     * @param drippedIhelp - Total help tokens that where driped for this upkeep
+     */
+    event RedeemedInterest(uint256 totalAmount, uint256 drippedIhelp);
+
+    /**
+     * Emited when a phase change ouccurs
+     * @param newPhase    - The new phase index
+     * @param previousDrip - The help tokens driped before the phase change
+     * @param newPhaseDrip - The help tokens that where driped for this upkeep
+     */
+    event PhaseChange(uint256 newPhase, uint256 previousDrip, uint256 newPhaseDrip);
+
     function setTokenPhases() internal {
         uint256 numberPhases = 10;
 
@@ -111,24 +118,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
 
     function setTokensPerInterestPhase(uint256 _phase, uint256 _newRate) external onlyOperatorOrOwner {
         tokensPerInterestByPhase[_phase] = _newRate;
-    }
-
-    function setProcessingState(
-        uint256 newInterestUS,
-        uint256 totalCharityPoolContributions,
-        uint256 tokensToCirculate,
-        uint256 tokensToCirculateInCurrentPhase,
-        uint256 i,
-        uint256 ii,
-        uint256 status
-    ) public onlyOperatorOrOwner {
-        processingState.newInterestUS = newInterestUS;
-        processingState.totalCharityPoolContributions = totalCharityPoolContributions;
-        processingState.tokensToCirculate = tokensToCirculate;
-        processingState.tokensToCirculateInCurrentPhase = tokensToCirculateInCurrentPhase;
-        processingState.i = i;
-        processingState.ii = ii;
-        processingState.status = status;
     }
 
     function transferOperator(address newOperator) public virtual onlyOperatorOrOwner {
@@ -296,281 +285,100 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         return totalInterest;
     }
 
-    function charityInterestShare(CharityPoolInterface _charity) public view returns (uint256) {
-        return _charity.newTotalInterestEarnedUSD();
-    }
-
-    function dripStage1() external onlyOperatorOrOwner {
-        // the number of tokens that go to each user is based on their currently allocated capital across all pools
-        uint256 initialGas = gasleft();
-        uint256 consumedGas = 0;
-        
+    /**
+     * @notice Redeems any newly generated interest and distributes the corrsponding iHelp Tokens
+     */
+    function upkeep() external onlyOperatorOrOwner {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
 
-        require(processingState.status == 0, "Invalid status");
-        for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
-            // Check how much gas was used and break
-            consumedGas = initialGas - gasleft();
-            // console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
-            if (consumedGas >= __processingGasLimit) {
-                processingState.i = i;
-                return;
-            }
-
-            address charity = charityPoolList.at(i);
-
-            // if no active contributors pass over the charity for processing
-            if (CharityPoolInterface(payable(charity)).numberOfContributors() == 0) {
-                // reset ii to avoid funky issues
-                processingState.ii = 0;
-                continue;
-            }
-            
-            // console.log('charity',charity);
-
-            for (uint256 ii = processingState.ii; ii < cTokens.length; ii++) {
-                // We need to check for gas at the start of each iteration
-                consumedGas = initialGas - gasleft();
-                // console.log("L2 Consumed gas,", consumedGas, "limit", __processingGasLimit);
-                if (consumedGas >= __processingGasLimit) {
-                    processingState.i = i;
-                    processingState.ii = ii;
-                    return;
-                }
-
-                // skip over uncontributed lenders to save on gas
-                uint256 balanceInLender = CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress);
-                if (balanceInLender == 0) {
-                    continue;
-                }
-
-                // console.log('  lender',cTokens[ii].lendingAddress,balanceInLender);
-
-                // get the total from each charity - this represents an accumulated value not just the current capital or interest
-                CharityPoolInterface(payable(charity)).calculateTotalIncrementalInterest(cTokens[ii].lendingAddress);
-            }
-
-            uint256 totalInterestUSDofCharity = CharityPoolInterface(payable(charity)).newTotalInterestEarnedUSDByCurrencies(cTokens);
-            if( totalInterestUSDofCharity == 0 ) {
-                continue;
-            }
-
-            // console.log('charity total',charity,totalInterestUSDofCharity);
-
-            // capture the share
-            // charityInterestShare[charity] += totalInterestUSDofCharity;
-            
-            // this represents the totalInterest in USD
-            processingState.newInterestUS += totalInterestUSDofCharity;
-
-            // get the balance per user that has generated this new interest amount
-            uint256 charityAccountedBalance = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
-
-            processingState.totalCharityPoolContributions += charityAccountedBalance;
-            charitiesToProcess.add(charity);
+        uint256 totalInterest;
+        for (uint256 i = 0; i < cTokens.length; i++) {
+            totalInterest += contributionsAggregator.redeemInterest(cTokens[i].lendingAddress);
         }
 
-        __interestGenerated += processingState.newInterestUS;
-        processingState.status = 1;
-        processingState.i = 0;
-        processingState.ii = 0;
-        // keep track of the last interest processed so we only processed the changed aggregate interest amount
-        // console.log("\nincremental calc done...");
+        uint256 tokensToCirculate = drip(totalInterest);
+        contributionsAggregator.distributeIHelp(tokensToCirculate);
+        totalContributorGeneratedInterest += totalInterest;
+        
+        emit RedeemedInterest(totalInterest, tokensToCirculate);
     }
 
-    function dripStage2() external onlyOperatorOrOwner {
-        require(processingState.status == 1, "Invalid status");
-
-        console.log("dripping",processingState.i);
-
-        // this value will accumulate the overall accumlated interest balance for each charity over each timestep
-        uint256 newInterestUSD = processingState.newInterestUS; // represents capital contributed + interest generated
-        uint256 totalCharityPoolContributions = processingState.totalCharityPoolContributions;
-
-        console.log("\nnewInterestUSD", newInterestUSD);
-        console.log("totalCharityPoolContributions", totalCharityPoolContributions);
-        // console.log("tokenPhase", __tokenPhase);
-
+    /**
+     * Drips iHelp tokens accodring to to the total charity pool contributions and interest
+     * @param _interest - The newly generate interest
+     * @return the new tokens to circulate 
+     */
+    function drip(uint256 _interest) internal  virtual returns(uint256)  {
         // based on the total generated interest in the timestep generate the tokens to drip
         uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
         // e.g. $1.66 in Wei
         console.log("tokensPerInterest", tokensPerInterest);
+        console.log("interest", _interest);
 
         // calculate the units to drip this timestamp
-        uint256 tokensToCirculate = newInterestUSD.mul(tokensPerInterest);
+
+        uint256 tokensToCirculate = (_interest * tokensPerInterest) / 10 ** underlyingToken.decimals();
         // 1.66 * 10 = 16.66 tokens to circulate (in ihelp currency)
 
         console.log("totalSupply", __totalSupply);
-        console.log("tokensToCirculate", tokensToCirculate);
+        console.log("tokensToCirculate", tokensToCirculate,  underlyingToken.decimals());
 
-        // check supply and only only process what is available, mint more if needed at next rate
-        // e.g. 10 tokens available - 16.66 tokens needed = -6.66 tokens remaining
-        // if newTokenSupply is <= 0, circulate tokens at the current phase rate and mint new ones
-        // for this changeover case, we basically need to only generate enough tokens in supply and back out the interest used for that
-        // then calculate the new token generation based on the new token interest rate
-
-        uint256 tokensToCirculateInCurrentPhase = 0;
-
-        // Skip by default assignTokensToContributors
-        processingState.status = 3;
+        uint256 tokensToCirculateInCurrentPhase;
 
         if (tokensToCirculate >= __totalSupply) {
+
+            tokensToCirculateInCurrentPhase = __totalSupply;
+
             console.log("");
             console.log("splitting interest division...");
 
-            tokensToCirculateInCurrentPhase = __totalSupply;
             console.log("tokensToCirculateInCurrentPhase", tokensToCirculateInCurrentPhase);
-            // e.g. 10 token
-            __totalSupply -= tokensToCirculateInCurrentPhase;
+
+            __totalSupply = 0;
             __totalCirculating += tokensToCirculateInCurrentPhase;
 
-            if (totalCharityPoolContributions > 0) {
-                // Need to call assignTokensToContributors
-                uint256 interestForExistingTokenSupply = tokensToCirculateInCurrentPhase.div(tokensPerInterest);
+            console.log("tokensPerInterest", tokensPerInterest);
 
-                console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
+            uint256 interestForExistingTokenSupply = (tokensToCirculateInCurrentPhase / tokensPerInterest) * 10 ** underlyingToken.decimals();
 
-                // DISTRIBUTE THIS INTEREST TO ALL
+            console.log("interestForExistingTokenSupply", interestForExistingTokenSupply);
 
-                console.log("newInterestUSD", newInterestUSD);
+            // DISTRIBUTE THIS INTEREST TO ALL
 
-                uint256 remainingInterestToCirculate = newInterestUSD - interestForExistingTokenSupply;
-                // e.g. $10 required - $6 ciruclated = $4 remaining
-                console.log("remainingInterestToCirculate", remainingInterestToCirculate);
+            uint256 remainingInterestToCirculate = _interest - interestForExistingTokenSupply;
+            // e.g. $10 required - $6 ciruclated = $4 remaining
+            console.log("remainingInterestToCirculate", remainingInterestToCirculate);
 
-                __tokenPhase += 1;
-                uint256 newTokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
-                // e.g. 0.86
+            __tokenPhase += 1;
+            uint256 newTokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
 
-                // mint another 1,000,000 tokens to the supply
-                // console.log('mint operator',operator);
-                _mint(operator, __tokensMintedPerPhase * 1e18);
+            // e.g. 0.86
 
-                __totalSupply += __tokensMintedPerPhase * 1e18;
+            // mint another 1,000,000 tokens to the supply
+            // console.log('mint operator',operator);
+            _mint(operator, __tokensMintedPerPhase * 1e18);
 
-                uint256 remainingTokensToCirculate = remainingInterestToCirculate.mul(newTokensPerInterest);
-                // e..g $4 * $0.86 = $3.44
-                console.log("remainingTokensToCirculate", remainingTokensToCirculate);
+            __totalSupply += __tokensMintedPerPhase * 1e18;
 
-                tokensToCirculate = remainingTokensToCirculate;
-                processingState.status = 2;
-            }
+            console.log("newTokensPerInterest", newTokensPerInterest);
+
+            uint256 remainingTokensToCirculate = (remainingInterestToCirculate * newTokensPerInterest) / 10 ** underlyingToken.decimals();
+            // e..g $4 * $0.86 = $3.44
+            console.log("remainingTokensToCirculate", remainingTokensToCirculate);
+
+            tokensToCirculate = remainingTokensToCirculate;
+
+            emit PhaseChange(__tokenPhase, tokensToCirculateInCurrentPhase, remainingTokensToCirculate);
+
         }
 
-        processingState.tokensToCirculate = tokensToCirculate;
-        processingState.tokensToCirculateInCurrentPhase = tokensToCirculateInCurrentPhase;
         __totalSupply -= tokensToCirculate;
         __totalCirculating += tokensToCirculate;
         __tokensLastDripped = tokensToCirculate + tokensToCirculateInCurrentPhase;
-    }
 
-    function dripStage3() external onlyOperatorOrOwner {
-        require(processingState.status == 2, "Invalid status");
+        console.log("__tokensLastDripped", __tokensLastDripped);
 
-        uint256 tokensToCirculateInCurrentPhase = processingState.tokensToCirculateInCurrentPhase;
-        bool done = distribute(tokensToCirculateInCurrentPhase);
-        if (done) {
-            processingState.i = 0;
-            processingState.ii = 0;
-            processingState.status = 3;
-        }
-    }
-
-    function dripStage4() external onlyOperatorOrOwner {
-        require(processingState.status == 3, "Invalid status");
-        uint256 tokensToCirculate = processingState.tokensToCirculate;
-        bool done = distribute(tokensToCirculate);
-        if (done) {
-            processingState.i = 0;
-            processingState.ii = 0;
-            processingState.status = 4;
-        }
-    }
-
-    function distribute(uint256 tokensToCirculate) internal returns (bool) {
-        console.log("distributing", tokensToCirculate);
-
-        uint256 initialGas = gasleft();
-        uint256 consumedGas = 0;
-        PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
-
-        for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
-            // Check how much gas was used and break
-            consumedGas = initialGas - gasleft();
-            // console.log("Consumed gas,", consumedGas, "limit", __processingGasLimit);
-
-            if (consumedGas >= __processingGasLimit) {
-                processingState.i = i;
-                return false;
-            }
-
-            address charity = charityPoolList.at(i);
-            CharityPoolInterface charityContract = CharityPoolInterface(payable(charity));
-
-            // only process the charities initially considered in dripStage1
-            if (!shouldProcessCharity(charity)) {
-                // reset ii to avoid funky issues
-                processingState.ii = 0;
-                continue;
-            }
-
-            uint256 poolContribution = CharityPoolInterface(payable(charity)).accountedBalanceUSDOfCurrencies(cTokens);
-            // console.log("poolContribution", poolContribution);
-
-            if (poolContribution > 0) {
-                // console.log("totalCharityPoolContributions", processingState.totalCharityPoolContributions);
-                uint256 poolShare = poolContribution.div(processingState.totalCharityPoolContributions);
-                // console.log("poolShare", poolShare);
-
-                uint256 tokensPerInterest = tokensPerInterestByPhase[__tokenPhase];
-                uint256 interestInPhase = tokensToCirculate.div(tokensPerInterest);
-
-                // newly generated interest specific for the pool
-                uint256 interestInPhasePoolShare = poolShare.mul(interestInPhase);
-
-                uint256 poolTokens = poolShare.mul(tokensToCirculate);
-                // console.log("poolTokens", poolTokens);
-
-                for (uint256 ii = processingState.ii; ii < charityContract.numberOfContributors(); ii++) {
-                    // Check how much gas was used and break
-                    consumedGas = initialGas - gasleft();
-                    // console.log("Consumed gas L2,", consumedGas, "limit", __processingGasLimit);
-
-                    if (consumedGas >= __processingGasLimit) {
-                        processingState.i = i;
-                        processingState.ii = ii;
-                        return false;
-                    }
-
-                    // get the contributors balance
-                    uint256 userContribution = charityContract.balanceOfUSDByCurrency(
-                        charityContract.contributorAt(ii),
-                        cTokens
-                    );
-
-                    uint256 userShare = userContribution.div(poolContribution);
-                    // console.log("contributor", charityContract.contributorAt(ii), userContribution, userShare);
-
-                    uint256 contribTokens = userShare.mul(poolTokens);
-                    // console.log("contribTokens", contribTokens);
-
-                    contributorTokenClaims[charityContract.contributorAt(ii)] += contribTokens;
-
-                    uint256 userInterest = userShare.mul(interestInPhasePoolShare);
-                    // console.log("userInterest", userInterest);
-
-                    contributorGeneratedInterest[charityContract.contributorAt(ii)][charity] += userInterest;
-                    totalContributorGeneratedInterest += userInterest;
-                }
-                processingState.ii = 0;
-            }
-        }
-
-        return true;
-    }
-
-    function shouldProcessCharity(address charity) public view returns (bool) {
-        return charitiesToProcess.contains(charity);
+        return __tokensLastDripped;
     }
 
     /**
@@ -578,70 +386,6 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
      */
     function hasCharity(address _addr) public view returns (bool) {
         return charityPoolList.contains(_addr);
-    }
-
-    // NOTE: call this after calling calculatePerfectRedeemInterest off chain
-    function dump() public onlyOperatorOrOwner {
-        require(processingState.status == 4, "Invalid status");
-
-        // check the incrementals add up to the total specific charity amounts
-        console.log("dumping", processingState.i, processingState.newInterestUS);
-
-        uint256 initialGas = gasleft();
-        uint256 consumedGas = 0;
-        if (processingState.newInterestUS > 0) {
-
-            PriceFeedProviderInterface.DonationCurrency[] memory cTokens = priceFeedProvider.getAllDonationCurrencies();
-
-            for (uint256 i = processingState.i; i < charityPoolList.length(); i++) {
-                consumedGas = initialGas - gasleft();
-                if (consumedGas >= __processingGasLimit) {
-                    processingState.i = i;
-                    return;
-                }
-                // redeem the charity interest to the holding pool
-                address charity = charityPoolList.at(i);
-                
-                // only process the charities initially considered in dripStage1
-                // if (!shouldProcessCharity(charity)) {
-                //     // reset ii to 0 to avoid funky issue
-                //     processingState.ii = 0;
-                //     continue;
-                // }
-
-                // console.log('charity',charity);
-
-                for (uint256 ii = 0; ii < cTokens.length; ii++) {
-                    // consumedGas = initialGas - gasleft();
-                    // if (consumedGas >= __processingGasLimit) {
-                    //     processingState.i = i;
-                    //     processingState.ii = ii;
-                    //     return;
-                    // }
-
-                    // skip over uncontributed lenders to save on gas
-                    uint256 balanceInLender = CharityPoolInterface(payable(charity)).accountedBalances(cTokens[ii].lendingAddress);
-                    if (balanceInLender == 0) {
-                        continue;
-                    }
-
-                    // console.log('  lender',cTokens[ii].lendingAddress);
-                    
-                    CharityPoolInterface(payable(charity)).redeemInterest(cTokens[ii].lendingAddress);
-
-                }
-                
-                charitiesToProcess.remove(charity);
-            }
-        }
-        // reset the processingState
-        processingState.newInterestUS = 0;
-        processingState.totalCharityPoolContributions = 0;
-        processingState.tokensToCirculate = 0;
-        processingState.tokensToCirculateInCurrentPhase = 0;
-        processingState.status = 0;
-        processingState.i = 0;
-        processingState.ii = 0;
     }
 
     function setFees(
@@ -707,7 +451,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function getClaimableTokens(address _addr) public view returns (uint256) {
-        return contributorTokenClaims[_addr];
+        return contributionsAggregator.claimableIHelpRewardOf(_addr);
     }
 
     function balance() public view returns (uint256) {
@@ -715,19 +459,12 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     function claimTokens() public {
-        uint256 claimAmount = contributorTokenClaims[msg.sender];
+        uint256 claimAmount = getClaimableTokens(msg.sender);
         claimSpecificTokens(claimAmount);
     }
 
     function claimSpecificTokens(uint256 amount) public {
-        uint256 claimAmount = contributorTokenClaims[msg.sender];
-        console.log("claiming tokens", msg.sender, amount, claimAmount);
-
-        require(claimAmount >= amount, "not enough claimable balance for amount");
-
-        contributorTokenClaims[msg.sender] -= amount;
-
-        approve(operator, amount);
+        contributionsAggregator.claimIHelpReward(msg.sender, amount);
         _transfer(operator, msg.sender, amount);
     }
 
@@ -757,8 +494,7 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
         developmentPool = _poolAddress;
     }
 
-    function setProcessingGasLimit(uint256 gasLimit) public onlyOperatorOrOwner {
-        require(gasLimit > 0, "Limit cannot be 0");
-        __processingGasLimit = gasLimit;
+    function setContributionsAggregator(address _aggregatorAddress) external onlyOperatorOrOwner {
+        contributionsAggregator = ContributionsAggregator(_aggregatorAddress);
     }
 }

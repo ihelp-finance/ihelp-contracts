@@ -129,22 +129,21 @@ const validate = async () => {
 
   const ihelpAddress = (await hardhat.deployments.get('iHelp')).address;
   const xhelpAddress = (await hardhat.deployments.get('xHelp')).address;
-  const daiAddress = (await hardhat.deployments.get('DAI')).address;
-  const cDaiAddress = (await hardhat.deployments.get('cDAI')).address;
+  const daiAddress = (await hardhat.deployments.get('DAI.e')).address;
+  const cDaiAddress = (await hardhat.deployments.get('jDAI.e')).address;
   const usdcAddress = (await hardhat.deployments.get('USDC')).address;
-  const cUsdcAddress = (await hardhat.deployments.get('cUSDC')).address;
+  const cUsdcAddress = (await hardhat.deployments.get('jUSDC')).address;
   const swapperAddress = (await hardhat.deployments.get('swapper')).address;
   const charity1Address = (await hardhat.deployments.get('charityPool1')).address;
   const charity2Address = (await hardhat.deployments.get('charityPool2')).address;
   const charity3Address = (await hardhat.deployments.get('charityPool3')).address;
+  const contributionsAggregatorAddress = (await hardhat.deployments.get('ContributionsAggregator')).address;
 
   green('Signer Address:', signer._address);
   green('DAI Address:', daiAddress);
   green('cDAI Address:', cDaiAddress);
   green('USDC Address:', usdcAddress);
   green('cUSDC Address:', cUsdcAddress);
-  // green('WETH Address:', wethAddress);
-  // green('cETH Address:', cEthAddress);
   green('iHelp Address:', ihelpAddress);
   green('xHelp Address:', xhelpAddress);
   green('Swapper Address:', swapperAddress);
@@ -152,13 +151,15 @@ const validate = async () => {
   green('CharityPool 2 Address:', charity2Address);
   green('CharityPool 3 Address:', charity3Address);
   green('Development Pool Address:', developmentPool);
+  green('Contributions Aggregator Address:', contributionsAggregatorAddress);
+
   green('');
 
   // get the contracts
   const mockDai = false;
 
   // get the contracts here
-  let ihelp, xhelp, swapper, dai, cdai, usdc, cusdc, charityPool1, charityPool2, charityPool3;
+  let ihelp, xhelp, swapper, dai, cdai, usdc, cusdc, charityPool1, charityPool2, charityPool3, contributionsAggregator;
   ihelp = await hardhat.ethers.getContractAt('iHelpToken', ihelpAddress, signer);
   xhelp = await hardhat.ethers.getContractAt('xHelpToken', xhelpAddress, signer);
   dai = await hardhat.ethers.getContractAt('ERC20MintableMock', daiAddress, signer);
@@ -166,6 +167,7 @@ const validate = async () => {
   usdc = await hardhat.ethers.getContractAt('ERC20MintableMock', usdcAddress, signer);
   cusdc = await hardhat.ethers.getContractAt('CTokenMock', cUsdcAddress, signer);
   swapper = await hardhat.ethers.getContractAt('Swapper', swapperAddress, signer);
+  contributionsAggregator =  await hardhat.ethers.getContractAt('ContributionsAggregator', contributionsAggregatorAddress, signer);
 
   yellow("Configurating charity pools...");
   charityPool1 = await hardhat.ethers.getContractAt('CharityPool', charity1Address, signer);
@@ -281,7 +283,6 @@ const validate = async () => {
         break;
       }
     }
-    // console.log(result);
 
     const c1contributionsTx = await charityPool1.accountedBalances(cDaiAddress);
     const c1contributions = fromBigNumber(c1contributionsTx, daiDecimals);
@@ -297,7 +298,6 @@ const validate = async () => {
 
     const helpsupplyTx = await ihelp.totalAvailableSupply();
     const helpsupply = fromBigNumber(helpsupplyTx);
-
     const helpcirculatingTx = await ihelp.totalCirculating();
     const helpcirculating = fromBigNumber(helpcirculatingTx);
 
@@ -305,24 +305,30 @@ const validate = async () => {
     const helpunclaimed1 = fromBigNumber(helpunclaimedTx1);
     const helpunclaimedTx2 = await ihelp.getClaimableTokens(userAccount2);
     const helpunclaimed2 = fromBigNumber(helpunclaimedTx2);
-
+    
     const helpunclaimed = helpunclaimed1 + helpunclaimed2;
 
+    await charityPool1.incrementTotalInterest();
     const c1interestTx = await charityPool1.totalInterestEarnedUSD();
     const c1interest = fromBigNumber(c1interestTx);
 
+    await charityPool2.incrementTotalInterest();
     const c2interestTx = await charityPool2.totalInterestEarnedUSD();
     const c2interest = fromBigNumber(c2interestTx);
 
+    await charityPool3.incrementTotalInterest();
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
+    await charityPool1.claimInterest();
     const c1walletTx = await charityPool1.claimableInterest();
     const c1wallet = fromBigNumber(c1walletTx);
 
+    await charityPool2.claimInterest();
     const c2walletTx = await charityPool2.claimableInterest();
     const c2wallet = fromBigNumber(c2walletTx);
 
+    await charityPool3.claimInterest();
     const c3walletTx = await charityPool3.claimableInterest();
     const c3wallet = fromBigNumber(c3walletTx);
 
@@ -400,96 +406,30 @@ const validate = async () => {
   };
 
   const rewardStep = async () => {
-
-    // take the staking pool dai amount and distribute this across stakers
-    // const stakepoolTx = await dai.balanceOf(stakingPool);
-    // approve the staking pool address to send from xhelp contract
-    // let rewardApprove = await dai.connect(stakingPoolSigner).approve(xhelpAddress, stakepoolTx.toString());
-    // await rewardApprove.wait();
     await xhelp.distributeRewards();
   };
 
 
-  const upkeepStatusMapping = {
-    0: "dripStage1",
-    1: "dripStage2",
-    2: "dripStage3",
-    3: "dripStage4",
-    4: "dump"
-  };
-
-
-  // Incrementally go trough all upkeep steps
-  const processUpkeep = async (upkeepStatus) => {
-    let newUpkeepstatus = upkeepStatus;
-    const method = upkeepStatusMapping[upkeepStatus];
-    cyan("Processing upkeep, status ", method);
-    while (upkeepStatus == newUpkeepstatus) {
-      await ihelp.functions[method]();
-      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
-    }
-
-    green("New Upkeep status ", newUpkeepstatus.toNumber());
-
-    // Return when the upkeep status goes back to 0
-    if (newUpkeepstatus.toNumber() === 0) {
-      return;
-    }
-    await processUpkeep(newUpkeepstatus);
-  };
-
-
   const upkeepStep = async () => {
-
-    let upkeepStatus = await ihelp.processingState().then(data => data.status);
-    await processUpkeep(upkeepStatus);
-
-    /*
-      // run the reward distribution script
-      let stakingPoolBalance = await dai.connect(stakingPoolSigner).balanceOf(stakingPool);
-      //console.log('stakingPoolDai', fromBigNumber(stakingPoolBalance));
-      
-      const currentBalanceHoldingBefore = await ihelp.balanceOf(xhelpAddress);
-      //console.log('help before:', fromBigNumber(currentBalanceHoldingBefore));
-  
-      if (fromBigNumber(stakingPoolBalance) > 0) {
-  
-          const minReward = '0';
-          const stakeMe = stakingPoolBalance.toString();
-          
-          //console.log(minReward,stakeMe);
-  
-          let swapApprove = await dai.connect(stakingPoolSigner).approve(swapperAddress, stakeMe);
-          await swapApprove.wait();
-            
-          //try {
-            // swap dai for help and transfer to the xhelp contract to increase the exchange rate
-            let swapme = await swapper.connect(stakingPoolSigner).swap(daiAddress, ihelpAddress, stakeMe, minReward, xhelpAddress,options);
-            //console.log(swapme);
-            await swapme.wait();
-          //}catch(e){}
-          
-          //const currentBalanceHoldingAfter = await ihelp.balanceOf(xhelpAddress);
-          //console.log('help after:', fromBigNumber(currentBalanceHoldingAfter));
-  
-      }
-    */
-
+    await ihelp.upkeep();
   };
 
   const calculateAccrualValueDai = async (value) => {
+    // const c1bTx = await cdai.balanceOfUnderlying(contributionsAggregator.address);
+    // const c1b = (c1bTx.toString());
+    // //console.log('c1b', c1b);
 
-    const c1bTx = await cdai.balanceOfUnderlying(charityPool1.address);
-    const c1b = (c1bTx.toString());
-    //console.log('c1b', c1b);
+    // const c3bTx = await cdai.balanceOfUnderlying(charityPool3.address);
+    // const c3b = (c3bTx.toString());
+    // //console.log('c3b', c3b);
 
-    const c3bTx = await cdai.balanceOfUnderlying(charityPool3.address);
-    const c3b = (c3bTx.toString());
-    //console.log('c3b', c3b);
+    // const totalb = Big(c1b).plus(c3b);
+    // //console.log('totalb', totalb.toFixed(0));
 
-    const totalb = Big(c1b).plus(c3b);
-    //console.log('totalb', totalb.toFixed(0));
 
+    const c1bTx = await cdai.balanceOfUnderlying(contributionsAggregator.address);
+    const totalb = Big(c1bTx.toString());
+    
     const getCashTx = await cdai.getCash();
     const getCash = getCashTx.toString();
     //console.log('getCash', getCash);
@@ -506,9 +446,13 @@ const validate = async () => {
 
   const calculateAccrualValueUsdc = async (value) => {
 
-    const c2bTx = await cusdc.balanceOfUnderlying(charityPool2.address);
-    const c2b = (c2bTx.toString());
+    // const c2bTx = await cusdc.balanceOfUnderlying(charityPool2.address);
+    // const c2b = (c2bTx.toString());
     //console.log('c2b', c2b);
+    // TODO: @Matt, check this, please
+
+    const c2bTx = await cusdc.balanceOfUnderlying(contributionsAggregator.address);
+    const c2b = (c2bTx.toString());
 
     const totalb = Big(c2b);
     //console.log('totalb', totalb.toFixed(0));
@@ -521,7 +465,7 @@ const validate = async () => {
     //console.log('percentCUSDC', percentofcusdc.toFixed(0));
 
     const accrualValue = ethers.utils.parseUnits(Big(value).times(1e6).div(percentofcusdc).toFixed(0), usdcDecimals).toString();
-    //console.log('accrualValue', accrualValue);
+    console.log('accrualValue', accrualValue);
 
     return accrualValue;
 
@@ -531,8 +475,6 @@ const validate = async () => {
   let INPUT = 0;
   console.log('\n*** INPUT', INPUT, '***');
   await getOutputs(INPUT);
-
-  //process.exit(0)
 
   INPUT = 1;
   console.log('\n*** INPUT', INPUT, '***');
@@ -609,7 +551,7 @@ const validate = async () => {
 
   await getOutputs(INPUT);
 
-
+  
   INPUT = 4;
   console.log('\n*** INPUT', INPUT, '***');
 

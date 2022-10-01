@@ -68,188 +68,209 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
 
   // if using mock tokens, create the uniswap pair liquidity pool
 
-  const IUniswapV2Factory = require("@uniswap/v2-core/build/IUniswapV2Factory.json");
-  const IUniswapV2Pair = require("@uniswap/v2-core/build/IUniswapV2Pair.json");
-  const IUniswapV2Router02 = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json");
-
-  const swapperAddresses = await getSwapAddresses(process.env.SWAPPER_ADDRESSES || 'uniswap', chainId);
-  const swapv2FactoryAddress = swapperAddresses['factory'];
-  const swapv2RouterAddress = swapperAddresses['router'];
-
-  console.log('router', swapv2RouterAddress);
-  console.log('factory', swapv2FactoryAddress);
-
-  //const mainnetInfura = new ethers.providers.StaticJsonRpcProvider("https://api.avax.network/ext/bc/C/rpc");
-  const mainnetInfura = new ethers.providers.StaticJsonRpcProvider(process.env.TEST_FORK);
-  const swapv2Factory = new ethers.Contract(swapv2FactoryAddress, IUniswapV2Factory['abi'], mainnetInfura);
-  const swapv2Router = new ethers.Contract(swapv2RouterAddress, IUniswapV2Router02['abi'], mainnetInfura);
-
   const userSigner = signer;
   const userAccount = deployer;
 
-  // activate the LP 
-
-  const activateETHLiquidityPool = async(token, value, dex) => {
-
-    const token1Address = token['underlyingToken'];
-
-    const ethAddress = await swapv2Router.WETH();
-
-    console.log('');
-    dim(token.name, '->', 'ETH');
-    dim(token1Address, '->', ethAddress);
-
-    let token1contract;
-    if (token.name == 'HELP') {
-      token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
-    }
-    else {
-      token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
-    }
-
-    const decimals = await token1contract.decimals();
-
-    let pair = await getPair(swapv2Factory, signer, token1Address, ethAddress)
-    dim('   pair', pair);
-    const swapv2Pair1 = new ethers.Contract(pair, IUniswapV2Pair['abi'], mainnetInfura);
-    let pairSupply = await getPairSupply(swapv2Pair1, signer, 18, decimals);
-    dim('   pairSupply', pairSupply);
-
-    if (pairSupply == 0) {
-
-      const currentBalance1 = await token1contract.balanceOf(userAccount);
-
-      if (fromBigNumber(currentBalance1, decimals) < parseFloat(value) || fromBigNumber(currentBalance1, decimals) == 0) {
-        if (token.name == 'HELP') {
-          console.log('minting help tokens...');
-          const MintTx1 = await token1contract.mint(userAccount, ethers.utils.parseUnits(value, decimals));
-          await MintTx1.wait();
-        }
-        else {
-          console.log('minting token1...');
-          const MintTx1 = await token1contract.allocateTo(userAccount, ethers.utils.parseUnits(value, decimals));
-          await MintTx1.wait();
-        }
-      }
-
-      // add liquidity to the pair
-      let devTx1Approve = await token1contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(value, decimals));
-      //console.log(devTx1Approve['hash']);
-      await devTx1Approve.wait();
-
-      const timestamp = (await mainnetInfura.getBlock()).timestamp;
-      console.log('Adding liquidity...', timestamp);
-
-      const addLiquid = await swapv2Router.connect(userSigner)
-        .addLiquidityETH(token1Address,
-          ethers.utils.parseUnits(value, decimals),
-          ethers.utils.parseUnits(value, decimals),
-          0,
-          userAccount, timestamp + 3000000, {
-            value: parseEther('500')
-          });
-
-      await addLiquid.wait();
-
-      let pairSupply1 = 0;
-      try {
-        pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
-        pairSupply1 = fromBigNumber(pairSupply1, 18 - decimals > 0 ? 18 - decimals : 18);
-      }
-      catch (e) {
-        console.log(e)
-      }
-      dim('   new pairSupply', pairSupply1);
-
-    }
-
-  };
-
-  const activateLiquidityPool = async(token1, token2, token1value, token2value, dex) => {
-
-    const token1Address = token1['underlyingToken'];
-    const token2Address = token2['underlyingToken'];
-
-    console.log('');
-    dim(token1.name, '->', token2.name);
-    dim(token1Address, '->', token2Address);
-
-    let token1contract;
-    if (token1.name == 'HELP') {
-      token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
-    }
-    else {
-      token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
-    }
-    const token2contract = await ethers.getContractAt('ERC20MintableMock', token2Address, signer);
-
-    const token1decimals = await token1contract.decimals();
-    const token2decimals = await token2contract.decimals();
-
-    //console.log(token1value,token2value)
-    //console.log(token1decimals,token2decimals)
-
-    let pair = await getPair(swapv2Factory, signer, token1Address, token2Address);
-    const swapv2Pair1 = new ethers.Contract(pair, IUniswapV2Pair['abi'], mainnetInfura);
-
-    let pairSupply = await getPairSupply(swapv2Pair1, signer, token2decimals, token1decimals);
-    dim('   pairSupply', pairSupply);
-
-    if (pairSupply == 0) {
-
-      const currentBalance1 = await token1contract.balanceOf(userAccount);
-      if (fromBigNumber(currentBalance1, token1decimals) <= parseFloat(token1value) || fromBigNumber(currentBalance1, token1decimals) == 0) {
-        if (token1.name == 'HELP') {
-          console.log('minting help tokens...');
-          const MintTx1 = await token1contract.mint(userAccount, ethers.utils.parseUnits(token1value, token1decimals));
-          await MintTx1.wait();
-        }
-        else {
-          console.log('minting token1...');
-          const MintTx1 = await token1contract.allocateTo(userAccount, ethers.utils.parseUnits(token1value, token1decimals));
-          await MintTx1.wait();
-        }
-      }
-      console.log('minting token1... success');
-
-      const currentBalance2 = await token2contract.balanceOf(userAccount);
-      if (fromBigNumber(currentBalance2, token2decimals) <= parseFloat(token2value) || fromBigNumber(currentBalance2, token2decimals) == 0) {
-        console.log('minting token2...');
-        const MintTx2 = await token2contract.allocateTo(userAccount, ethers.utils.parseUnits(token2value, token2decimals));
-        await MintTx2.wait();
-      }
-
-      // add liquidity to the pair
-      let devTx1Approve = await token1contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(token1value, token1decimals));
-      //console.log(devTx1Approve['hash']);
-      await devTx1Approve.wait();
-
-      let devTx2Approve = await token2contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(token2value, token2decimals));
-      //console.log(devTx2Approve['hash']);
-      await devTx2Approve.wait();
-
-
-      const timestamp = (await mainnetInfura.getBlock()).timestamp;
-      console.log('Adding liquidity...', timestamp);
-
-      const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, timestamp + 3000000);
-      await addLiquid.wait();
-
-      let pairSupply1 = 0;
-      try {
-        pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
-        pairSupply1 = fromBigNumber(pairSupply1, token2decimals - token1decimals > 0 ? token2decimals - token1decimals : token2decimals);
-      }
-      catch (e) {}
-      dim('   new pairSupply', pairSupply1);
-
-    }
-
-  };
-
-  // await activateLiquidityPool('HELP', 'DAI', '125000', '150000', 'aave', 'traderjoe');
-
   if (isTestEnvironment && deployMockTokens == 'true') {
+
+    // activate the test LPs
+    const dex = process.env.SWAPPER_ADDRESSES || 'traderjoe';
+
+    cyan(`\nusing ${dex} LP dex exchange...`);
+
+    const swapperAddresses = await getSwapAddresses(dex, chainId);
+    const swapv2FactoryAddress = swapperAddresses['factory'];
+    const swapv2RouterAddress = swapperAddresses['router'];
+
+    dim('router', swapv2RouterAddress);
+    dim('factory', swapv2FactoryAddress);
+
+    let router = null;
+    let factory = require("@uniswap/v2-core/build/IUniswapV2Factory.json")['abi'];
+    let pairAbi = require("@uniswap/v2-core/build/IUniswapV2Pair.json")['abi'];
+
+    if (dex == 'traderjoe') {
+      router = require("../scripts/utils/traderjoe.router.abi.json");
+    } else if (dex == 'uniswap') {
+      router = require("@uniswap/v2-periphery/build/IUniswapV2Router02.json")['abi'];
+    }
+    const swapv2Factory = new ethers.Contract(swapv2FactoryAddress,factory, ethers.provider);
+    const swapv2Router = new ethers.Contract(swapv2RouterAddress, router, ethers.provider);
+    
+
+    const activateNativeLiquidityPool = async(token, value) => {
+
+      const token1Address = token['underlyingToken'];
+
+      let ethAddress = null
+      if (dex == 'traderjoe') { 
+        ethAddress = await swapv2Router.WAVAX();
+      } else if (dex == 'uniswap') {
+        ethAddress = await swapv2Router.WETH();
+      }
+
+      console.log('');
+      dim(token.name, '->', 'AVAX');
+      dim(token1Address, '->', ethAddress);
+
+      let token1contract;
+      if (token.name == 'HELP') {
+        token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
+      }
+      else {
+        token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
+      }
+
+      const decimals = await token1contract.decimals();
+
+      let pair = await getPair(swapv2Factory, signer, token1Address, ethAddress)
+      dim('   pair', pair);
+      const swapv2Pair1 = new ethers.Contract(pair, pairAbi, ethers.provider);
+      let pairSupply = await getPairSupply(swapv2Pair1, signer, 18, decimals);
+      dim('   pairSupply', pairSupply);
+
+      if (pairSupply == 0) {
+
+        const currentBalance1 = await token1contract.balanceOf(userAccount);
+
+        if (fromBigNumber(currentBalance1, decimals) < parseFloat(value) || fromBigNumber(currentBalance1, decimals) == 0) {
+          if (token.name == 'HELP') {
+            console.log('minting help tokens...');
+            const MintTx1 = await token1contract.mint(userAccount, ethers.utils.parseUnits(value, decimals));
+            await MintTx1.wait();
+          }
+          else {
+            console.log('minting token1...');
+            const MintTx1 = await token1contract.allocateTo(userAccount, ethers.utils.parseUnits(value, decimals));
+            await MintTx1.wait();
+          }
+        }
+
+        // add liquidity to the pair
+        let devTx1Approve = await token1contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(value, decimals));
+        //console.log(devTx1Approve['hash']);
+        await devTx1Approve.wait();
+
+        const timestamp = (await ethers.provider.getBlock()).timestamp;
+        console.log('Adding liquidity...', timestamp);
+
+        if (dex == 'traderjoe') {
+          const addLiquid = await swapv2Router.connect(userSigner)
+            .addLiquidityAVAX(token1Address,
+              ethers.utils.parseUnits(value, decimals),
+              ethers.utils.parseUnits(value, decimals),
+              0,
+              userAccount, timestamp + 3000000, {
+                value: parseEther('500')
+              });
+          await addLiquid.wait();
+        } else if (dex == 'uniswap') {
+          const addLiquid = await swapv2Router.connect(userSigner)
+            .addLiquidityETH(token1Address,
+              ethers.utils.parseUnits(value, decimals),
+              ethers.utils.parseUnits(value, decimals),
+              0,
+              userAccount, timestamp + 3000000, {
+                value: parseEther('500')
+              });
+          await addLiquid.wait();
+        }
+
+        let pairSupply1 = 0;
+        try {
+          pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
+          pairSupply1 = fromBigNumber(pairSupply1, 18 - decimals > 0 ? 18 - decimals : 18);
+        }
+        catch (e) {
+          console.log(e)
+        }
+        dim('   new pairSupply', pairSupply1);
+
+      }
+
+    };
+
+    const activateLiquidityPool = async(token1, token2, token1value, token2value) => {
+
+      const token1Address = token1['underlyingToken'];
+      const token2Address = token2['underlyingToken'];
+
+      console.log('');
+      dim(token1.name, '->', token2.name);
+      dim(token1Address, '->', token2Address);
+
+      let token1contract;
+      if (token1.name == 'HELP') {
+        token1contract = await ethers.getContractAt('iHelpToken', token1Address, signer);
+      }
+      else {
+        token1contract = await ethers.getContractAt('ERC20MintableMock', token1Address, signer);
+      }
+      const token2contract = await ethers.getContractAt('ERC20MintableMock', token2Address, signer);
+
+      const token1decimals = await token1contract.decimals();
+      const token2decimals = await token2contract.decimals();
+
+      //console.log(token1value,token2value)
+      //console.log(token1decimals,token2decimals)
+
+      let pair = await getPair(swapv2Factory, signer, token1Address, token2Address);
+      const swapv2Pair1 = new ethers.Contract(pair, pairAbi, ethers.provider);
+
+      let pairSupply = await getPairSupply(swapv2Pair1, signer, token2decimals, token1decimals);
+      dim('   pairSupply', pairSupply);
+
+      if (pairSupply == 0) {
+
+        const currentBalance1 = await token1contract.balanceOf(userAccount);
+        if (fromBigNumber(currentBalance1, token1decimals) <= parseFloat(token1value) || fromBigNumber(currentBalance1, token1decimals) == 0) {
+          if (token1.name == 'HELP') {
+            console.log('minting help tokens...');
+            const MintTx1 = await token1contract.mint(userAccount, ethers.utils.parseUnits(token1value, token1decimals));
+            await MintTx1.wait();
+          }
+          else {
+            console.log('minting token1...');
+            const MintTx1 = await token1contract.allocateTo(userAccount, ethers.utils.parseUnits(token1value, token1decimals));
+            await MintTx1.wait();
+          }
+        }
+        console.log('minting token1... success');
+
+        const currentBalance2 = await token2contract.balanceOf(userAccount);
+        if (fromBigNumber(currentBalance2, token2decimals) <= parseFloat(token2value) || fromBigNumber(currentBalance2, token2decimals) == 0) {
+          console.log('minting token2...');
+          const MintTx2 = await token2contract.allocateTo(userAccount, ethers.utils.parseUnits(token2value, token2decimals));
+          await MintTx2.wait();
+        }
+
+        // add liquidity to the pair
+        let devTx1Approve = await token1contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(token1value, token1decimals));
+        //console.log(devTx1Approve['hash']);
+        await devTx1Approve.wait();
+
+        let devTx2Approve = await token2contract.connect(userSigner).approve(swapv2RouterAddress, ethers.utils.parseUnits(token2value, token2decimals));
+        //console.log(devTx2Approve['hash']);
+        await devTx2Approve.wait();
+
+        const timestamp = (await ethers.provider.getBlock()).timestamp;
+        console.log('Adding liquidity...', timestamp);
+
+        const addLiquid = await swapv2Router.connect(userSigner).addLiquidity(token1Address, token2Address, ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), ethers.utils.parseUnits(token1value, token1decimals), ethers.utils.parseUnits(token2value, token2decimals), userAccount, timestamp + 3000000);
+        await addLiquid.wait();
+
+        let pairSupply1 = 0;
+        try {
+          pairSupply1 = await swapv2Pair1.connect(userSigner).totalSupply();
+          pairSupply1 = fromBigNumber(pairSupply1, token2decimals - token1decimals > 0 ? token2decimals - token1decimals : token2decimals);
+        }
+        catch (e) {}
+        dim('   new pairSupply', pairSupply1);
+
+      }
+
+    };
+
 
     if (process.env.TEST_FORK == '' || process.env.TEST_FORK == undefined) {
       red('\nWARNING - not deploying test liquidity pools becuase there is no forked router. Please fork to use the swapper...')
@@ -276,7 +297,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
 
       let holdingToken = null
       for (const coin of currencies) {
-        if (coin['currency'] == holdingTokenName) {
+        if (coin['currency'].replace('.e','').replace('c','').replace('j','').replace('a','') == holdingTokenName) {
           holdingToken = {
             underlyingToken: coin['underlyingToken'],
             name: coin['currency']
@@ -296,10 +317,10 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
             name: coin['currency']
           }
 
-          await activateETHLiquidityPool(token, '50000000', 'uniswap');
+          await activateNativeLiquidityPool(token, '50000000', process.env.SWAPPER_ADDRESSES || 'traderjoe');
 
-          if (coin['currency'] != holdingTokenName) {
-            await activateLiquidityPool(token, holdingToken, '50000000', '50000000', 'uniswap');
+          if (coin['currency'].replace('.e','').replace('c','').replace('j','').replace('a','') != holdingTokenName) {
+            await activateLiquidityPool(token, holdingToken, '50000000', '50000000', process.env.SWAPPER_ADDRESSES || 'traderjoe');
           }
 
         }
@@ -320,6 +341,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   const swapperAddress = await getAddress('swapper');
   const analyticsAddress = await getAddress('analytics');
   const pricefeedAddress = await getAddress('priceFeedProvider');
+  const contribAggregatorAddress = await getAddress('ContributionsAggregator');
 
   console.log('');
   green('Signer Address:', signer._address);
@@ -328,6 +350,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
   green('Swapper Address:', swapperAddress);
   green('Analytics Address:', analyticsAddress);
   green('PriceFeedProvider Address:', pricefeedAddress);
+  green('ContributionsAggregator Address:', contribAggregatorAddress);
   green('Development Pool Address:', developmentPool);
   green('');
 
@@ -338,6 +361,7 @@ module.exports = async({ getNamedAccounts, deployments, getChainId, ethers }) =>
     { name: 'Swapper', address: swapperAddress },
     { name: 'Analytics', address: analyticsAddress },
     { name: 'PriceFeedProvider', address: pricefeedAddress },
+    { name: 'ContributionsAggregator', address: contribAggregatorAddress },
     { name: 'Development Pool', address: developmentPool },
   ];
 

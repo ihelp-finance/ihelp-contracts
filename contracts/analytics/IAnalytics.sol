@@ -15,21 +15,15 @@ interface IAnalytics {
     /**
      * Calaculates the total generated interest for all charities
      */
-    function totalGeneratedInterest(
-        iHelpTokenInterface _iHelp,
-        uint256 _offset,
-        uint256 _limit
-    ) external view returns (uint256);
+    function totalGeneratedInterest(iHelpTokenInterface _iHelp) external view returns (uint256);
 
     /**
      * Calaculates the total generated interest for a given yield protocol
      */
-    function getYieldProtocolGeneratedInterest(
-        iHelpTokenInterface _iHelp,
-        address _cTokenAddress,
-        uint256 _offset,
-        uint256 _limit
-    ) external view returns (uint256);
+    function getYieldProtocolGeneratedInterest(iHelpTokenInterface _iHelp, address _cTokenAddress)
+        external
+        view
+        returns (uint256);
 
     /**
      * Calaculates the total generated yield for a given charity
@@ -41,9 +35,7 @@ interface IAnalytics {
      */
     function getUnderlyingCurrencyGeneratedInterest(
         iHelpTokenInterface _iHelp,
-        address _underlyingCurrency,
-        uint256 _offset,
-        uint256 _limit
+        address _underlyingCurrency
     ) external view returns (uint256);
 
     /**
@@ -51,9 +43,7 @@ interface IAnalytics {
      */
     function getUserGeneratedInterest(
         iHelpTokenInterface _iHelp,
-        address _account,
-        uint256 _offset,
-        uint256 _limit
+        address _account
     ) external view returns (uint256);
 
     /**
@@ -65,9 +55,7 @@ interface IAnalytics {
      * Calaculates the total locked value over all charities
      */
     function totalLockedValue(
-        iHelpTokenInterface _iHelp,
-        uint256 _offset,
-        uint256 _limit
+        iHelpTokenInterface _iHelp
     ) external view returns (uint256);
 
     /**
@@ -78,11 +66,7 @@ interface IAnalytics {
     /**
      * Get total number of helpers
      */
-    function totalHelpers(
-        iHelpTokenInterface _iHelp,
-        uint256 _offset,
-        uint256 _limit
-    ) external view returns (uint256);
+    function totalHelpers(iHelpTokenInterface _iHelp) external view returns (uint256);
 
     /**
      * Get number of helpers in a given charity
@@ -147,7 +131,7 @@ interface IAnalytics {
         iHelpTokenInterface _iHelp,
         address _user,
         address _xHelpAddress
-    ) external view  returns (AnalyticsUtils.WalletInfo memory);
+    ) external view returns (AnalyticsUtils.WalletInfo memory);
 
     /**
      * Returns an array with all the charity pools and their contributions

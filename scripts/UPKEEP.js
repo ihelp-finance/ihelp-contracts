@@ -66,7 +66,7 @@ const upkeep = async() => {
     startinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
   }
 
-  console.log(`start interest gen: ${startinterest}`);
+  // console.log(`start interest gen: ${startinterest}`);
 
   const daiDevBalanceStart = await DAI.balanceOf(developmentPool);
   console.log(`start dai dev balance: ${fromBigNumber(daiDevBalanceStart)}`);
@@ -80,80 +80,29 @@ const upkeep = async() => {
   // await ihelp.setProcessingGasLimit('6500000');
   // console.log('gas limit set\n');
 
-  const upkeepStatusMapping = {
-    0: "dripStage1",
-    1: "dripStage2",
-    2: "dripStage3",
-    3: "dripStage4",
-    4: "dump"
-  };
+  // run the upkeep process
+  console.log('running upkeep function')
+  const upkeepTx = await ihelp.upkeep();
+  await upkeepTx.wait(1);
 
-  let lastStep = 0;
+  // increment the total interest for each charity (only charities that have balance)
+  console.log('incrementing charity totalinterest counter')
+  const charities = await ihelp.getCharities();
 
-  // Incrementally go trough all upkeep steps
-  const processUpkeep = async(upkeepStatus) => {
-
-    lastStep = JSON.parse(JSON.stringify(upkeepStatus.toNumber()));
-
-    let newUpkeepstatus = upkeepStatus;
-    const method = upkeepStatusMapping[upkeepStatus];
-
-    const numberOfCharities = await ihelp.numberOfCharities()
-
-    cyan("\nProcessing upkeep:", method);
-    console.log(await ihelp.processingState());
-   //console.log();
-
-    while (upkeepStatus == newUpkeepstatus) {
-      
-      if (method == 'dripStage1') {
-        const charityIndex = await ihelp.processingState().then(data => data.i);
-        green("   running", method,'-',parseInt(charityIndex)+1,'/',parseInt(numberOfCharities));
-      } else {
-        green("   running", method);
-      }
-      
-      // process.exit(0)
-      
-      tx = await ihelp.functions[method]();
-
-      const { status } = await tx.wait(1);
-
-      if (+status != 1) {
-        process.exit(1);
-      }
-
-      newUpkeepstatus = await ihelp.processingState().then(data => data.status);
-      yellow('   new status:', upkeepStatusMapping[newUpkeepstatus]);
+  const charitiesToProcess = [];
+  for (const [ci,charityAddress] of charities.entries()) {
+    const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
+    if (await charity.accountedBalanceUSD() > 0) {
+      charitiesToProcess.push(charity.address);
     }
-
-    // Return when the upkeep status goes back to dripStage1 step 0 from dump step 4
-    if (newUpkeepstatus.toNumber() == 0 && lastStep == 4) {
-      cyan('\nProcessing complete...')
-      return
-    }
-    else {
-      await processUpkeep(newUpkeepstatus);
-    }
-  };
-
-  const upkeepStep = async() => {
-
-    let upkeepStatus = await ihelp.processingState().then(data => data.status);
-    
-    console.log('upkeepStatus',upkeepStatus);
-    
-    // console.log('\nresetting processing state');
-    // await ihelp.setProcessingState(0,0,0,0,0,0,0);
-    // console.log('processing state reset\n');
-    
-    // process.exit(0)
-    
-    await processUpkeep(upkeepStatus);
-
-  };
-
-  await upkeepStep()
+  }
+  console.log(charitiesToProcess.length,'charities to incremental interest');
+  for (const [ci,charityAddress] of charitiesToProcess.entries()) {
+    const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
+    console.log(ci+1,'/',charitiesToProcess.length,'-',await charity.name())
+    const incrementTx = await charity.incrementTotalInterest();
+    await incrementTx.wait();
+  }
 
   const balanceend = await provider.getBalance(signer.address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
