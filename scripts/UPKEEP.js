@@ -83,26 +83,8 @@ const upkeep = async() => {
   // run the upkeep process
   console.log('running upkeep function')
   const upkeepTx = await ihelp.upkeep();
+  // await ihelp.incrementTotalInterest();
   await upkeepTx.wait(1);
-
-  // increment the total interest for each charity (only charities that have balance)
-  console.log('incrementing charity totalinterest counter')
-  const charities = await ihelp.getCharities();
-
-  const charitiesToProcess = [];
-  for (const [ci,charityAddress] of charities.entries()) {
-    const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
-    if (await charity.accountedBalanceUSD() > 0) {
-      charitiesToProcess.push(charity.address);
-    }
-  }
-  console.log(charitiesToProcess.length,'charities to incremental interest');
-  for (const [ci,charityAddress] of charitiesToProcess.entries()) {
-    const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
-    console.log(ci+1,'/',charitiesToProcess.length,'-',await charity.name())
-    const incrementTx = await charity.incrementTotalInterest();
-    await incrementTx.wait();
-  }
 
   const balanceend = await provider.getBalance(signer.address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);

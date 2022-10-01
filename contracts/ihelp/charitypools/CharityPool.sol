@@ -444,7 +444,7 @@ contract CharityPool is
     /**
      * Implements and tracks the total interest accumulated for charity - runs as part of an upkeep process
      */
-    function incrementTotalInterest() external onlyOperatorOrOwner {
+    function incrementTotalInterest() external onlyHelpToken {
         
         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {

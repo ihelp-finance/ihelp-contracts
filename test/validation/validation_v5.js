@@ -308,15 +308,12 @@ const validate = async () => {
     
     const helpunclaimed = helpunclaimed1 + helpunclaimed2;
 
-    await charityPool1.incrementTotalInterest();
     const c1interestTx = await charityPool1.totalInterestEarnedUSD();
     const c1interest = fromBigNumber(c1interestTx);
 
-    await charityPool2.incrementTotalInterest();
     const c2interestTx = await charityPool2.totalInterestEarnedUSD();
     const c2interest = fromBigNumber(c2interestTx);
 
-    await charityPool3.incrementTotalInterest();
     const c3interestTx = await charityPool3.totalInterestEarnedUSD();
     const c3interest = fromBigNumber(c3interestTx);
 
@@ -412,6 +409,7 @@ const validate = async () => {
 
   const upkeepStep = async () => {
     await ihelp.upkeep();
+    // await ihelp.incrementTotalInterest();
   };
 
   const calculateAccrualValueDai = async (value) => {
