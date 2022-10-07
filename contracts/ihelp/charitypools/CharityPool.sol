@@ -135,10 +135,14 @@ contract CharityPool is
     }
 
     function contributorInterestGeneratedPerToken(address _lenderTokenAddress) public view returns (uint256) {
-        if (deposited(_lenderTokenAddress) == 0) {
+        uint256 totalDeposited = deposited(_lenderTokenAddress);
+
+        if (totalDeposited == 0) {
             return 0;
         }
-        return contributorInterestPerTokenStored[_lenderTokenAddress];
+
+        uint256 newInterest = pendingInterest(_lenderTokenAddress);
+        return contributorInterestPerTokenStored[_lenderTokenAddress] + (newInterest * 1e9) / totalDeposited;
     }
 
     // Calculates the new reward ratio after new rewards are added to the pool
@@ -424,6 +428,21 @@ contract CharityPool is
 
             uint256 _claimedInterest = aggregatorInstance.claimReward(address(this), lenderTokenAddress);
 
+             uint256 tokenDecimals = IERC20(priceFeedProvider.getDonationCurrencyAt(i).underlyingToken).decimals();
+        
+            uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
+                .generatedInterestOfCharity(lenderTokenAddress, address(this));
+
+            uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
+            lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
+
+            // We keep track of the totalInterestEarned (before tax)
+            // convert this to lender currency decimals so usd convert funtion works properly
+            // TODO:  REview the scaling with @Matt
+            totalInterestEarned[lenderTokenAddress] += toTokenScale(newlyGeneratedInterest,tokenDecimals);
+            
+            trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
+
             // We keep track of the clamied interest (after tax)
             claimedInterest[lenderTokenAddress] += _claimedInterest;
 
@@ -441,31 +460,22 @@ contract CharityPool is
         require(success, "transfer failed");
     }
 
+    function absoluteTotalInterestEarned(address _lenderTokenAddress) public view returns (uint256) {
+        // TODO:  REview the scaling with @Matt
+        return totalInterestEarned[_lenderTokenAddress] + toTokenScale(pendingInterest(_lenderTokenAddress), decimals(_lenderTokenAddress));
+    }
+
     /**
-     * Implements and tracks the total interest accumulated for charity - runs as part of an upkeep process
+     * Returns the interest that was not yet added recoreded in totalTotalGeneratedInterest
      */
-    function incrementTotalInterest() external onlyOperatorOrOwner {
-        
-        ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
-        for (uint256 i = 0; i < priceFeedProvider.numberOfDonationCurrencies(); i++) {
+    function pendingInterest(address _lenderTokenAddress) public view returns (uint256) {
+         ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
+        uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
+                .generatedInterestOfCharity(_lenderTokenAddress, address(this));
 
-            address lenderTokenAddress = priceFeedProvider.getDonationCurrencyAt(i).lendingAddress;
-            uint256 tokenDecimals = IERC20(priceFeedProvider.getDonationCurrencyAt(i).underlyingToken).decimals();
-        
-            uint256 currentInterestTracked = CharityInterestTracker(address(aggregatorInstance))
-                .generatedInterestOfCharity(lenderTokenAddress, address(this));
+        uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[_lenderTokenAddress];
 
-            uint256 newlyGeneratedInterest = currentInterestTracked - lastTrackedInterest[lenderTokenAddress];
-            lastTrackedInterest[lenderTokenAddress] = currentInterestTracked;
-
-            // We keep track of the totalInterestEarned (before tax)
-            // convert this to lender currency decimals so usd convert funtion works properly
-            totalInterestEarned[lenderTokenAddress] += toTokenScale(newlyGeneratedInterest,tokenDecimals);
-            
-            trackContributorInterest(lenderTokenAddress, newlyGeneratedInterest);
-
-        }
-
+        return newlyGeneratedInterest;
     }
 
     /**
@@ -639,14 +649,9 @@ contract CharityPool is
 
     function totalInterestEarnedUSD() public view returns (uint256) {
         PriceFeedProviderInterface.DonationCurrency[] memory cTokens = getAllDonationCurrencies();
-        ContributionsAggregatorInterface aggregatorInstance = contributionsAggregator();
         uint256 result;
         for (uint256 i = 0; i < cTokens.length; i++) {            
-            result += convertToUsd(cTokens[i].lendingAddress,totalInterestEarned[cTokens[i].lendingAddress]);
-            // CharityInterestTracker(address(aggregatorInstance)).generatedInterestOfCharity(
-            //     cTokens[i].lendingAddress,
-            //     address(this)
-            // );
+            result += convertToUsd(cTokens[i].lendingAddress, absoluteTotalInterestEarned(cTokens[i].lendingAddress));
         }
         return result;
     }
