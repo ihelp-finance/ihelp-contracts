@@ -304,6 +304,15 @@ contract iHelpToken is ERC20CappedUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Redeems any newly generated interest and distributes the corrsponding iHelp Tokens
+     */
+    function incrementTotalInterest(address[] calldata _charities) public onlyOperatorOrOwner {
+        for (uint256 i = 0; i < _charities.length; i++) {
+            CharityPoolInterface(payable(_charities[i])).incrementTotalInterest();
+        }
+    }
+
+    /**
      * Drips iHelp tokens accodring to to the total charity pool contributions and interest
      * @param _interest - The newly generate interest
      * @return the new tokens to circulate 

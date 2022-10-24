@@ -39,6 +39,7 @@ const verifyContracts = async() => {
       xHelp: 'xHelpToken',
       priceFeedProvider:'PriceFeedProvider',
       swapper:'Swapper',
+      ContributionsAggregator:'ContributionsAggregator'
     };
 
     for (let i=0;i<Object.keys(contractsToVerify).length;i++) {
@@ -75,6 +76,16 @@ const verifyContracts = async() => {
           yellow('  implementation not verified - verifying contract now...')
 
           sourceCode = await fs.readFileSync(`contracts_flattened/${contractsToVerify[contract]}Flat.sol`,'utf8');
+
+          let libs = [];
+
+          if (contract == 'ContributionsAggregator') {
+            const SwapperUtilsAddress = (await hardhat.deployments.get('SwapperUtils')).address;
+            libs = [{
+              name: 'SwapperUtils',
+              address: SwapperUtilsAddress
+            }]
+          }
 
           var data = qs.stringify({
             'apikey': process.env.BLOCKEXPLORER_API_KEY,
