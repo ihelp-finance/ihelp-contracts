@@ -77,6 +77,16 @@ const verifyContracts = async() => {
 
           sourceCode = await fs.readFileSync(`contracts_flattened/${contractsToVerify[contract]}Flat.sol`,'utf8');
 
+          let libs = [];
+
+          if (contract == 'ContributionsAggregator') {
+            const SwapperUtilsAddress = (await hardhat.deployments.get('SwapperUtils')).address;
+            libs = [{
+              name: 'SwapperUtils',
+              address: SwapperUtilsAddress
+            }]
+          }
+
           var data = qs.stringify({
             'apikey': process.env.BLOCKEXPLORER_API_KEY,
             'action': 'verifysourcecode',

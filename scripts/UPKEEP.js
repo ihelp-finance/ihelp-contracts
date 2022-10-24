@@ -56,12 +56,12 @@ const upkeep = async() => {
   console.log(`\nstart signer balance: ${fromBigNumber(startbalance)}`);
 
   const numberOfCharities = await ihelp.numberOfCharities();
-  const BATCH_SIZE = 30;
+  const BATCH_SIZE = 10;
 
   let index = 0;
   let startinterest = 0;
   for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
-    // console.log(i,'/',parseInt(numberOfCharities));
+    console.log(i,'/',parseInt(numberOfCharities));
     const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
     startinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
   }
@@ -81,41 +81,28 @@ const upkeep = async() => {
   // console.log('gas limit set\n');
 
   // run the upkeep process
-  console.log('\nrunning upkeep function');
+  console.log('running upkeep function')
   const upkeepTx = await ihelp.upkeep();
   await upkeepTx.wait(1);
 
-  // increment the total interest earned manually until we make this a view
-  console.log('\nincrementing interest counters');
+  // // increment the total interest for each charity (only charities that have balance)
+  // console.log('incrementing charity totalinterest counter')
+  // const charities = await ihelp.getCharities();
 
-  const charities = await ihelp.getCharities();
-
-  const charitiesToProcess = [];
-  for (const [ci,charityAddress] of charities.entries()) {
-    const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
-    if (await charity.accountedBalanceUSD() > 0) {
-      charitiesToProcess.push(charity.address);
-    }
-  }
-
-  const CHARITY_BATCH_SIZE = 16;
-
-  console.log(charitiesToProcess.length,'charities to incremental interest in batches of',CHARITY_BATCH_SIZE);
-
-  let counter = 0;
-  for (let i=0;i<charitiesToProcess.length;i=i+CHARITY_BATCH_SIZE) {
-    console.log('increment',i,i+CHARITY_BATCH_SIZE);
-    const batch = charitiesToProcess.slice(i, i+CHARITY_BATCH_SIZE);
-
-    const incrementTx = await ihelp.incrementTotalInterest(batch);
-    await incrementTx.wait(1);
-
-    for (const i of batch) {
-      counter+=1
-    }
-
-  }
-  console.log(counter,'charities incremented\n');
+  // const charitiesToProcess = [];
+  // for (const [ci,charityAddress] of charities.entries()) {
+  //   const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
+  //   if (await charity.accountedBalanceUSD() > 0) {
+  //     charitiesToProcess.push(charity.address);
+  //   }
+  // }
+  // console.log(charitiesToProcess.length,'charities to incremental interest');
+  // for (const [ci,charityAddress] of charitiesToProcess.entries()) {
+  //   const charity = await hardhat.ethers.getContractAt('CharityPool', charityAddress, signer);
+  //   console.log(ci+1,'/',charitiesToProcess.length,'-',await charity.name())
+  //   const incrementTx = await charity.incrementTotalInterest();
+  //   await incrementTx.wait();
+  // }
 
   const balanceend = await provider.getBalance(signer.address);
   console.log(`\nend signer balance: ${fromBigNumber(balanceend)}`);
@@ -128,7 +115,7 @@ const upkeep = async() => {
   index = 0;
   let endinterest = 0;
   for (let i = index; i < numberOfCharities; i = i + BATCH_SIZE) {
-    // console.log(i,'/',parseInt(numberOfCharities));
+    console.log(i,'/',parseInt(numberOfCharities));
     const d = await analytics.generalStats(ihelpAddress,i, BATCH_SIZE);
     endinterest += parseFloat(hardhat.ethers.utils.formatUnits(d['totalInterestGenerated'], 18))
   }
