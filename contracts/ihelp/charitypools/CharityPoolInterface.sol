@@ -54,5 +54,5 @@ interface CharityPoolInterface {
     function redeemableInterest(address _account) external view returns (uint256);
     function priceFeedProvider() external view returns (PriceFeedProviderInterface);
     function ihelpToken() external view returns (iHelpTokenInterface);
-    function incrementTotalInterest() external;
+    // function incrementTotalInterest() external;
 }
